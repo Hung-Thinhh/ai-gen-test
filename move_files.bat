@@ -1,0 +1,7 @@
+move "src\app\history" "src\app\(client)\"
+move "src\app\profile" "src\app\(client)\"
+move "src\app\prompt-library" "src\app\(client)\"
+move "src\app\settings" "src\app\(client)\"
+move "src\app\storyboarding" "src\app\(client)\"
+move "src\app\tool" "src\app\(client)\"
+move "src\app\not-found.tsx" "src\app\(client)\"

@@ -1,0 +1,146 @@
+{
+    "categories": [
+        {
+            "id": "all",
+            "labelVi": "Tất cả",
+            "labelEn": "All"
+        },
+        {
+            "id": "male",
+            "labelVi": "Nam",
+            "labelEn": "Male"
+        },
+        {
+            "id": "female",
+            "labelVi": "Nữ",
+            "labelEn": "Female"
+        },
+        {
+            "id": "birthday",
+            "labelVi": "Sinh nhật",
+            "labelEn": "Birthday"
+        },
+        {
+            "id": "couple",
+            "labelVi": "Cặp đôi",
+            "labelEn": "Couple"
+        },
+        {
+            "id": "family",
+            "labelVi": "Gia đình",
+            "labelEn": "Family"
+        }
+    ],
+    "prompts": [
+        {
+            "id": "1",
+            "category": "male",
+            "text": "A confident businessman in a modern office, professional attire, natural lighting, photorealistic",
+            "imageUrl": "https://picsum.photos/seed/prompt1/400/500",
+            "tags": [
+                "business",
+                "professional",
+                "office"
+            ]
+        },
+        {
+            "id": "2",
+            "category": "male",
+            "text": "Athletic man exercising outdoors, dynamic pose, golden hour lighting, action shot",
+            "imageUrl": "https://picsum.photos/seed/prompt2/400/500",
+            "tags": [
+                "sports",
+                "fitness",
+                "outdoor"
+            ]
+        },
+        {
+            "id": "3",
+            "category": "male",
+            "text": "Elderly gentleman reading a book by the fireplace, warm tones, cozy atmosphere",
+            "imageUrl": "https://picsum.photos/seed/prompt3/400/500",
+            "tags": [
+                "elderly",
+                "reading",
+                "cozy"
+            ]
+        },
+        {
+            "id": "4",
+            "category": "female",
+            "text": "Elegant woman in evening gown, studio portrait, soft lighting, fashion photography",
+            "imageUrl": "https://picsum.photos/seed/prompt4/400/500",
+            "tags": [
+                "fashion",
+                "elegant",
+                "portrait"
+            ]
+        },
+        {
+            "id": "5",
+            "category": "female",
+            "text": "Professional woman giving a presentation, confident pose, corporate setting",
+            "imageUrl": "https://picsum.photos/seed/prompt5/400/500",
+            "tags": [
+                "business",
+                "professional",
+                "presentation"
+            ]
+        },
+        {
+            "id": "6",
+            "category": "female",
+            "text": "Young woman with flowers in a garden, natural beauty, spring vibes",
+            "imageUrl": "https://picsum.photos/seed/prompt6/400/500",
+            "tags": [
+                "nature",
+                "flowers",
+                "spring"
+            ]
+        },
+        {
+            "id": "7",
+            "category": "birthday",
+            "text": "Birthday celebration with cake and candles, colorful balloons, joyful atmosphere",
+            "imageUrl": "https://picsum.photos/seed/prompt7/400/500",
+            "tags": [
+                "birthday",
+                "celebration",
+                "party"
+            ]
+        },
+        {
+            "id": "8",
+            "category": "birthday",
+            "text": "Child blowing out birthday candles, magical moment, warm lighting",
+            "imageUrl": "https://picsum.photos/seed/prompt8/400/500",
+            "tags": [
+                "birthday",
+                "child",
+                "celebration"
+            ]
+        },
+        {
+            "id": "9",
+            "category": "couple",
+            "text": "Romantic couple walking on beach at sunset, holding hands, cinematic",
+            "imageUrl": "https://picsum.photos/seed/prompt9/400/500",
+            "tags": [
+                "romantic",
+                "beach",
+                "sunset"
+            ]
+        },
+        {
+            "id": "10",
+            "category": "couple",
+            "text": "Couple having coffee in a cozy café, intimate moment, bokeh background",
+            "imageUrl": "https://picsum.photos/seed/prompt10/400/500",
+            "tags": [
+                "romantic",
+                "café",
+                "intimate"
+            ]
+        }
+    ]
+}
