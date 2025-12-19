@@ -40,7 +40,9 @@ interface AvatarCreatorProps {
     onStateChange: (newState: AvatarCreatorState) => void;
     onReset: () => void;
     onGoBack: () => void;
-    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string) => void;
+    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: {
+        api_model_used?: string;
+    }) => void;
 }
 
 const AvatarCreator: React.FC<AvatarCreatorProps> = (props) => {
@@ -53,7 +55,7 @@ const AvatarCreator: React.FC<AvatarCreatorProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, settings, checkCredits } = useAppControls();
+    const { t, settings, checkCredits, modelVersion } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
     const { videoTasks, generateVideo } = useVideoGeneration();
     const isMobile = useMediaQuery('(max-width: 768px)');
@@ -85,18 +87,16 @@ const AvatarCreator: React.FC<AvatarCreatorProps> = (props) => {
             historicalImages: [],
             error: null,
         });
-        addImagesToGallery([imageDataUrl]);
+        // REMOVED: addImagesToGallery([imageDataUrl]);
     };
 
     const handleStyleReferenceImageChange = (imageDataUrl: string | null) => {
         onStateChange({
             ...appState,
             styleReferenceImage: imageDataUrl,
-            selectedIdeas: [], // Clear selected ideas when a style ref is used
+            selectedIdeas: [],
         });
-        if (imageDataUrl) {
-            addImagesToGallery([imageDataUrl]);
-        }
+        // REMOVED: if (imageDataUrl) addImagesToGallery([imageDataUrl]);
     };
 
     const handleImageUpload = useCallback((e: ChangeEvent<HTMLInputElement>) => {
@@ -105,9 +105,15 @@ const AvatarCreator: React.FC<AvatarCreatorProps> = (props) => {
 
     const handleUploadedImageChange = (newUrl: string | null) => {
         onStateChange({ ...appState, uploadedImage: newUrl, stage: newUrl ? 'configuring' : 'idle' });
-        if (newUrl) {
-            addImagesToGallery([newUrl]);
-        }
+        // REMOVED: if (newUrl) addImagesToGallery([newUrl]);
+    };
+
+    const handleGeneratedImageChange = (idea: string) => (newUrl: string | null) => {
+        if (!newUrl) return;
+        const newGeneratedImages = { ...appState.generatedImages, [idea]: { status: 'done' as 'done', url: newUrl } };
+        const newHistorical = [...appState.historicalImages, { idea: `${idea}-edit`, url: newUrl }];
+        onStateChange({ ...appState, generatedImages: newGeneratedImages, historicalImages: newHistorical });
+        // REMOVED: addImagesToGallery([newUrl]); // Manual change is an upload/input
     };
 
     const handleOptionChange = (field: keyof AvatarCreatorState['options'], value: string | boolean) => {
@@ -136,7 +142,7 @@ const AvatarCreator: React.FC<AvatarCreatorProps> = (props) => {
     const executeGeneration = async (ideas?: string[]) => {
         if (!appState.uploadedImage) return;
 
-        if (!await checkCredits()) return;
+        // Removed early checkCredits() to allow immediate UI feedback
 
         hasLoggedGeneration.current = false;
 
@@ -145,11 +151,16 @@ const AvatarCreator: React.FC<AvatarCreatorProps> = (props) => {
             const idea = "Style Reference";
             const preGenState = { ...appState, selectedIdeas: [idea] };
             const stage: 'generating' = 'generating';
-            // FIX: Capture intermediate state to pass to subsequent updates, avoiding stale state issues.
-            // FIX: The status property was being inferred as a generic 'string'. Using 'as const' ensures
-            // it's typed as a literal, which is assignable to the 'ImageStatus' type.
+
             const generatingState = { ...appState, stage, generatedImages: { [idea]: { status: 'pending' as const } }, selectedIdeas: [idea] };
+            // Immediate Feedback
             onStateChange(generatingState);
+
+            if (!await checkCredits()) {
+                // Revert
+                onStateChange({ ...appState, stage: 'configuring' });
+                return;
+            }
 
             try {
                 const resultUrl = await generatePatrioticImage(
@@ -166,9 +177,10 @@ const AvatarCreator: React.FC<AvatarCreatorProps> = (props) => {
                     state: { ...preGenState, stage: 'configuring', generatedImages: {}, historicalImages: [], error: null },
                 };
                 const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-                logGeneration('avatar-creator', preGenState, urlWithMetadata);
+                logGeneration('avatar-creator', preGenState, urlWithMetadata, {
+                    api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                });
 
-                // FIX: Pass a state object instead of a function to `onStateChange`.
                 onStateChange({
                     ...generatingState,
                     stage: 'results',
@@ -178,7 +190,6 @@ const AvatarCreator: React.FC<AvatarCreatorProps> = (props) => {
                 addImagesToGallery([urlWithMetadata]);
             } catch (err) {
                 const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
-                // FIX: Pass a state object instead of a function to `onStateChange`.
                 onStateChange({
                     ...generatingState,
                     stage: 'results',
@@ -202,7 +213,14 @@ const AvatarCreator: React.FC<AvatarCreatorProps> = (props) => {
         const randomCount = ideasToGenerate.filter(i => i === randomConceptString).length;
 
         if (randomCount > 0) {
+            // Immediate Feedback
             setIsAnalyzing(true);
+
+            if (!await checkCredits()) {
+                setIsAnalyzing(false);
+                return;
+            }
+
             try {
                 const allCategories = IDEAS_BY_CATEGORY.filter((c: any) => c.key !== 'random');
                 const suggestedCategories = await analyzeAvatarForConcepts(appState.uploadedImage, allCategories);
@@ -236,16 +254,27 @@ const AvatarCreator: React.FC<AvatarCreatorProps> = (props) => {
             }
         }
 
+        // Immediate Feedback for Generation Phase
         const stage: 'generating' = 'generating';
-        onStateChange({ ...appState, stage: stage });
 
         const initialGeneratedImages = { ...appState.generatedImages };
         ideasToGenerate.forEach(idea => {
-            // FIX: Add 'as const' to prevent type widening of 'status' to string.
             initialGeneratedImages[idea] = { status: 'pending' as const };
         });
 
         onStateChange({ ...appState, stage: stage, generatedImages: initialGeneratedImages, selectedIdeas: ideasToGenerate });
+
+        // Double check credits if we didn't check in analysis (or if analysis wasn't run)
+        // If randomCount > 0, we checked credits above.
+        // If randomCount == 0, we haven't checked credits yet.
+        // It's safe to check again or check if we haven't checked.
+        // checkCredits() usually doesn't deduct, just checks availability.
+        if (randomCount === 0) {
+            if (!await checkCredits()) {
+                onStateChange({ ...appState, stage: 'configuring' });
+                return;
+            }
+        }
 
         const concurrencyLimit = 2;
         const ideasQueue = [...ideasToGenerate];
@@ -262,7 +291,9 @@ const AvatarCreator: React.FC<AvatarCreatorProps> = (props) => {
                 const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
 
                 if (!hasLoggedGeneration.current) {
-                    logGeneration('avatar-creator', preGenState, urlWithMetadata);
+                    logGeneration('avatar-creator', preGenState, urlWithMetadata, {
+                        api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                    });
                     hasLoggedGeneration.current = true;
                 }
 
@@ -270,7 +301,6 @@ const AvatarCreator: React.FC<AvatarCreatorProps> = (props) => {
                     ...currentAppState,
                     generatedImages: {
                         ...currentAppState.generatedImages,
-                        // FIX: Add 'as const' to prevent type widening of 'status' to string.
                         [idea]: { status: 'done' as const, url: urlWithMetadata },
                     },
                     historicalImages: [...currentAppState.historicalImages, { idea, url: urlWithMetadata }],
@@ -284,7 +314,6 @@ const AvatarCreator: React.FC<AvatarCreatorProps> = (props) => {
                     ...currentAppState,
                     generatedImages: {
                         ...currentAppState.generatedImages,
-                        // FIX: Add 'as const' to prevent type widening of 'status' to string.
                         [idea]: { status: 'error' as const, error: errorMessage },
                     },
                 };
@@ -348,7 +377,9 @@ const AvatarCreator: React.FC<AvatarCreatorProps> = (props) => {
                 state: { ...appState, stage: 'configuring', generatedImages: {}, historicalImages: [], error: null },
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            logGeneration('avatar-creator', preGenState, urlWithMetadata);
+            logGeneration('avatar-creator', preGenState, urlWithMetadata, {
+                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+            });
             onStateChange({
                 ...appState,
                 // FIX: Add 'as const' to prevent type widening of 'status' to string.
@@ -367,13 +398,7 @@ const AvatarCreator: React.FC<AvatarCreatorProps> = (props) => {
         }
     };
 
-    const handleGeneratedImageChange = (idea: string) => (newUrl: string | null) => {
-        if (!newUrl) return;
-        const newGeneratedImages = { ...appState.generatedImages, [idea]: { status: 'done' as 'done', url: newUrl } };
-        const newHistorical = [...appState.historicalImages, { idea: `${idea}-edit`, url: newUrl }];
-        onStateChange({ ...appState, generatedImages: newGeneratedImages, historicalImages: newHistorical });
-        addImagesToGallery([newUrl]);
-    };
+
 
     const handleChooseOtherIdeas = () => {
         onStateChange({ ...appState, stage: 'configuring', generatedImages: {}, historicalImages: [] });

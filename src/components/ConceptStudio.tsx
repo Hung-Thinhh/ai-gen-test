@@ -9,22 +9,31 @@ import ActionablePolaroidCard from './ActionablePolaroidCard';
 import { AppScreenHeader, handleFileUpload as utilHandleFileUpload, ResultsView, OptionsPanel, useAppControls } from './uiUtils';
 
 interface ConceptStudioState { stage: 'configuring' | 'generating' | 'results'; conceptImage: string | null; resultImage: string | null; error: string | null; }
-interface ConceptStudioProps { mainTitle: string; subtitle: string; useSmartTitleWrapping: boolean; smartTitleWrapWords: number; uploaderCaption: string; uploaderDescription: string; addImagesToGallery: (images: string[]) => void; appState: ConceptStudioState; onStateChange: (newState: ConceptStudioState) => void; onReset: () => void; onGoBack: () => void; logGeneration: (appId: string, preGenState: any, thumbnailUrl: string) => void; }
+interface ConceptStudioProps { mainTitle: string; subtitle: string; useSmartTitleWrapping: boolean; smartTitleWrapWords: number; uploaderCaption: string; uploaderDescription: string; addImagesToGallery: (images: string[]) => void; appState: ConceptStudioState; onStateChange: (newState: ConceptStudioState) => void; onReset: () => void; onGoBack: () => void; logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: { api_model_used?: string; }) => void; }
 
 const ConceptStudio: React.FC<ConceptStudioProps> = (props) => {
     const { uploaderCaption, uploaderDescription, addImagesToGallery, appState, onStateChange, onReset, logGeneration, ...headerProps } = props;
-    const { t, checkCredits } = useAppControls();
+    const { t, checkCredits, modelVersion } = useAppControls();
 
     const handleGenerate = async () => {
         if (!appState.conceptImage) return;
-        if (!await checkCredits()) return;
+
+        // Immediate Feedback
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
+
+        if (!await checkCredits()) {
+            onStateChange({ ...appState, stage: 'configuring' });
+            return;
+        }
+
         try {
             const result = await generateBackgroundFromConcept(appState.conceptImage);
             onStateChange({ ...appState, stage: 'results', resultImage: result });
             addImagesToGallery([result]);
-            logGeneration('concept-studio', preGenState, result);
+            logGeneration('concept-studio', preGenState, result, {
+                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+            });
         } catch (err) {
             onStateChange({ ...appState, stage: 'results', error: err instanceof Error ? err.message : "Lỗi." });
         }
@@ -38,7 +47,7 @@ const ConceptStudio: React.FC<ConceptStudioProps> = (props) => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 w-full max-w-7xl mx-auto px-4">
                 <div className="flex flex-col items-center gap-2">
                     <label htmlFor="concept-upload" className="cursor-pointer w-full"><ActionablePolaroidCard type={appState.conceptImage ? 'multi-input' : 'uploader'} caption={uploaderCaption} status="done" mediaUrl={appState.conceptImage || undefined} placeholderType="magic" onImageChange={(url) => onStateChange({ ...appState, conceptImage: url })} /></label>
-                    <input id="concept-upload" type="file" className="hidden" accept="image/*" onChange={(e) => { utilHandleFileUpload(e, (url) => { onStateChange({ ...appState, conceptImage: url, resultImage: null, error: null }); addImagesToGallery([url]); }); }} />
+                    <input id="concept-upload" type="file" className="hidden" accept="image/*" onChange={(e) => { utilHandleFileUpload(e, (url) => { onStateChange({ ...appState, conceptImage: url, resultImage: null, error: null }); /* addImagesToGallery([url]); */ }); }} />
                     <p className="base-font font-bold text-neutral-300 text-center max-w-xs text-xs sm:text-sm">{uploaderDescription}</p>
                 </div>
             </div>

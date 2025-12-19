@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase/client';
 import { uploadToCloudinary } from './cloudinaryService';
-const USERS_TABLE = "profiles";
+const USERS_TABLE = "users";
+const PROFILES_TABLE = "profiles";
 const GUESTS_TABLE = "guest_sessions";
 
 // Helper interface for guest history
@@ -8,6 +9,72 @@ interface GuestHistoryItem {
     url: string;
     timestamp: number;
 }
+
+// Helper for timeouts
+// Helper for timeouts
+const promiseWithTimeout = <T>(promise: PromiseLike<T>, ms: number, label: string): Promise<T> => {
+    return Promise.race([
+        Promise.resolve(promise),
+        new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`Timeout: ${label} took longer than ${ms}ms`)), ms))
+    ]);
+};
+
+
+// Helper to execute operations with JWT retry logic
+const executeWithRetry = async <T>(
+    operationName: string,
+    operation: (client: any) => Promise<{ data: T | null; error: any }>,
+    token?: string
+): Promise<{ data: T | null; error: any }> => {
+    let activeToken = token;
+
+    // If no token provided, try to get current session immediately (for cases where manual passing failed)
+    if (!activeToken) {
+        try {
+            // Add timeout to getSession to prevent hang
+            const { data: sessionData } = await promiseWithTimeout(
+                supabase.auth.getSession(),
+                2000,
+                'getSession_Initial'
+            );
+            activeToken = sessionData.session?.access_token;
+        } catch (e) { /* ignore */ }
+    }
+
+    let client = getFreshClient(activeToken);
+
+    try {
+        // Attempt 1
+        const result = await operation(client);
+
+        if (result.error && (result.error.code === 'PGRST303' || result.error.message?.includes('JWT'))) {
+            console.warn(`[Storage] JWT expired in ${operationName}, refreshing token...`);
+
+            // Force Session Refresh
+            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+
+            if (refreshError || !refreshData.session) {
+                console.error(`[Storage] Token refresh failed for ${operationName}:`, refreshError);
+                // Fallback: Try getSession in case refreshSession is just picky, or user needs generic session
+                const { data: sessionData } = await supabase.auth.getSession();
+                activeToken = sessionData.session?.access_token;
+            } else {
+                activeToken = refreshData.session.access_token;
+            }
+
+            if (activeToken) {
+                // Create new client with new token
+                client = getFreshClient(activeToken);
+                return await operation(client);
+            }
+        }
+
+        return result;
+    } catch (e) {
+        console.error(`[Storage] Unexpected error in ${operationName}:`, e);
+        return { data: null, error: e };
+    }
+};
 
 /**
  * Uploads a Base64 image to Cloudinary (Replaces Firebase Storage) and returns the download URL.
@@ -38,30 +105,31 @@ export const addImageToCloudGallery = async (userId: string, imageUrl: string) =
  * Adds multiple image URLs to the user's Supabase gallery.
  * Handles Read-Modify-Write to prevent race conditions within the batch.
  */
-export const addMultipleImagesToCloudGallery = async (userId: string, imageUrls: string[]) => {
+export const addMultipleImagesToCloudGallery = async (userId: string, imageUrls: string[], token?: string) => {
     try {
         if (!imageUrls.length) return;
 
         // 1. Get current gallery
-        const currentGallery = await getUserCloudGallery(userId);
+        const currentGallery = await getUserCloudGallery(userId, true, token);
 
-        // 2. Add new images (filter duplicates if needed, but arrayUnion usually allows dupes unless Set used)
-        // We just append.
+        // 2. Add new images
         const newGallery = [...currentGallery, ...imageUrls];
+        console.log(`[Storage] Saving gallery for user ${userId}, count: ${newGallery.length}`);
 
-        // 3. Upsert to Supabase
-        const { error } = await supabase
-            .from(USERS_TABLE)
-            .upsert({
-                id: userId,
-                gallery: newGallery,
-                last_updated: new Date().toISOString()
-            }, { onConflict: 'id' });
+        // 3. Upsert with Retry
+        await executeWithRetry(
+            'addMultipleImagesToCloudGallery',
+            async (client) => client
+                .from(PROFILES_TABLE)
+                .upsert({
+                    id: userId,
+                    gallery: newGallery,
+                    last_updated: new Date().toISOString()
+                }, { onConflict: 'id' }),
+            token
+        );
 
-        if (error) {
-            console.error("[Supabase] Upsert Error:", error);
-            throw error;
-        }
+        console.log("[Storage] Save success.");
 
     } catch (error) {
         console.error("Error adding images to cloud gallery:", error);
@@ -72,24 +140,33 @@ export const addMultipleImagesToCloudGallery = async (userId: string, imageUrls:
 /**
  * Fetches the user's gallery from Supabase.
  */
-export const getUserCloudGallery = async (userId: string): Promise<string[]> => {
+export const getUserCloudGallery = async (userId: string, useFreshClient: boolean = false, token?: string): Promise<string[]> => {
     try {
-        const { data, error } = await supabase
-            .from(USERS_TABLE)
+        const fetchOp = async (client: any) => client
+            .from(PROFILES_TABLE)
             .select('gallery')
             .eq('id', userId)
             .maybeSingle();
 
+        let data, error;
+
+        if (useFreshClient) {
+            const result = await executeWithRetry('getUserCloudGallery', fetchOp, token);
+            data = result.data;
+            error = result.error;
+        } else {
+            const result = await fetchOp(supabase);
+            data = result.data;
+            error = result.error;
+        }
+
         if (error) {
-            // If code is PGRST116 (JSON object 0 keys), it means row likely doesn't exist yet
             if (error.code === 'PGRST116') return [];
             console.error("Error fetching cloud gallery:", error);
             return [];
         }
 
         if (data && data.gallery) {
-            // Return reversed to show newest first (assuming we append new ones to end)
-            // Supabase JSONB comes back as array if stored as array
             return Array.isArray(data.gallery) ? [...data.gallery].reverse() : [];
         }
         return [];
@@ -103,46 +180,39 @@ export const getUserCloudGallery = async (userId: string): Promise<string[]> => 
 /**
  * Removes an image from the cloud gallery (Supabase).
  */
-export const removeImageFromCloudGallery = async (userId: string, imageUrl: string) => {
+export const removeImageFromCloudGallery = async (userId: string, imageUrl: string, token?: string) => {
     try {
-        // 1. Get current gallery
-        const currentGallery = await getUserCloudGallery(userId);
+        // Fetch current gallery with retry
+        const fetchResult = await executeWithRetry(
+            'removeImageFromCloudGallery_Fetch',
+            async (client) => client
+                .from(PROFILES_TABLE)
+                .select('gallery')
+                .eq('id', userId)
+                .maybeSingle(),
+            token
+        );
 
-        // 2. Filter out the image (remove by exact string match)
-        const newGallery = currentGallery.filter(url => url !== imageUrl);
-
-        // Note: getUserCloudGallery returns REVERSED array. 
-        // We should ideally maintain order. But filtering is safe. 
-        // When saving back, order might flip if we are not careful about "original" storage order.
-        // For simplicity: we just save the filtered array.
-        // Since we reverse on GET, the "newest" was at index 0. 
-        // If we save this list, the "newest" becomes index 0 in DB (oldest). 
-        // Wait, if getUserCloudGallery reverses it, we are saving the REVERSED list back to DB.
-        // This effectively flips the order every time we save!
-        // FIX: We should fetch RAW gallery first.
-
-        // Re-fetching RAW data to be safe with ordering
-        const { data, error } = await supabase
-            .from(USERS_TABLE)
-            .select('gallery')
-            .eq('id', userId)
-            .maybeSingle();
-
-        if (error) throw error;
+        if (fetchResult.error) throw fetchResult.error;
+        const data = fetchResult.data as { gallery: string[] } | null; // Cast for TS
 
         const rawGallery: string[] = Array.isArray(data?.gallery) ? data.gallery : [];
         const filteredRAWGallery = rawGallery.filter(url => url !== imageUrl);
 
-        // 3. Update Supabase
-        const { error: updateError } = await supabase
-            .from(USERS_TABLE)
-            .update({
-                gallery: filteredRAWGallery,
-                last_updated: new Date().toISOString()
-            })
-            .eq('id', userId);
+        // Update with retry
+        const updateResult = await executeWithRetry(
+            'removeImageFromCloudGallery_Update',
+            async (client) => client
+                .from(PROFILES_TABLE)
+                .update({
+                    gallery: filteredRAWGallery,
+                    last_updated: new Date().toISOString()
+                })
+                .eq('id', userId),
+            token
+        );
 
-        if (updateError) throw updateError;
+        if (updateResult.error) throw updateResult.error;
 
     } catch (error) {
         console.error("Error removing image from cloud gallery:", error);
@@ -186,8 +256,9 @@ export const saveGuestSession = async (guestId: string, ip: string, imageUrl?: s
  */
 export const saveGuestSessionBatch = async (guestId: string, ip: string, imageUrls: string[]) => {
     try {
-        // 1. Get existing session to update history properly
-        const { data } = await supabase
+        // 1. Get existing session to update history properly - Use Fresh Client
+        const client = getFreshClient(); // Explicitly use fresh client for read-modify-write
+        const { data } = await client
             .from(GUESTS_TABLE)
             .select('history')
             .eq('guest_id', guestId)
@@ -215,11 +286,13 @@ export const saveGuestSessionBatch = async (guestId: string, ip: string, imageUr
             history: currentHistory
         };
 
-        const { error } = await supabase
+        // UPSERT using FRESH CLIENT
+        const { error } = await client
             .from(GUESTS_TABLE)
             .upsert(updateData, { onConflict: 'guest_id' });
 
         if (error) throw error;
+        console.log(`[Storage] Guest session updated for ${guestId}, history count: ${currentHistory.length}`);
 
     } catch (error) {
         console.error("Error saving guest session:", error);
@@ -235,8 +308,8 @@ export const getUserCredits = async (userId: string): Promise<number> => {
     try {
         const { data, error } = await supabase
             .from(USERS_TABLE)
-            .select('credits')
-            .eq('id', userId)
+            .select('current_credits')
+            .eq('user_id', userId)
             .single();
 
         if (error) {
@@ -244,7 +317,7 @@ export const getUserCredits = async (userId: string): Promise<number> => {
             return 0;
         }
 
-        return data?.credits ?? 0;
+        return data?.current_credits ?? 0;
     } catch (error) {
         console.error("Error in getUserCredits:", error);
         return 0;
@@ -259,7 +332,7 @@ export const getGuestCredits = async (guestId: string): Promise<number> => {
     try {
         const { data, error } = await supabase
             .from(GUESTS_TABLE)
-            .select('current_credits')
+            .select('credits')
             .eq('guest_id', guestId)
             .maybeSingle();
 
@@ -269,7 +342,7 @@ export const getGuestCredits = async (guestId: string): Promise<number> => {
             return 10;
         }
 
-        return data?.current_credits ?? 10;
+        return data?.credits ?? 10;
     } catch (error) {
         console.error("Error in getGuestCredits:", error);
         return 10;
@@ -292,9 +365,9 @@ export const deductGuestCredit = async (guestId: string, amount: number = 1): Pr
         // Since it's guest data, strict ACID is less critical than UX speed, but let's try to be safe.
         const { data, error } = await supabase
             .from(GUESTS_TABLE)
-            .update({ current_credits: current - amount })
+            .update({ credits: current - amount })
             .eq('guest_id', guestId)
-            .select('current_credits')
+            .select('credits')
             .single();
 
         if (error) {
@@ -302,7 +375,7 @@ export const deductGuestCredit = async (guestId: string, amount: number = 1): Pr
             return current; // Return old balance implies no change
         }
 
-        return data?.current_credits ?? (current - amount);
+        return data?.credits ?? (current - amount);
     } catch (error) {
         console.error("Error in deductGuestCredit:", error);
         return -1;
@@ -313,42 +386,153 @@ export const deductGuestCredit = async (guestId: string, amount: number = 1): Pr
  * Deducts credits from a registered user's capability.
  * Returns the new balance or -1 if deduction failed (e.g. insufficient funds).
  */
-export const deductUserCredit = async (userId: string, amount: number = 1): Promise<number> => {
+// ... (helper to get access token)
+const getAccessToken = async () => {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token;
+};
+
+/**
+ * Deducts credits from a registered user's capability.
+ * Returns the new balance or -1 if deduction failed (e.g. insufficient funds).
+ */
+const getFreshClient = (accessToken?: string) => {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    // Dynamic import to avoid circular dependencies if any
+    const { createClient } = require('@supabase/supabase-js');
+
+    const options: any = {
+        auth: {
+            persistSession: false // stateless request
+        }
+    };
+
+    if (accessToken) {
+        options.global = {
+            headers: {
+                Authorization: `Bearer ${accessToken}`
+            }
+        };
+    }
+
+    return createClient(supabaseUrl, supabaseAnonKey, options);
+}
+
+/**
+ * Deducts credits from a registered user's capability.
+ * Returns the new balance or -1 if deduction failed (e.g. insufficient funds).
+ */
+export const deductUserCredit = async (userId: string, amount: number = 1, token?: string): Promise<number> => {
     try {
-        // First check current balance
-        const { data: user, error: fetchError } = await supabase
-            .from(USERS_TABLE)
-            .select('credits')
-            .eq('id', userId)
-            .single();
+        console.log(`[Storage] deductUserCredit called for ${userId}`);
 
-        if (fetchError || !user) {
-            console.error("Error fetching user credits for deduction:", fetchError);
+        let client = supabase;
+        let shouldUseFreshClient = false;
+
+        // If token is explicitly provided (likely due to previous failures or just good practice), 
+        // we could jump effectively to fresh client? 
+        // BUT strict logic says logic: try global first. 
+        // ACTUALLY, if we are passed a token, it might be safer to use fresh client immediately if global is unreliable.
+        // But let's keep existing fallback logic to not change behavior too much, 
+        // EXCEPT if fallback is triggered, use the passed token.
+
+        // Try with global client first, wrapped in timeout
+        try {
+            // 1. Fetch user credits with timeout
+            const fetchPromise = client
+                .from(USERS_TABLE)
+                .select('current_credits')
+                .eq('user_id', userId)
+                .single();
+
+            const { data: user, error: fetchError } = await promiseWithTimeout<any>(
+                fetchPromise,
+                3000, // Short timeout for first attempt
+                'fetchUserCredits_Global'
+            );
+
+            if (!fetchError && user) {
+                if (user.current_credits < amount) {
+                    console.log(`[Storage] Insufficient credits: ${user.current_credits} < ${amount}`);
+                    return -1;
+                }
+
+                const newBalance = user.current_credits - amount;
+                const updatePromise = client
+                    .from(USERS_TABLE)
+                    .update({ current_credits: newBalance })
+                    .eq('user_id', userId);
+
+                const { error: updateError } = await promiseWithTimeout<any>(
+                    updatePromise,
+                    5000,
+                    'updateUserCredits_Global'
+                );
+
+                if (!updateError) {
+                    console.log("[Storage] Deduct success (Global), new balance:", newBalance);
+                    return newBalance;
+                }
+            } else if (fetchError) {
+                console.warn("Global client fetch error:", fetchError);
+                shouldUseFreshClient = true;
+            }
+
+        } catch (e) {
+            console.warn("Global client timed out or failed, switching to fresh client fallback...", e);
+            shouldUseFreshClient = true;
+        }
+
+        // Use executeWithRetry for robust JWT handling
+        const result = await executeWithRetry('deductUserCredit', async (client) => {
+            // 1. Fetch
+            const { data: user, error: fetchError } = await client
+                .from(USERS_TABLE)
+                .select('current_credits')
+                .eq('user_id', userId)
+                .single();
+
+            if (fetchError) {
+                return { data: null, error: fetchError };
+            }
+
+            if (!user || user.current_credits < amount) {
+                // Not an error per se, but logic failure
+                return { data: -1, error: null }; // Custom signal
+            }
+
+            const newBalance = user.current_credits - amount;
+
+            // 2. Update
+            const { error: updateError } = await client
+                .from(USERS_TABLE)
+                .update({ current_credits: newBalance })
+                .eq('user_id', userId);
+
+            if (updateError) return { data: null, error: updateError };
+
+            return { data: newBalance, error: null };
+
+        }, token);
+
+        if (result.error) {
+            console.error("Error in deductUserCredit (Retry Wrapper):", result.error);
             return -1;
         }
 
-        if (user.credits < amount) {
-            return -1; // Insufficient credits
+        const balance = result.data as number;
+        if (balance !== -1) {
+            console.log("[Storage] Deduct success (Retry Wrapper), new balance:", balance);
         }
+        return balance;
 
-        const newBalance = user.credits - amount;
-
-        const { error: updateError } = await supabase
-            .from(USERS_TABLE)
-            .update({ credits: newBalance })
-            .eq('id', userId);
-
-        if (updateError) {
-            console.error("Error updating user credits:", updateError);
-            return -1;
-        }
-
-        return newBalance;
     } catch (error) {
-        console.error("Error in deductUserCredit:", error);
+        console.error("Error in deductUserCredit (Fatal):", error);
         return -1;
     }
 };
+
 
 /**
  * Transfers guest credits to a user.
@@ -373,9 +557,11 @@ export const transferGuestCreditsToUser = async (guestId: string): Promise<numbe
 /**
  * Fetches the guest's gallery from Supabase.
  */
-export const getGuestCloudGallery = async (guestId: string): Promise<string[]> => {
+export const getGuestCloudGallery = async (guestId: string, useFreshClient: boolean = false): Promise<string[]> => {
     try {
-        const { data, error } = await supabase
+        const client = useFreshClient ? getFreshClient() : supabase;
+
+        const { data, error } = await client
             .from(GUESTS_TABLE)
             .select('history')
             .eq('guest_id', guestId)
@@ -393,3 +579,318 @@ export const getGuestCloudGallery = async (guestId: string): Promise<string[]> =
         return [];
     }
 };
+
+// --- ADMIN FUNCTIONS ---
+
+/**
+ * Fetches all users (for Admin dashboard).
+ * WARNING: This requires Service Role or Admin RLS policy, or the user to be an admin.
+ */
+export const getAllUsers = async (token?: string) => {
+    try {
+        const client = getFreshClient(token);
+
+        // Fetch from 'profiles' table.
+        const { data, error } = await client
+            .from(USERS_TABLE)
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error("Error fetching all users:", error);
+            return [];
+        }
+        return data || [];
+    } catch (error) {
+        console.error("Error fetching all users:", error);
+        return [];
+    }
+};
+
+/**
+ * Updates a user's profile (Admin action).
+ */
+export const updateUser = async (userId: string, updates: any, token?: string) => {
+    try {
+        const client = getFreshClient(token);
+        const { error } = await client
+            .from(USERS_TABLE)
+            .update(updates)
+            .eq('user_id', userId);
+
+        if (error) throw error;
+        return true;
+    } catch (error) {
+        console.error("Error updating user:", error);
+        return false;
+    }
+};
+
+/**
+ * Bans or Unbans a user (Admin action).
+ */
+export const toggleUserBan = async (userId: string, isBanned: boolean, token?: string) => {
+    return updateUser(userId, { banned: isBanned }, token);
+};
+
+// Cache for tool IDs to reduce DB queries
+const toolIdCache = new Map<string, number>();
+
+const getToolId = async (appIdOrName: string): Promise<number | null> => {
+    if (!appIdOrName) return null;
+    if (toolIdCache.has(appIdOrName)) return toolIdCache.get(appIdOrName)!;
+
+    // Special fallback key
+    const FALLBACK_KEY = '___FALLBACK_TOOL_ID___';
+    if (toolIdCache.has(FALLBACK_KEY) && !appIdOrName) return toolIdCache.get(FALLBACK_KEY)!;
+
+    try {
+        // 1. Try matching by tool_key (formerly slug)
+        // Note: DB column is tool_key, PK is tool_id
+        let { data } = await supabase
+            .from('tools')
+            .select('tool_id')
+            .eq('tool_key', appIdOrName)
+            .maybeSingle();
+
+        if (data) {
+            toolIdCache.set(appIdOrName, data.tool_id);
+            return data.tool_id;
+        }
+
+        // 2. Check if it's already a numeric ID
+        const asNum = parseInt(appIdOrName);
+        if (!isNaN(asNum)) {
+            const { data: dataId } = await supabase
+                .from('tools')
+                .select('tool_id')
+                .eq('tool_id', asNum)
+                .maybeSingle();
+            if (dataId) {
+                toolIdCache.set(appIdOrName, dataId.tool_id);
+                return dataId.tool_id;
+            }
+        }
+
+        console.warn(`[Storage] Could not resolve tool_id for '${appIdOrName}'. Trying fallback...`);
+
+        // 3. FALLBACK: Get ANY valid tool ID (e.g. the first one) to ensure FK constraint passes
+        // We prefer a tool named 'general' or 'unknown' but any is better than crashing
+        if (toolIdCache.has(FALLBACK_KEY)) {
+            const fallbackId = toolIdCache.get(FALLBACK_KEY)!;
+            console.log(`[Storage] Using cached fallback tool_id: ${fallbackId} for '${appIdOrName}'`);
+            return fallbackId;
+        }
+
+        // Try to find a tool that looks generic, or just the first one
+        // Try to find a tool that looks generic, or just the first one
+        const { data: fallbackData } = await supabase
+            .from('tools')
+            .select('tool_id')
+            .limit(1)
+            .maybeSingle();
+
+        if (fallbackData) {
+            console.log(`[Storage] Resolved fallback tool_id: ${fallbackData.tool_id}`);
+            toolIdCache.set(FALLBACK_KEY, fallbackData.tool_id);
+            // Also cache this appId to map to this fallback so we don't retry lookup
+            toolIdCache.set(appIdOrName, fallbackData.tool_id);
+            return fallbackData.tool_id;
+        }
+
+        return null;
+    } catch (e) {
+        console.error("Error resolving tool ID:", e);
+        return null;
+    }
+};
+
+/**
+ * Fetches all tools from the database.
+ */
+export const getAllTools = async () => {
+    try {
+        const { data, error } = await supabase
+            .from('tools')
+            .select('*')
+            .order('tool_id', { ascending: true });
+
+        if (error) {
+            console.error("Error fetching tools:", error);
+            return [];
+        }
+        return data || [];
+    } catch (error) {
+        console.error("Error fetching tools:", error);
+        return [];
+    }
+};
+
+/**
+ * Updates a tool's details.
+ */
+export const updateTool = async (toolId: string | number, updates: any, token?: string) => {
+    try {
+        console.log(`[Storage] updateTool called for ID: ${toolId} (Type: ${typeof toolId})`, updates);
+
+        // Define the operation
+        const dbOperation = async (client: any) => {
+            const { data, error } = await client
+                .from('tools')
+                .update(updates)
+                .eq('tool_id', toolId)
+                .select(); // Request returned data to check if row was touched
+
+            if (!error && data && data.length === 0) {
+                console.warn(`[Storage] Update succeeded but 0 rows modified. check RLS or ID: ${toolId}`);
+                // We can treat this as a soft error or just log it. 
+                // For debugging, let's treat it as a failure to alert the user.
+                return { data: false, error: new Error(`Update executed but user or tool not found (RLS or bad ID). ID: ${toolId}`) };
+            }
+
+            return { data: !error, error };
+        };
+
+        // Wrap with timeout and retry
+        const result = await executeWithRetry('updateTool', async (client) => {
+            // Internal timeout just for the DB call part to catch network hangs
+            const timeoutPromise = new Promise<{ data: any, error: any }>((_, reject) =>
+                setTimeout(() => reject(new Error("DB Update Timed Out")), 10000)
+            );
+
+            return Promise.race([
+                dbOperation(client),
+                timeoutPromise
+            ]);
+        }, token);
+
+        if (result.error) {
+            console.error("[Storage] updateTool failed inside retry wrapper:", result.error);
+            throw result.error;
+        }
+
+        console.log(`[Storage] updateTool success`);
+        return true;
+    } catch (error) {
+        console.error("Error updating tool:", error);
+        return false;
+    }
+};
+
+/**
+ * Logs a generation event to the 'generation_history' table.
+ */
+export const logGenerationHistory = async (userId: string, entry: any, token?: string) => {
+    try {
+        const client = getFreshClient(token);
+
+        let resolvedToolId = entry.tool_id;
+
+        // If tool_id is missing or 0, try to resolve from appId provided in entry (if any)
+        // entry usually comes from MainApp.tsx logGeneration which has appId
+        if (!resolvedToolId && entry.appId) {
+            const foundId = await getToolId(entry.appId);
+            if (foundId) resolvedToolId = foundId;
+        }
+
+        // Map frontend fields to DB columns
+        const dbEntry: any = {
+            user_id: userId,
+            output_images: entry.output_images || [],
+            generation_count: entry.generation_count || 1,
+            credits_used: entry.credits_used || 0,
+            api_model_used: entry.api_model_used || 'unknown',
+            generation_time_ms: entry.generation_time_ms || 0,
+            error_message: entry.error_message || null,
+        };
+
+        // Only include tool_id if it's valid (non-zero/null). 
+        // If FK is not nullable, this insert might still fail if we omit it.
+        // But usually nullable FKs are fine. If it's NOT nullable, we are in trouble if we can't find it.
+        // Assuming we default to null if not found, and hope column is nullable.
+        // If not nullable, we might default to 1? But explicit 0 failed.
+        if (resolvedToolId) {
+            dbEntry.tool_id = resolvedToolId;
+        } else {
+            // Try explicit NULL instead of 0
+            dbEntry.tool_id = null;
+        }
+
+        // Use executeWithRetry
+        await executeWithRetry('logGenerationHistory', async (client) => {
+            const { error } = await client
+                .from('generation_history')
+                .insert(dbEntry);
+            return { data: null, error };
+        }, token);
+
+        console.log(`[Storage] Generation log saved. (Tool ID: ${resolvedToolId})`);
+    } catch (error) {
+        console.error("Error in logGenerationHistory:", error);
+    }
+};
+
+// --- PACKAGE / PRICING HELPERS ---
+
+/**
+ * Fetches all pricing packages from the database.
+ */
+export const getAllPackages = async () => {
+    try {
+        const { data, error } = await supabase
+            .from('packages')
+            .select('*')
+            .order('price_vnd', { ascending: true }); // Order by price
+
+        if (error) throw error;
+        return data || [];
+    } catch (error) {
+        console.error("Error fetching packages:", error);
+        return [];
+    }
+};
+
+/**
+ * Updates a pricing package's details.
+ */
+export const updatePackage = async (packageId: string | number, updates: any, token?: string) => {
+    try {
+        console.log(`[Storage] updatePackage called for ID: ${packageId}`, updates);
+
+        const dbOperation = async (client: any) => {
+            const { data, error } = await client
+                .from('packages')
+                .update(updates)
+                .eq('package_id', packageId)
+                .select();
+
+            if (!error && data && data.length === 0) {
+                return { data: false, error: new Error(`Update executed but package not found (RLS or bad ID). ID: ${packageId}`) };
+            }
+
+            return { data: !error, error };
+        };
+
+        const result = await executeWithRetry('updatePackage', async (client) => {
+            const timeoutPromise = new Promise<{ data: any, error: any }>((_, reject) =>
+                setTimeout(() => reject(new Error("DB Update Timed Out")), 10000)
+            );
+
+            return Promise.race([
+                dbOperation(client),
+                timeoutPromise
+            ]);
+        }, token);
+
+        if (result.error) {
+            throw result.error;
+        }
+
+        return true;
+    } catch (error) {
+        console.error("Error updating package:", error);
+        return false;
+    }
+};
+
+

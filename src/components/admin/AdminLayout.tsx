@@ -165,7 +165,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     if (!isClient || authLoading) {
         return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: '#F8F9FA' }}>
+            <Box
+                suppressHydrationWarning
+                sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: '#F8F9FA' }}
+            >
                 <CircularProgress color="primary" />
             </Box>
         );

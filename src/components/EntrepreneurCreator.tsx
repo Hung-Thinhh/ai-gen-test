@@ -40,7 +40,9 @@ interface EntrepreneurCreatorProps {
     onStateChange: (newState: EntrepreneurCreatorState) => void;
     onReset: () => void;
     onGoBack: () => void;
-    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string) => void;
+    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: {
+        api_model_used?: string;
+    }) => void;
 }
 
 const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
@@ -53,7 +55,7 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, settings, checkCredits } = useAppControls();
+    const { t, settings, checkCredits, modelVersion } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
     const { videoTasks, generateVideo } = useVideoGeneration();
     const isMobile = useMediaQuery('(max-width: 768px)');
@@ -85,7 +87,7 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
             historicalImages: [],
             error: null,
         });
-        addImagesToGallery([imageDataUrl]);
+        // addImagesToGallery([imageDataUrl]);
     };
 
     const handleStyleReferenceImageChange = (imageDataUrl: string | null) => {
@@ -94,9 +96,9 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
             styleReferenceImage: imageDataUrl,
             selectedIdeas: [],
         });
-        if (imageDataUrl) {
-            addImagesToGallery([imageDataUrl]);
-        }
+        // if (imageDataUrl) {
+        //     addImagesToGallery([imageDataUrl]);
+        // }
     };
 
     const handleImageUpload = useCallback((e: ChangeEvent<HTMLInputElement>) => {
@@ -109,9 +111,9 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
             uploadedImage: newUrl,
             stage: newUrl ? 'configuring' : 'idle'
         });
-        if (newUrl) {
-            addImagesToGallery([newUrl]);
-        }
+        // if (newUrl) {
+        //     addImagesToGallery([newUrl]);
+        // }
     };
 
     const handleOptionChange = (field: keyof EntrepreneurCreatorState['options'], value: string | boolean) => {
@@ -140,7 +142,7 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
     const executeGeneration = async (ideas?: string[]) => {
         if (!appState.uploadedImage) return;
 
-        if (!await checkCredits()) return;
+        // Removed early checkCredits()
 
         hasLoggedGeneration.current = false;
 
@@ -148,11 +150,16 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
             const idea = "Style Reference";
             const preGenState = { ...appState, selectedIdeas: [idea] };
             const stage: 'generating' = 'generating';
-            // FIX: Capture intermediate state to pass to subsequent updates, avoiding stale state issues.
-            // FIX: The status property was being inferred as a generic 'string'. Using 'as const' ensures
-            // it's typed as a literal, which is assignable to the 'ImageStatus' type.
+
             const generatingState = { ...appState, stage, generatedImages: { [idea]: { status: 'pending' as const } }, selectedIdeas: [idea] };
+            // Immediate Feedback
             onStateChange(generatingState);
+
+            if (!await checkCredits()) {
+                // Revert
+                onStateChange({ ...appState, stage: 'configuring' });
+                return;
+            }
 
             try {
                 const resultUrl = await generateEntrepreneurImage(
@@ -168,8 +175,9 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
                     state: { ...preGenState, stage: 'configuring', generatedImages: {}, historicalImages: [], error: null },
                 };
                 const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-                logGeneration('entrepreneur-creator', preGenState, urlWithMetadata);
-                // FIX: Pass a state object instead of a function to `onStateChange`.
+                logGeneration('entrepreneur-creator', preGenState, urlWithMetadata, {
+                    api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                });
                 onStateChange({
                     ...generatingState,
                     stage: 'results',
@@ -179,7 +187,6 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
                 addImagesToGallery([urlWithMetadata]);
             } catch (err) {
                 const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
-                // FIX: Pass a state object instead of a function to `onStateChange`.
                 onStateChange({
                     ...generatingState,
                     stage: 'results',
@@ -202,7 +209,14 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
         const randomCount = ideasToGenerate.filter(i => i === randomConceptString).length;
 
         if (randomCount > 0) {
+            // Immediate Feedback
             setIsAnalyzing(true);
+
+            if (!await checkCredits()) {
+                setIsAnalyzing(false);
+                return;
+            }
+
             try {
                 const allCategories = IDEAS_BY_CATEGORY.filter((c: any) => c.key !== 'random');
                 const suggestedCategories = await analyzeForEntrepreneurConcepts(appState.uploadedImage, allCategories);
@@ -213,7 +227,6 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
                         .filter((c: any) => suggestedCategories.includes(c.category))
                         .flatMap((c: any) => c.ideas);
                 }
-
                 if (ideaPool.length === 0) {
                     ideaPool = allCategories.flatMap((c: any) => c.ideas);
                 }
@@ -238,15 +251,21 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
         }
 
         const stage: 'generating' = 'generating';
-        onStateChange({ ...appState, stage: stage });
 
         const initialGeneratedImages = { ...appState.generatedImages };
         ideasToGenerate.forEach(idea => {
-            // FIX: Add 'as const' to prevent type widening of 'status' to string.
             initialGeneratedImages[idea] = { status: 'pending' as const };
         });
 
+        // Immediate Feedback
         onStateChange({ ...appState, stage: stage, generatedImages: initialGeneratedImages, selectedIdeas: ideasToGenerate });
+
+        if (randomCount === 0) {
+            if (!await checkCredits()) {
+                onStateChange({ ...appState, stage: 'configuring' });
+                return;
+            }
+        }
 
         const concurrencyLimit = 2;
         const ideasQueue = [...ideasToGenerate];
@@ -263,7 +282,9 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
                 const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
 
                 if (!hasLoggedGeneration.current) {
-                    logGeneration('entrepreneur-creator', preGenState, urlWithMetadata);
+                    logGeneration('entrepreneur-creator', preGenState, urlWithMetadata, {
+                        api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                    });
                     hasLoggedGeneration.current = true;
                 }
 
@@ -271,7 +292,6 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
                     ...currentAppState,
                     generatedImages: {
                         ...currentAppState.generatedImages,
-                        // FIX: Add 'as const' to prevent type widening of 'status' to string.
                         [idea]: { status: 'done' as const, url: urlWithMetadata },
                     },
                     historicalImages: [...currentAppState.historicalImages, { idea, url: urlWithMetadata }],
@@ -285,7 +305,6 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
                     ...currentAppState,
                     generatedImages: {
                         ...currentAppState.generatedImages,
-                        // FIX: Add 'as const' to prevent type widening of 'status' to string.
                         [idea]: { status: 'error' as const, error: errorMessage },
                     },
                 };
@@ -349,7 +368,9 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
                 state: { ...appState, stage: 'configuring', generatedImages: {}, historicalImages: [], error: null },
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            logGeneration('entrepreneur-creator', preGenState, urlWithMetadata);
+            logGeneration('entrepreneur-creator', preGenState, urlWithMetadata, {
+                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+            });
             onStateChange({
                 ...appState,
                 // FIX: Add 'as const' to prevent type widening of 'status' to string.

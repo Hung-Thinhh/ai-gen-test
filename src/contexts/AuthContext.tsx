@@ -11,6 +11,7 @@ interface AuthContextType {
     isLoggedIn: boolean;
     currentUser: string | null;
     role: string | null;
+    token: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -64,6 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const [user, setUser] = useState<User | null>(null);
+    const [token, setToken] = useState<string | null>(null);
     const [userRole, setUserRole] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -71,6 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Get initial session
         supabase.auth.getSession().then(async ({ data: { session } }) => {
             setUser(session?.user ?? null);
+            setToken(session?.access_token ?? null);
 
             // Fetch role immediately for initial session
             if (session?.user) {
@@ -164,6 +167,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
 
                 setUser(session?.user ?? null);
+                setToken(session?.access_token ?? null);
 
                 // Create/update user in database when signed in
                 if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
@@ -250,7 +254,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginGoogle,
         logout,
         isLoggedIn: !!user,
-        currentUser: user?.user_metadata?.full_name || user?.email || null
+        currentUser: user?.user_metadata?.full_name || user?.email || null,
+        token
     };
 
     return (

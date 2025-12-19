@@ -36,32 +36,41 @@ interface ColorPaletteSwapProps {
     onStateChange: (newState: ColorPaletteSwapState) => void;
     onReset: () => void;
     onGoBack: () => void;
-    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string) => void;
+    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: {
+        api_model_used?: string;
+    }) => void;
 }
 
 const ColorPaletteSwap: React.FC<ColorPaletteSwapProps> = (props) => {
     const { uploaderCaptionSource, uploaderDescriptionSource, uploaderCaptionPalette, uploaderDescriptionPalette, addImagesToGallery, appState, onStateChange, onReset, logGeneration, ...headerProps } = props;
-    const { t, checkCredits } = useAppControls();
+    const { t, checkCredits, modelVersion } = useAppControls();
 
     const handleImageUpload = (imageKey: 'sourceImage' | 'paletteImage') => (e: ChangeEvent<HTMLInputElement>) => {
         utilHandleFileUpload(e, (imageDataUrl) => {
             onStateChange({ ...appState, [imageKey]: imageDataUrl, resultImage: null, error: null });
-            addImagesToGallery([imageDataUrl]);
+            // addImagesToGallery([imageDataUrl]);
         });
     };
 
     const handleGenerate = async () => {
         if (!appState.sourceImage || !appState.paletteImage) return;
-        if (!await checkCredits()) return;
 
+        // Immediate Feedback
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
+
+        if (!await checkCredits()) {
+            onStateChange({ ...appState, stage: 'configuring' });
+            return;
+        }
 
         try {
             const result = await swapColorPalette(appState.sourceImage, appState.paletteImage);
             onStateChange({ ...appState, stage: 'results', resultImage: result });
             addImagesToGallery([result]);
-            logGeneration('color-palette-swap', preGenState, result);
+            logGeneration('color-palette-swap', preGenState, result, {
+                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+            });
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "Đã xảy ra lỗi.";
             onStateChange({ ...appState, stage: 'results', error: errorMessage });

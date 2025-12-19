@@ -76,7 +76,7 @@ export const useImageEditor = (): ImageEditorContextType => {
 const AppControlContext = createContext<AppControlContextType | undefined>(undefined);
 
 export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { user, isLoggedIn } = useAuth();
+    const { user, isLoggedIn, token } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
     const [viewHistory, setViewHistory] = useState<ViewState[]>([{ viewId: 'overview', state: { stage: 'home' } }]);
@@ -288,18 +288,19 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         return translation;
     }, [translations]);
 
-    const checkCredits = useCallback(async () => {
+    const checkCredits = useCallback(async (amount: number = 1) => {
         const { deductGuestCredit, deductUserCredit } = await import('../services/storageService');
 
         if (isLoggedIn && user) {
-            const newBalance = await deductUserCredit(user.id, 1);
+            // Pass token to deductUserCredit
+            const newBalance = await deductUserCredit(user.id, amount, token || undefined);
             if (newBalance === -1) {
                 toast.error(t('common_outOfCredits'));
-                // Open upgrade modal or similar?
-                // For now just error
+                console.log("User credit deduction failed (balance -1)");
                 return false;
             }
             setUserCredits(newBalance);
+            console.log("User credit deduction success", newBalance);
             return true;
         }
 
@@ -311,8 +312,10 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         }
 
         try {
-            // Deduct 1 credit
-            const newBalance = await deductGuestCredit(guestId, 1);
+            console.log("Checking guest credits for", guestId);
+            // Deduct X credits
+            const newBalance = await deductGuestCredit(guestId, amount);
+            console.log("Deduct result:", newBalance);
 
             if (newBalance === -1) {
                 console.log("[Guest Check] Limit reached! Opening Login Modal.");
@@ -324,12 +327,13 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             setGuestCredits(newBalance);
             return true;
 
+
         } catch (e) {
             console.error("Guest check failed", e);
             toast.error("Lỗi khi kiểm tra tín dụng. Vui lòng thử lại.");
             return false;
         }
-    }, [isLoggedIn, guestId, user, t]);
+    }, [isLoggedIn, guestId, user, t, token]);
 
 
 
@@ -345,7 +349,15 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             // Pruning can be done here if desired, but IndexedDB is large
             return updatedHistory;
         });
-    }, []);
+
+        // Log to Supabase if logged in
+        if (isLoggedIn && user) {
+            // Non-blocking log
+            storageService.logGenerationHistory(user.id, newEntry, token || undefined)
+                .catch(err => console.error("Failed to log generation to Supabase:", err));
+        }
+
+    }, [isLoggedIn, user, token]);
 
 
     const handleLanguageChange = useCallback((lang: 'vi' | 'en') => {
@@ -355,14 +367,25 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     const handleModelVersionChange = useCallback((version: ModelVersion) => {
         setModelVersion(version);
+        // Sync with global config
+        import('../services/gemini/baseService').then(({ setGlobalModelConfig }) => {
+            setGlobalModelConfig({ modelVersion: version });
+        });
+
         // Auto-set to 1K when switching to V3
         if (version === 'v3') {
             setImageResolution('1K');
+            import('../services/gemini/baseService').then(({ setGlobalModelConfig }) => {
+                setGlobalModelConfig({ imageResolution: '1K' });
+            });
         }
     }, []);
 
     const handleResolutionChange = useCallback((resolution: ImageResolution) => {
         setImageResolution(resolution);
+        import('../services/gemini/baseService').then(({ setGlobalModelConfig }) => {
+            setGlobalModelConfig({ imageResolution: resolution });
+        });
     }, []);
 
     const addImagesToGallery = useCallback(async (newImages: string[]) => {
@@ -376,6 +399,10 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             // 1. Upload all new images to Cloudinary (Parallel)
             const uploadPromises = uniqueNewImages.map(async (img) => {
                 if (img.startsWith('data:image')) {
+                    // Note: uploadImageToCloud uses Cloudinary, doesn't need Supabase token?
+                    // Actually storageService.uploadImageToCloud uses cloudinaryService.
+                    // Let's verify if it needs token. `uploadToCloudinary` uses generic API usually.
+                    // But `addMultipleImagesToCloudGallery` NEEDS token.
                     return await storageService.uploadImageToCloud(user.id, img);
                 } else {
                     return img; // Already a URL
@@ -386,7 +413,7 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 const uploadedUrls = await Promise.all(uploadPromises);
 
                 // 2. Save all URLs to Supabase DB (Batch)
-                await storageService.addMultipleImagesToCloudGallery(user.id, uploadedUrls);
+                await storageService.addMultipleImagesToCloudGallery(user.id, uploadedUrls, token || undefined);
 
                 toast.success('Đã lưu ảnh vào Cloud!');
                 setImageGallery(prev => {
@@ -431,19 +458,19 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             await db.addMultipleGalleryImages(processedImages);
             setImageGallery(prev => [...processedImages, ...prev]);
         }
-    }, [imageGallery, isLoggedIn, user]);
+    }, [imageGallery, isLoggedIn, user, token]);
 
     const removeImageFromGallery = useCallback(async (indexToRemove: number) => {
         const urlToDelete = imageGallery[indexToRemove];
         if (urlToDelete) {
             if (isLoggedIn && user) {
-                await storageService.removeImageFromCloudGallery(user.id, urlToDelete);
+                await storageService.removeImageFromCloudGallery(user.id, urlToDelete, token || undefined);
             } else {
                 await db.deleteGalleryImage(urlToDelete);
             }
             setImageGallery(prev => prev.filter((_, index) => index !== indexToRemove));
         }
-    }, [imageGallery, isLoggedIn, user]);
+    }, [imageGallery, isLoggedIn, user, token]);
 
     const replaceImageInGallery = useCallback(async (indexToReplace: number, newImageUrl: string) => {
         const oldUrl = imageGallery[indexToReplace];
@@ -456,6 +483,32 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             });
         }
     }, [imageGallery]);
+
+    // NEW: Strict DB Fetch
+    const refreshGallery = useCallback(async () => {
+        try {
+            console.log("Refreshing gallery from DB...");
+            let fetchedImages: string[] = [];
+
+            if (isLoggedIn && user) {
+                // User: Fetch directly from Supabase profiles bucket/table
+                // Use fresh client = true to bypass cache
+                fetchedImages = await storageService.getUserCloudGallery(user.id, true, token || undefined);
+            } else if (guestId) {
+                // Guest: Fetch directly from guest_sessions
+                // Use fresh client = true to bypass cache
+                fetchedImages = await storageService.getGuestCloudGallery(guestId, true);
+            }
+
+            console.log("Gallery refreshed, count:", fetchedImages.length);
+            console.log("Gallery Data:", fetchedImages); // Debug Log
+            // Replace local state purely with DB data
+            setImageGallery(fetchedImages);
+        } catch (error) {
+            console.error("Failed to refresh gallery:", error);
+            toast.error("Không thể tải thư viện ảnh.");
+        }
+    }, [isLoggedIn, user, guestId, token]);
 
     useEffect(() => {
         const fetchSettings = async () => {
@@ -792,6 +845,7 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         v3UsageCount,
         refreshUsageCounts,
         checkCredits,
+        refreshGallery, // NEW
         openLoginModal: () => setIsLoginModalOpen(true),
         closeLoginModal: () => setIsLoginModalOpen(false),
         addGenerationToHistory,
@@ -846,7 +900,7 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         isLayerComposerMounted, isLayerComposerVisible, isLoginModalOpen,
         language, generationHistory, modelVersion, imageResolution,
         guestCredits, userCredits, v2UsageCount, v3UsageCount,
-        refreshUsageCounts, checkCredits,
+        refreshUsageCounts, checkCredits, refreshGallery,
         addGenerationToHistory, addImagesToGallery, removeImageFromGallery,
         replaceImageInGallery, handleThemeChange, handleLanguageChange,
         handleModelVersionChange, handleResolutionChange,

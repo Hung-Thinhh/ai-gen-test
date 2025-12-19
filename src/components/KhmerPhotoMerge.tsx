@@ -29,7 +29,7 @@ interface KhmerPhotoMergeProps {
     onStateChange: (newState: KhmerPhotoMergeState) => void;
     onReset: () => void;
     onGoBack: () => void;
-    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string) => void;
+    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: { api_model_used?: string; }) => void;
     useSmartTitleWrapping?: boolean;
     smartTitleWrapWords?: number;
 }
@@ -84,7 +84,7 @@ const KhmerPhotoMerge: React.FC<KhmerPhotoMergeProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, settings, checkCredits } = useAppControls();
+    const { t, settings, checkCredits, modelVersion } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
     const { generateVideo } = useVideoGeneration();
     const isMobile = useMediaQuery('(max-width: 768px)');
@@ -102,7 +102,7 @@ const KhmerPhotoMerge: React.FC<KhmerPhotoMergeProps> = (props) => {
             generatedImage: null,
             error: null,
         });
-        addImagesToGallery([imageDataUrl]);
+        // REMOVED: addImagesToGallery([imageDataUrl]); // User requested NO auto-save for inputs
     };
 
     const handleImageUpload = useCallback((e: ChangeEvent<HTMLInputElement>) => {
@@ -115,12 +115,11 @@ const KhmerPhotoMerge: React.FC<KhmerPhotoMergeProps> = (props) => {
             uploadedImage: newUrl,
             stage: newUrl ? 'configuring' : 'idle'
         });
-        if (newUrl) {
-            addImagesToGallery([newUrl]);
-        }
+        // REMOVED: if (newUrl) addImagesToGallery([newUrl]); // User requested NO auto-save for inputs
     };
 
     const handleStyleSelect = (templateUrl: string) => {
+        console.log("Selecting style:", templateUrl);
         onStateChange({
             ...appState,
             selectedStyleImage: templateUrl,
@@ -135,17 +134,30 @@ const KhmerPhotoMerge: React.FC<KhmerPhotoMergeProps> = (props) => {
     };
 
     const handleGenerate = async () => {
-        console.log("handleGenerate triggered", { uploaded: !!appState.uploadedImage, style: !!appState.selectedStyleImage });
+        console.log("handleGenerate triggered. State snapshot:", {
+            uploaded: !!appState.uploadedImage,
+            style: !!appState.selectedStyleImage,
+            styleUrl: appState.selectedStyleImage,
+            stage: appState.stage
+        });
+
         if (!appState.uploadedImage || !appState.selectedStyleImage) {
-            console.warn("Missing inputs");
+            console.warn("Missing inputs - aborting generation");
             return;
         }
 
-        if (!await checkCredits()) return;
-
+        // Immediate feedback
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
-        console.log("State updated to generating");
+        console.log("State updated to generating (immediate feedback)");
+
+        if (!await checkCredits()) {
+            console.warn("checkCredits returned false");
+            // Revert
+            onStateChange({ ...appState, stage: 'configuring' });
+            return;
+        }
+        console.log("checkCredits passed");
 
         try {
             const selectedTemplate = TEMPLATES.find(t => t.url === appState.selectedStyleImage);
@@ -167,7 +179,9 @@ const KhmerPhotoMerge: React.FC<KhmerPhotoMergeProps> = (props) => {
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
 
-            logGeneration('khmer-photo-merge', preGenState, urlWithMetadata);
+            logGeneration('khmer-photo-merge', preGenState, urlWithMetadata, {
+                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+            });
 
             onStateChange({
                 ...appState,
@@ -175,6 +189,7 @@ const KhmerPhotoMerge: React.FC<KhmerPhotoMergeProps> = (props) => {
                 generatedImage: urlWithMetadata,
                 historicalImages: [...appState.historicalImages, { style: appState.selectedStyleImage, url: urlWithMetadata }],
             });
+            console.log("Saving generated image to gallery:", urlWithMetadata);
             addImagesToGallery([urlWithMetadata]);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";

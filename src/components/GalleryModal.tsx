@@ -24,7 +24,7 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, images }) 
         navigateLightbox
     } = useLightbox();
 
-    const { t, addImagesToGallery, removeImageFromGallery, replaceImageInGallery } = useAppControls();
+    const { t, addImagesToGallery, removeImageFromGallery, replaceImageInGallery, refreshGallery } = useAppControls();
     const { openImageEditor } = useImageEditor();
     const [isDraggingOver, setIsDraggingOver] = useState(false);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -37,8 +37,11 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, images }) 
             closeLightbox();
             setIsSelectionMode(false);
             setSelectedIndices([]);
+        } else {
+            // Also refresh when modal opens
+            refreshGallery();
         }
-    }, [isOpen, closeLightbox]);
+    }, [isOpen, closeLightbox, refreshGallery]);
 
     const handleDownloadAll = () => {
         const imagesToZip: ImageForZip[] = images.map((url, index) => ({

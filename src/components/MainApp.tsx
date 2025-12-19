@@ -241,7 +241,15 @@ function MainApp() {
         return exportableState;
     }, []);
 
-    const logGeneration = useCallback(async (appId: string, preGenState: any, thumbnailUrl: string) => {
+    const logGeneration = useCallback(async (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: {
+        tool_id?: number;
+        credits_used?: number;
+        api_model_used?: string;
+        generation_time_ms?: number;
+        error_message?: string;
+        output_images?: any;
+        generation_count?: number;
+    }) => {
         if (!settings) return;
 
         const appConfig = settings.apps.find((app: AppConfig) => app.id === appId);
@@ -259,6 +267,7 @@ function MainApp() {
                 viewId: appId,
                 state: cleanedState,
             },
+            ...extraDetails // Spread extra details into the entry
         };
         addGenerationToHistory(entry);
     }, [addGenerationToHistory, settings, t, getExportableState]);

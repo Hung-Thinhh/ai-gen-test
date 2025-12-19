@@ -20,32 +20,41 @@ interface InpainterProps {
     onStateChange: (newState: InpainterState) => void;
     onReset: () => void;
     onGoBack: () => void;
-    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string) => void;
+    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: {
+        api_model_used?: string;
+    }) => void;
 }
 
 const Inpainter: React.FC<InpainterProps> = (props) => {
     const { uploaderCaption, uploaderDescription, addImagesToGallery, appState, onStateChange, onReset, logGeneration, ...headerProps } = props;
-    const { t, checkCredits } = useAppControls();
+    const { t, checkCredits, modelVersion } = useAppControls();
 
     const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
         utilHandleFileUpload(e, (imageDataUrl) => {
             onStateChange({ ...appState, maskedImage: imageDataUrl, resultImage: null, error: null });
-            addImagesToGallery([imageDataUrl]);
+            // addImagesToGallery([imageDataUrl]);
         });
     };
 
     const handleGenerate = async () => {
         if (!appState.maskedImage || !appState.options.prompt.trim()) return;
-        if (!await checkCredits()) return;
 
+        // Immediate Feedback
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
+
+        if (!await checkCredits()) {
+            onStateChange({ ...appState, stage: 'configuring' });
+            return;
+        }
 
         try {
             const result = await inpaintImage(appState.options.prompt, appState.maskedImage, appState.options.additionalInstructions || undefined);
             onStateChange({ ...appState, stage: 'results', resultImage: result });
             addImagesToGallery([result]);
-            logGeneration('inpainter', preGenState, result);
+            logGeneration('inpainter', preGenState, result, {
+                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+            });
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "Đã xảy ra lỗi.";
             onStateChange({ ...appState, stage: 'results', error: errorMessage });

@@ -9,22 +9,32 @@ import ActionablePolaroidCard from './ActionablePolaroidCard';
 import { AppScreenHeader, ResultsView, OptionsPanel, useAppControls } from './uiUtils';
 
 interface TypographicIllustratorState { stage: 'configuring' | 'generating' | 'results'; phrase: string; resultImage: string | null; error: string | null; }
-interface TypographicIllustratorProps { mainTitle: string; subtitle: string; useSmartTitleWrapping: boolean; smartTitleWrapWords: number; addImagesToGallery: (images: string[]) => void; appState: TypographicIllustratorState; onStateChange: (newState: TypographicIllustratorState) => void; onReset: () => void; onGoBack: () => void; logGeneration: (appId: string, preGenState: any, thumbnailUrl: string) => void; }
+interface TypographicIllustratorProps { mainTitle: string; subtitle: string; useSmartTitleWrapping: boolean; smartTitleWrapWords: number; addImagesToGallery: (images: string[]) => void; appState: TypographicIllustratorState; onStateChange: (newState: TypographicIllustratorState) => void; onReset: () => void; onGoBack: () => void; logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: { api_model_used?: string; }) => void; }
 
 const TypographicIllustrator: React.FC<TypographicIllustratorProps> = (props) => {
     const { addImagesToGallery, appState, onStateChange, onReset, logGeneration, ...headerProps } = props;
-    const { t, checkCredits } = useAppControls();
+    const { t, checkCredits, modelVersion } = useAppControls();
 
     const handleGenerate = async () => {
         if (!appState.phrase.trim()) return;
-        if (!await checkCredits()) return;
+
+        // Immediate UI feedback
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
+
+        // Async checks
+        const hasCredits = await checkCredits();
+        if (!hasCredits) {
+            onStateChange({ ...appState, stage: 'configuring' });
+            return;
+        }
         try {
             const result = await generateTypographicIllustration(appState.phrase);
             onStateChange({ ...appState, stage: 'results', resultImage: result });
             addImagesToGallery([result]);
-            logGeneration('typographic-illustrator', preGenState, result);
+            logGeneration('typographic-illustrator', preGenState, result, {
+                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+            });
         } catch (err) {
             onStateChange({ ...appState, stage: 'results', error: err instanceof Error ? err.message : "Lỗi." });
         }

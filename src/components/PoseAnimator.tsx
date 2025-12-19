@@ -11,23 +11,32 @@ import ActionablePolaroidCard from './ActionablePolaroidCard';
 import { AppScreenHeader, handleFileUpload as utilHandleFileUpload, ResultsView, OptionsPanel, useAppControls } from './uiUtils';
 
 interface PoseAnimatorState { stage: 'configuring' | 'generating' | 'results'; poseReferenceImage: string | null; targetImage: string | null; resultImage: string | null; options: { instructions: string }; error: string | null; }
-interface PoseAnimatorProps { mainTitle: string; subtitle: string; useSmartTitleWrapping: boolean; smartTitleWrapWords: number; uploaderCaptionPose: string; uploaderDescriptionPose: string; uploaderCaptionTarget: string; uploaderDescriptionTarget: string; addImagesToGallery: (images: string[]) => void; appState: PoseAnimatorState; onStateChange: (newState: PoseAnimatorState) => void; onReset: () => void; onGoBack: () => void; logGeneration: (appId: string, preGenState: any, thumbnailUrl: string) => void; }
+interface PoseAnimatorProps { mainTitle: string; subtitle: string; useSmartTitleWrapping: boolean; smartTitleWrapWords: number; uploaderCaptionPose: string; uploaderDescriptionPose: string; uploaderCaptionTarget: string; uploaderDescriptionTarget: string; addImagesToGallery: (images: string[]) => void; appState: PoseAnimatorState; onStateChange: (newState: PoseAnimatorState) => void; onReset: () => void; onGoBack: () => void; logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: { api_model_used?: string; }) => void; }
 
 const PoseAnimator: React.FC<PoseAnimatorProps> = (props) => {
     const { uploaderCaptionPose, uploaderDescriptionPose, uploaderCaptionTarget, uploaderDescriptionTarget, addImagesToGallery, appState, onStateChange, onReset, logGeneration, ...headerProps } = props;
-    const { t, checkCredits } = useAppControls();
+    const { t, checkCredits, modelVersion } = useAppControls();
 
     const handleGenerate = async () => {
         if (!appState.poseReferenceImage || !appState.targetImage) return;
-        if (!await checkCredits()) return;
+
+        // Immediate Feedback
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
+
+        if (!await checkCredits()) {
+            onStateChange({ ...appState, stage: 'configuring' });
+            return;
+        }
+
         try {
             const prompt = `Transfer the pose from the first image to match the person in the second image. ${appState.options.instructions}`;
             const result = await generateStyledImage(prompt, [appState.poseReferenceImage, appState.targetImage]);
             onStateChange({ ...appState, stage: 'results', resultImage: result });
             addImagesToGallery([result]);
-            logGeneration('pose-animator', preGenState, result);
+            logGeneration('pose-animator', preGenState, result, {
+                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+            });
         } catch (err) {
             onStateChange({ ...appState, stage: 'results', error: err instanceof Error ? err.message : "Lỗi." });
         }
@@ -42,12 +51,12 @@ const PoseAnimator: React.FC<PoseAnimatorProps> = (props) => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 w-full max-w-7xl mx-auto px-4">
                 <div className="flex flex-col items-center gap-2">
                     <label htmlFor="pose-upload" className="cursor-pointer w-full"><ActionablePolaroidCard type={appState.poseReferenceImage ? 'multi-input' : 'uploader'} caption={uploaderCaptionPose} status="done" mediaUrl={appState.poseReferenceImage || undefined} placeholderType="person" onImageChange={(url) => onStateChange({ ...appState, poseReferenceImage: url })} /></label>
-                    <input id="pose-upload" type="file" className="hidden" accept="image/*" onChange={(e) => { utilHandleFileUpload(e, (url) => { onStateChange({ ...appState, poseReferenceImage: url }); addImagesToGallery([url]); }); }} />
+                    <input id="pose-upload" type="file" className="hidden" accept="image/*" onChange={(e) => { utilHandleFileUpload(e, (url) => { onStateChange({ ...appState, poseReferenceImage: url }); /* addImagesToGallery([url]); */ }); }} />
                     <p className="base-font font-bold text-neutral-300 text-center max-w-xs text-xs sm:text-sm">{uploaderDescriptionPose}</p>
                 </div>
                 <div className="flex flex-col items-center gap-2">
                     <label htmlFor="target-upload" className="cursor-pointer w-full"><ActionablePolaroidCard type={appState.targetImage ? 'multi-input' : 'uploader'} caption={uploaderCaptionTarget} status="done" mediaUrl={appState.targetImage || undefined} placeholderType="person" onImageChange={(url) => onStateChange({ ...appState, targetImage: url })} /></label>
-                    <input id="target-upload" type="file" className="hidden" accept="image/*" onChange={(e) => { utilHandleFileUpload(e, (url) => { onStateChange({ ...appState, targetImage: url }); addImagesToGallery([url]); }); }} />
+                    <input id="target-upload" type="file" className="hidden" accept="image/*" onChange={(e) => { utilHandleFileUpload(e, (url) => { onStateChange({ ...appState, targetImage: url }); /* addImagesToGallery([url]); */ }); }} />
                     <p className="base-font font-bold text-neutral-300 text-center max-w-xs text-xs sm:text-sm">{uploaderDescriptionTarget}</p>
                 </div>
             </div>

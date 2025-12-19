@@ -35,7 +35,9 @@ interface PhotoRestorationProps {
     onStateChange: (newState: PhotoRestorationState) => void;
     onReset: () => void;
     onGoBack: () => void;
-    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string) => void;
+    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: {
+        api_model_used?: string;
+    }) => void;
 }
 
 const PhotoRestoration: React.FC<PhotoRestorationProps> = (props) => {
@@ -46,7 +48,7 @@ const PhotoRestoration: React.FC<PhotoRestorationProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, settings, checkCredits } = useAppControls();
+    const { t, settings, checkCredits, modelVersion } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
 
     // State for searchable nationality dropdown
@@ -91,8 +93,9 @@ const PhotoRestoration: React.FC<PhotoRestorationProps> = (props) => {
             generatedImage: null,
             historicalImages: [],
             error: null,
+
         });
-        addImagesToGallery([imageDataUrl]);
+        // addImagesToGallery([imageDataUrl]);
     };
 
     const handleImageUpload = useCallback((e: ChangeEvent<HTMLInputElement>) => {
@@ -115,10 +118,14 @@ const PhotoRestoration: React.FC<PhotoRestorationProps> = (props) => {
     const executeInitialGeneration = async () => {
         if (!appState.uploadedImage) return;
 
-        if (!await checkCredits()) return;
-
+        // Immediate Feedback
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
+
+        if (!await checkCredits()) {
+            onStateChange({ ...appState, stage: 'configuring' });
+            return;
+        }
 
         try {
             const resultUrl = await restoreOldPhoto(appState.uploadedImage, appState.options);
@@ -127,7 +134,9 @@ const PhotoRestoration: React.FC<PhotoRestorationProps> = (props) => {
                 state: { ...appState, stage: 'configuring', generatedImage: null, historicalImages: [], error: null },
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            logGeneration('photo-restoration', preGenState, urlWithMetadata);
+            logGeneration('photo-restoration', preGenState, urlWithMetadata, {
+                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+            });
             onStateChange({
                 ...appState,
                 stage: 'results',
@@ -144,10 +153,14 @@ const PhotoRestoration: React.FC<PhotoRestorationProps> = (props) => {
     const handleRegeneration = async (prompt: string) => {
         if (!appState.generatedImage) return;
 
-        if (!await checkCredits()) return;
-
+        // Immediate Feedback
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
+
+        if (!await checkCredits()) {
+            onStateChange({ ...appState, stage: 'results' }); // Revert to results
+            return;
+        }
 
         try {
             const resultUrl = await editImageWithPrompt(appState.generatedImage, prompt);
@@ -156,7 +169,9 @@ const PhotoRestoration: React.FC<PhotoRestorationProps> = (props) => {
                 state: { ...appState, stage: 'configuring', generatedImage: null, historicalImages: [], error: null },
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            logGeneration('photo-restoration', preGenState, urlWithMetadata);
+            logGeneration('photo-restoration', preGenState, urlWithMetadata, {
+                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+            });
             onStateChange({
                 ...appState,
                 stage: 'results',
@@ -172,9 +187,9 @@ const PhotoRestoration: React.FC<PhotoRestorationProps> = (props) => {
 
     const handleUploadedImageChange = (newUrl: string | null) => {
         onStateChange({ ...appState, uploadedImage: newUrl, stage: newUrl ? 'configuring' : 'idle' });
-        if (newUrl) {
-            addImagesToGallery([newUrl]);
-        }
+        // if (newUrl) {
+        //     addImagesToGallery([newUrl]);
+        // }
     };
 
     const handleGeneratedImageChange = (newUrl: string | null) => {

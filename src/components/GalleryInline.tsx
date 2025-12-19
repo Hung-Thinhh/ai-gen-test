@@ -35,7 +35,7 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images })
         navigateLightbox
     } = useLightbox();
 
-    const { t, addImagesToGallery, removeImageFromGallery, replaceImageInGallery } = useAppControls();
+    const { t, addImagesToGallery, removeImageFromGallery, replaceImageInGallery, refreshGallery } = useAppControls();
     const { openImageEditor } = useImageEditor();
     const isMobile = useIsMobile();
     const [isDraggingOver, setIsDraggingOver] = useState(false);
@@ -44,6 +44,11 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images })
     const [isCombining, setIsCombining] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+    // Initial Fetch (Strictly from DB)
+    useEffect(() => {
+        refreshGallery();
+    }, [refreshGallery]);
 
     // Pagination state (simpler than infinite scroll)
     const [currentPage, setCurrentPage] = useState(1);

@@ -805,6 +805,14 @@ export interface GenerationHistoryEntry {
         viewId: string;
         state: AnyAppState;
     };
+    // new fields for DB logging
+    tool_id?: number;
+    credits_used?: number;
+    api_model_used?: string;
+    generation_time_ms?: number;
+    error_message?: string;
+    output_images?: any; // jsonb
+    generation_count?: number;
 }
 
 export type ModelVersion = 'v2' | 'v3';
@@ -835,7 +843,7 @@ export interface AppControlContextType {
     isLayerComposerVisible: boolean;
     isLoginModalOpen: boolean;
 
-    checkCredits: () => Promise<boolean>; // NEW
+    checkCredits: (amount?: number) => Promise<boolean>; // Updated to accept amount
     openLoginModal: () => void;
     closeLoginModal: () => void;
     language: 'vi' | 'en';
@@ -850,6 +858,7 @@ export interface AppControlContextType {
     v3UsageCount: number;
     refreshUsageCounts: () => void;
     addGenerationToHistory: (entryData: Omit<GenerationHistoryEntry, 'id' | 'timestamp'>) => Promise<void>;
+    refreshGallery: () => Promise<void>; // NEW
     addImagesToGallery: (newImages: string[]) => Promise<string[] | undefined>;
     removeImageFromGallery: (imageIndex: number) => void;
     replaceImageInGallery: (imageIndex: number, newImageUrl: string) => void;

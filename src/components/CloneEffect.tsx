@@ -34,7 +34,9 @@ interface CloneEffectProps {
     onStateChange: (newState: CloneEffectState) => void;
     onReset: () => void;
     onGoBack: () => void;
-    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string) => void;
+    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: {
+        api_model_used?: string;
+    }) => void;
 }
 
 const CloneEffect: React.FC<CloneEffectProps> = (props) => {
@@ -49,7 +51,7 @@ const CloneEffect: React.FC<CloneEffectProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, checkCredits } = useAppControls();
+    const { t, checkCredits, modelVersion } = useAppControls();
 
     const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
         utilHandleFileUpload(e, (imageDataUrl) => {
@@ -59,16 +61,21 @@ const CloneEffect: React.FC<CloneEffectProps> = (props) => {
                 resultImage: null,
                 error: null,
             });
-            addImagesToGallery([imageDataUrl]);
+            // addImagesToGallery([imageDataUrl]);
         });
     };
 
     const handleGenerate = async () => {
         if (!appState.uploadedImage) return;
-        if (!await checkCredits()) return;
 
+        // Immediate Feedback
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
+
+        if (!await checkCredits()) {
+            onStateChange({ ...appState, stage: 'configuring' });
+            return;
+        }
 
         try {
             const result = await generateCloneEffect(
@@ -77,7 +84,9 @@ const CloneEffect: React.FC<CloneEffectProps> = (props) => {
             );
             onStateChange({ ...appState, stage: 'results', resultImage: result });
             addImagesToGallery([result]);
-            logGeneration('clone-effect', preGenState, result);
+            logGeneration('clone-effect', preGenState, result, {
+                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+            });
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "Đã xảy ra lỗi.";
             onStateChange({ ...appState, stage: 'results', error: errorMessage });

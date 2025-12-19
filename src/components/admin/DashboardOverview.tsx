@@ -2,7 +2,6 @@
 
 import React from 'react';
 import {
-    Grid,
     Paper,
     Typography,
     Box,
@@ -201,8 +200,8 @@ export default function DashboardOverview() {
             </Stack>
 
             {/* Stats Row */}
-            <Grid container spacing={3} mb={4} sx={{ width: '100%', ml: 0 }}>
-                <Grid item xs={12} md={6} lg={3}>
+            <Stack direction={{ xs: 'column', lg: 'row' }} spacing={3} mb={4}>
+                <Box sx={{ flex: { lg: '1 1 25%' } }}>
                     <StatCard
                         title="Người dùng mới"
                         value="1,245"
@@ -211,8 +210,8 @@ export default function DashboardOverview() {
                         chartColor="#31C48D" // Green
                         data={[20, 40, 30, 50, 40, 60, 50, 70, 60, 80]}
                     />
-                </Grid>
-                <Grid item xs={12} md={4} lg={3}>
+                </Box>
+                <Box sx={{ flex: { lg: '1 1 25%' } }}>
                     <StatCard
                         title="Credit tiêu thụ"
                         value="325k"
@@ -221,8 +220,8 @@ export default function DashboardOverview() {
                         chartColor="#F05252" // Red
                         data={[80, 70, 60, 50, 40, 30, 20, 10, 20]}
                     />
-                </Grid>
-                <Grid item xs={12} md={4} lg={3}>
+                </Box>
+                <Box sx={{ flex: { lg: '1 1 25%' } }}>
                     <StatCard
                         title="Tổng ảnh tạo"
                         value="48.2k"
@@ -231,8 +230,8 @@ export default function DashboardOverview() {
                         chartColor="#9CA3AF" // Grey
                         data={[20, 25, 22, 30, 35, 32, 28, 30, 40]}
                     />
-                </Grid>
-                <Grid item xs={12} md={12} lg={3}>
+                </Box>
+                <Box sx={{ flex: { lg: '1 1 25%' } }}>
                     <Paper sx={{ p: 3, height: '100%', bgcolor: 'background.paper', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                         <Stack direction="row" justifyContent="space-between" mb={2}>
                             <Box>
@@ -258,12 +257,12 @@ export default function DashboardOverview() {
                             Xem log lỗi
                         </Button>
                     </Paper>
-                </Grid>
-            </Grid>
+                </Box>
+            </Stack>
 
             {/* Charts Row */}
-            <Grid container spacing={3} mb={6}>
-                <Grid item xs={12} md={7}>
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} mb={6}>
+                <Box sx={{ flex: { md: '7' } }}>
                     <Paper sx={{ p: 5 }}>
                         <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={3}>
                             <Box>
@@ -277,8 +276,8 @@ export default function DashboardOverview() {
                         </Stack>
                         <AreaChartMock />
                     </Paper>
-                </Grid>
-                <Grid item xs={12} md={5}>
+                </Box>
+                <Box sx={{ flex: { md: '5' } }}>
                     <Paper sx={{ p: 3, height: '100%' }}>
                         <Box mb={2}>
                             <Typography variant="h6" fontWeight={700}>Top Mô hình AI</Typography>
@@ -286,8 +285,8 @@ export default function DashboardOverview() {
                         </Box>
                         <BarChartMock />
                     </Paper>
-                </Grid>
-            </Grid>
+                </Box>
+            </Stack>
 
             {/* Details Table */}
             <Box>

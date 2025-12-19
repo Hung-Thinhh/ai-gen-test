@@ -9,7 +9,7 @@ import ActionablePolaroidCard from './ActionablePolaroidCard';
 import { AppScreenHeader, ResultsView, OptionsPanel, useAppControls } from './uiUtils';
 
 interface PortraitGeneratorState { stage: 'configuring' | 'generating' | 'results'; prompt: string; uploadedImage: string | null; resultImage: string | null; options: { style: string; lighting: string; background: string; notes: string }; error: string | null; }
-interface PortraitGeneratorProps { mainTitle: string; subtitle: string; useSmartTitleWrapping: boolean; smartTitleWrapWords: number; addImagesToGallery: (images: string[]) => void; appState: PortraitGeneratorState; onStateChange: (newState: PortraitGeneratorState) => void; onReset: () => void; onGoBack: () => void; logGeneration: (appId: string, preGenState: any, thumbnailUrl: string) => void; }
+interface PortraitGeneratorProps { mainTitle: string; subtitle: string; useSmartTitleWrapping: boolean; smartTitleWrapWords: number; addImagesToGallery: (images: string[]) => void; appState: PortraitGeneratorState; onStateChange: (newState: PortraitGeneratorState) => void; onReset: () => void; onGoBack: () => void; logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: { api_model_used?: string; }) => void; }
 
 // Simple Uploader Component
 const Uploader = ({ onImageUpload, currentImage, onRemove }: { onImageUpload: (file: File) => void, currentImage: string | null, onRemove: () => void }) => {
@@ -37,7 +37,7 @@ const Uploader = ({ onImageUpload, currentImage, onRemove }: { onImageUpload: (f
 
 const PortraitGenerator: React.FC<PortraitGeneratorProps> = (props) => {
     const { addImagesToGallery, appState, onStateChange, onReset, logGeneration, ...headerProps } = props;
-    const { t, checkCredits } = useAppControls();
+    const { t, checkCredits, modelVersion } = useAppControls();
 
     const handleImageUpload = (file: File) => {
         const reader = new FileReader();
@@ -49,16 +49,25 @@ const PortraitGenerator: React.FC<PortraitGeneratorProps> = (props) => {
 
     const handleGenerate = async () => {
         if (!appState.prompt.trim()) return;
-        if (!await checkCredits()) return;
+
+        // Immediate Feedback
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
+
+        if (!await checkCredits()) {
+            onStateChange({ ...appState, stage: 'configuring' });
+            return;
+        }
+
         try {
             const fullPrompt = `Generate a portrait: ${appState.prompt}. Style: ${appState.options.style || 'photorealistic'}. Lighting: ${appState.options.lighting || 'natural'}. Background: ${appState.options.background || 'neutral'}. ${appState.options.notes}`;
             const images = appState.uploadedImage ? [appState.uploadedImage] : [];
             const result = await generateStyledImage(fullPrompt, images);
             onStateChange({ ...appState, stage: 'results', resultImage: result });
             addImagesToGallery([result]);
-            logGeneration('portrait-generator', preGenState, result);
+            logGeneration('portrait-generator', preGenState, result, {
+                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+            });
         } catch (err) {
             onStateChange({ ...appState, stage: 'results', error: err instanceof Error ? err.message : "Lỗi." });
         }

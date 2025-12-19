@@ -45,7 +45,15 @@ interface FreeGenerationProps {
     onStateChange: (newState: FreeGenerationState) => void;
     onReset: () => void;
     onGoBack: () => void;
-    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string) => void;
+    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: {
+        tool_id?: number;
+        credits_used?: number;
+        api_model_used?: string;
+        generation_time_ms?: number;
+        error_message?: string;
+        output_images?: any;
+        generation_count?: number;
+    }) => void;
 }
 
 const NUMBER_OF_IMAGES_OPTIONS = ['1', '2', '3', '4'] as const;
@@ -63,7 +71,7 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, settings, checkCredits } = useAppControls();
+    const { t, settings, checkCredits, modelVersion } = useAppControls();
 
     const { videoTasks, generateVideo } = useVideoGeneration();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
@@ -129,8 +137,6 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
     };
 
     const handleGenerate = async () => {
-        if (!await checkCredits()) return;
-
         if (!localPrompt.trim()) {
             onStateChange({ ...appState, error: "Vui lòng nhập prompt để tạo ảnh." });
             return;
@@ -139,7 +145,10 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
         let finalPrompt = localPrompt;
         if (shouldEnhancePrompt && !appState.image1) {
             setIsEnhancing(true);
-            addImagesToGallery([]); // To satisfy the logGeneration call
+            if (!await checkCredits()) {
+                setIsEnhancing(false);
+                return;
+            }
             try {
                 const enhanced = await enhancePrompt(localPrompt);
                 finalPrompt = enhanced;
@@ -151,6 +160,13 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
                 // Proceed with the original prompt if enhancement fails
             } finally {
                 setIsEnhancing(false);
+            }
+        } else {
+            // Immediate feedback for normal generation
+            onStateChange({ ...appState, stage: 'generating', error: null, generatedImages: [] });
+            if (!await checkCredits()) {
+                onStateChange({ ...appState, stage: 'configuring' });
+                return;
             }
         }
 
@@ -179,7 +195,12 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
             );
 
             if (urlsWithMetadata.length > 0) {
-                logGeneration('free-generation', preGenState, urlsWithMetadata[0]);
+                logGeneration('free-generation', preGenState, urlsWithMetadata[0], {
+                    credits_used: 1,
+                    api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image',
+                    generation_count: urlsWithMetadata.length,
+                    output_images: urlsWithMetadata
+                });
             }
 
             onStateChange({
@@ -199,12 +220,17 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
         const url = appState.generatedImages[index];
         if (!url) return;
 
-        if (!await checkCredits()) return;
-
         const originalGeneratedImages = [...appState.generatedImages];
         const preGenState = { ...appState };
 
+        // Immediate feedback
         onStateChange({ ...appState, stage: 'generating', error: null });
+
+        if (!await checkCredits()) {
+            // Revert if failed
+            onStateChange({ ...appState, stage: 'results' });
+            return;
+        }
 
         try {
             const resultUrl = await editImageWithPrompt(url, prompt, undefined, appState.options.removeWatermark);
@@ -213,7 +239,12 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
                 state: { ...appState, stage: 'configuring', generatedImages: [], historicalImages: [], error: null },
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            logGeneration('free-generation', preGenState, urlWithMetadata);
+            logGeneration('free-generation', preGenState, urlWithMetadata, {
+                credits_used: 1,
+                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image',
+                generation_count: 1,
+                output_images: [urlWithMetadata]
+            });
 
             const newGeneratedImages = [...originalGeneratedImages];
             newGeneratedImages[index] = urlWithMetadata;

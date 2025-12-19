@@ -37,7 +37,9 @@ interface ToyModelCreatorProps {
     onStateChange: (newState: ToyModelCreatorState) => void;
     onReset: () => void;
     onGoBack: () => void;
-    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string) => void;
+    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: {
+        api_model_used?: string;
+    }) => void;
 }
 
 const ToyModelCreator: React.FC<ToyModelCreatorProps> = (props) => {
@@ -48,7 +50,7 @@ const ToyModelCreator: React.FC<ToyModelCreatorProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, settings, checkCredits } = useAppControls();
+    const { t, settings, checkCredits, modelVersion } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
     const { videoTasks, generateVideo } = useVideoGeneration();
     const [localNotes, setLocalNotes] = useState(appState.options.notes);
@@ -138,8 +140,8 @@ const ToyModelCreator: React.FC<ToyModelCreatorProps> = (props) => {
             historicalImages: [],
             error: null,
         });
-        addImagesToGallery([imageDataUrl]);
     };
+    // addImagesToGallery([imageDataUrl]);
 
     const handleImageUpload = useCallback((e: ChangeEvent<HTMLInputElement>) => {
         handleFileUpload(e, handleImageSelectedForUploader);
@@ -147,9 +149,10 @@ const ToyModelCreator: React.FC<ToyModelCreatorProps> = (props) => {
 
     const handleUploadedImageChange = (newUrl: string | null) => {
         onStateChange({ ...appState, uploadedImage: newUrl, stage: newUrl ? 'configuring' : 'idle' });
-        if (newUrl) {
-            addImagesToGallery([newUrl]);
-        }
+        onStateChange({ ...appState, uploadedImage: newUrl, stage: newUrl ? 'configuring' : 'idle' });
+        // if (newUrl) {
+        //     addImagesToGallery([newUrl]);
+        // }
     };
 
     const handleGeneratedImageChange = (newUrl: string | null) => {
@@ -175,10 +178,14 @@ const ToyModelCreator: React.FC<ToyModelCreatorProps> = (props) => {
     const executeInitialGeneration = async () => {
         if (!appState.uploadedImage) return;
 
-        if (!await checkCredits()) return;
-
+        // Immediate Feedback
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
+
+        if (!await checkCredits()) {
+            onStateChange({ ...appState, stage: 'configuring' });
+            return;
+        }
 
         try {
             // No need to transform options, the service handles '' and 'Tự động' correctly
@@ -188,7 +195,9 @@ const ToyModelCreator: React.FC<ToyModelCreatorProps> = (props) => {
                 state: { ...appState, stage: 'configuring', generatedImage: null, historicalImages: [], error: null },
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            logGeneration('toy-model-creator', preGenState, urlWithMetadata);
+            logGeneration('toy-model-creator', preGenState, urlWithMetadata, {
+                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+            });
             onStateChange({
                 ...appState,
                 stage: 'results',
@@ -206,10 +215,14 @@ const ToyModelCreator: React.FC<ToyModelCreatorProps> = (props) => {
     const handleRegeneration = async (prompt: string) => {
         if (!appState.generatedImage) return;
 
-        if (!await checkCredits()) return;
-
+        // Immediate Feedback
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
+
+        if (!await checkCredits()) {
+            onStateChange({ ...appState, stage: 'results' }); // Revert to results
+            return;
+        }
 
         try {
             const resultUrl = await editImageWithPrompt(appState.generatedImage, prompt);
@@ -218,7 +231,9 @@ const ToyModelCreator: React.FC<ToyModelCreatorProps> = (props) => {
                 state: { ...appState, stage: 'configuring', generatedImage: null, historicalImages: [], error: null },
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            logGeneration('toy-model-creator', preGenState, urlWithMetadata);
+            logGeneration('toy-model-creator', preGenState, urlWithMetadata, {
+                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+            });
             onStateChange({
                 ...appState,
                 stage: 'results',

@@ -43,7 +43,9 @@ interface BabyPhotoCreatorProps {
     onStateChange: (newState: BabyPhotoCreatorState) => void;
     onReset: () => void;
     onGoBack: () => void;
-    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string) => void;
+    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: {
+        api_model_used?: string;
+    }) => void;
 }
 
 const BabyPhotoCreator: React.FC<BabyPhotoCreatorProps> = (props) => {
@@ -56,7 +58,7 @@ const BabyPhotoCreator: React.FC<BabyPhotoCreatorProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, settings, checkCredits } = useAppControls();
+    const { t, settings, checkCredits, modelVersion } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
     const { videoTasks, generateVideo } = useVideoGeneration();
     const isMobile = useMediaQuery('(max-width: 768px)');
@@ -88,7 +90,7 @@ const BabyPhotoCreator: React.FC<BabyPhotoCreatorProps> = (props) => {
             historicalImages: [],
             error: null,
         });
-        addImagesToGallery([imageDataUrl]);
+        // REMOVED: addImagesToGallery([imageDataUrl]); // User requested NO auto-save for inputs
     };
 
     const handleStyleReferenceImageChange = (imageDataUrl: string | null) => {
@@ -97,9 +99,7 @@ const BabyPhotoCreator: React.FC<BabyPhotoCreatorProps> = (props) => {
             styleReferenceImage: imageDataUrl,
             selectedIdeas: [],
         });
-        if (imageDataUrl) {
-            addImagesToGallery([imageDataUrl]);
-        }
+        // REMOVED: addImagesToGallery([imageDataUrl]); // User requested NO auto-save for inputs
     };
 
     const handleImageUpload = useCallback((e: ChangeEvent<HTMLInputElement>) => {
@@ -108,9 +108,7 @@ const BabyPhotoCreator: React.FC<BabyPhotoCreatorProps> = (props) => {
 
     const handleUploadedImageChange = (newUrl: string | null) => {
         onStateChange({ ...appState, uploadedImage: newUrl, stage: newUrl ? 'configuring' : 'idle' });
-        if (newUrl) {
-            addImagesToGallery([newUrl]);
-        }
+        // REMOVED: if (newUrl) addImagesToGallery([newUrl]); // User requested NO auto-save for inputs
     };
 
     const handleOptionChange = (field: keyof BabyPhotoCreatorState['options'], value: string | boolean) => {
@@ -139,7 +137,7 @@ const BabyPhotoCreator: React.FC<BabyPhotoCreatorProps> = (props) => {
     const executeGeneration = async (ideas?: string[]) => {
         if (!appState.uploadedImage) return;
 
-        if (!await checkCredits()) return;
+        // Removed early checkCredits() to allow immediate UI feedback
 
         hasLoggedGeneration.current = false;
 
@@ -147,11 +145,16 @@ const BabyPhotoCreator: React.FC<BabyPhotoCreatorProps> = (props) => {
             const idea = "Style Reference";
             const preGenState = { ...appState, selectedIdeas: [idea] };
             const stage: 'generating' = 'generating';
-            // FIX: Capture intermediate state to pass to subsequent updates, avoiding stale state issues.
-            // FIX: The status property was being inferred as a generic 'string'. Using 'as const' ensures
-            // it's typed as a literal, which is assignable to the 'ImageStatus' type.
+
             const generatingState = { ...appState, stage, generatedImages: { [idea]: { status: 'pending' as const } }, selectedIdeas: [idea] };
+            // Immediate Feedback
             onStateChange(generatingState);
+
+            if (!await checkCredits()) {
+                // Revert
+                onStateChange({ ...appState, stage: 'configuring' });
+                return;
+            }
 
             try {
                 const resultUrl = await generateBabyPhoto(
@@ -167,7 +170,9 @@ const BabyPhotoCreator: React.FC<BabyPhotoCreatorProps> = (props) => {
                     state: { ...preGenState, stage: 'configuring', generatedImages: {}, historicalImages: [], error: null },
                 };
                 const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-                logGeneration('baby-photo-creator', preGenState, urlWithMetadata);
+                logGeneration('baby-photo-creator', preGenState, urlWithMetadata, {
+                    api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                });
                 // FIX: Pass a state object instead of a function to `onStateChange`.
                 onStateChange({
                     ...generatingState,
@@ -201,7 +206,14 @@ const BabyPhotoCreator: React.FC<BabyPhotoCreatorProps> = (props) => {
         const randomCount = ideasToGenerate.filter(i => i === randomConceptString).length;
 
         if (randomCount > 0) {
+            // Immediate Feedback
             setIsEstimatingAge(true);
+
+            if (!await checkCredits()) {
+                setIsEstimatingAge(false);
+                return;
+            }
+
             try {
                 const ageGroup = await estimateAgeGroup(appState.uploadedImage);
                 const ageGroupConfig = IDEAS_BY_CATEGORY.find((c: any) => c.key === ageGroup);
@@ -228,7 +240,6 @@ const BabyPhotoCreator: React.FC<BabyPhotoCreatorProps> = (props) => {
         }
 
         const stage: 'generating' = 'generating';
-        onStateChange({ ...appState, stage: stage });
 
         const initialGeneratedImages = { ...appState.generatedImages };
         ideasToGenerate.forEach(idea => {
@@ -237,6 +248,14 @@ const BabyPhotoCreator: React.FC<BabyPhotoCreatorProps> = (props) => {
         });
 
         onStateChange({ ...appState, stage: stage, generatedImages: initialGeneratedImages, selectedIdeas: ideasToGenerate });
+
+        // Double check credits if we didn't check in analysis
+        if (randomCount === 0) {
+            if (!await checkCredits()) {
+                onStateChange({ ...appState, stage: 'configuring' });
+                return;
+            }
+        }
 
         const concurrencyLimit = 2;
         const ideasQueue = [...ideasToGenerate];
@@ -253,7 +272,9 @@ const BabyPhotoCreator: React.FC<BabyPhotoCreatorProps> = (props) => {
                 const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
 
                 if (!hasLoggedGeneration.current) {
-                    logGeneration('baby-photo-creator', preGenState, urlWithMetadata);
+                    logGeneration('baby-photo-creator', preGenState, urlWithMetadata, {
+                        api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                    });
                     hasLoggedGeneration.current = true;
                 }
 
@@ -339,7 +360,9 @@ const BabyPhotoCreator: React.FC<BabyPhotoCreatorProps> = (props) => {
                 state: { ...appState, stage: 'configuring', generatedImages: {}, historicalImages: [], error: null },
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            logGeneration('baby-photo-creator', preGenState, urlWithMetadata);
+            logGeneration('baby-photo-creator', preGenState, urlWithMetadata, {
+                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+            });
             onStateChange({
                 ...appState,
                 // FIX: Add 'as const' to prevent type widening of 'status' to string.

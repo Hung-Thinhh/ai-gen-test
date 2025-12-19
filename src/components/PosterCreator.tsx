@@ -244,12 +244,14 @@ interface PosterCreatorProps {
     smartTitleWrapWords: number;
     uploaderCaption: string;
     uploaderDescription: string;
-    addImagesToGallery: (images: string[]) => void;
+    addImagesToGallery: (images: string[]) => Promise<string[] | undefined>;
     appState: PosterCreatorState;
     onStateChange: (newState: PosterCreatorState) => void;
     onReset: () => void;
     onGoBack: () => void;
-    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string) => void;
+    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: {
+        api_model_used?: string;
+    }) => void;
 }
 
 const MAX_PRODUCT_IMAGES = 3;
@@ -262,7 +264,7 @@ const PosterCreator: React.FC<PosterCreatorProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, checkCredits, user: currentUser, isLoggedIn, guestId, userIp } = useAppControls();
+    const { t, checkCredits, user: currentUser, isLoggedIn, guestId, userIp, modelVersion } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
     const { videoTasks, generateVideo } = useVideoGeneration();
     const [localNotes, setLocalNotes] = useState(appState.options.notes);
@@ -398,9 +400,9 @@ const PosterCreator: React.FC<PosterCreatorProps> = (props) => {
     const handleTextEffectUpload = useCallback((e: ChangeEvent<HTMLInputElement>) => {
         handleFileUpload(e, (imageDataUrl: string) => {
             onStateChange({ ...appState, textEffectImage: imageDataUrl });
-            addImagesToGallery([imageDataUrl]);
+            // REMOVED: addImagesToGallery([imageDataUrl]); // User requested NO auto-save for inputs
         });
-    }, [appState, onStateChange, addImagesToGallery]);
+    }, [appState, onStateChange]);
 
     const handleOptionChange = (field: keyof PosterCreatorState['options'], value: string | boolean | number) => {
         onStateChange({ ...appState, options: { ...appState.options, [field]: value } });
@@ -718,18 +720,16 @@ ${aspectRatioPrompt}
 
     const executeInitialGeneration = async () => {
         if (appState.productImages.length === 0) return;
-        if (!await checkCredits()) return;
 
         const imageCount = appState.options.imageCount || 1;
 
-        // Clear previous images and set pending slots
+        // Clear previous images but KEEP placeholders active
         generatedBlobUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
         generatedBlobUrlsRef.current = [];
         setDisplayImages([]);
-        setPendingImageSlots(imageCount);
+        setPendingImageSlots(imageCount); // Set slots immediately for feedback
 
-        // Switch to configuring stage immediately so user can see progress
-        // Switch to configuring stage immediately so user can see progress
+        // Switch to configuring stage immediately (ensure UI shows results section)
         onStateChange({ ...appState, stage: 'configuring', error: null });
 
         // Scroll to results area immediately
@@ -737,9 +737,15 @@ ${aspectRatioPrompt}
             resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 100);
 
+        // Check credits for TOTAL images
+        if (!await checkCredits(imageCount)) {
+            setPendingImageSlots(0); // Revert
+            return;
+        }
+
         try {
             const prompt = buildPrompt();
-            console.log('Generating poster...');
+            console.log(`Generating ${imageCount} poster(s) in PARALLEL...`);
 
             const imagesToUse: string[] = [];
 
@@ -754,76 +760,74 @@ ${aspectRatioPrompt}
                 });
             };
 
-            // Process inputs sequentially to save memory
+            // Process inputs sequentially to save memory (inputs are few)
             for (const img of appState.productImages) imagesToUse.push(await getBase64(img));
             if (appState.secondaryObjectImage) imagesToUse.push(await getBase64(appState.secondaryObjectImage));
             if (appState.referenceImage) imagesToUse.push(await getBase64(appState.referenceImage));
             if (appState.textEffectImage) imagesToUse.push(await getBase64(appState.textEffectImage));
 
-            const newImages: string[] = [];
-
-            for (let i = 0; i < imageCount; i++) {
-                const resultBase64 = await generateStyledImage(prompt, imagesToUse, `Style: ${selectedStyle}`);
-
-                let imageUrlForDisplay = '';
-
-                // --- CLOUD OFF-LOADING STRATEGY ---
+            // Create an array of promises for parallel execution
+            const generationPromises = Array.from({ length: imageCount }).map(async (_, index) => {
                 try {
-                    if (isLoggedIn && currentUser?.uid) {
-                        // User: Upload to their gallery
-                        imageUrlForDisplay = await storageService.uploadImageToCloud(currentUser.uid, resultBase64);
-                        await storageService.addImageToCloudGallery(currentUser.uid, imageUrlForDisplay);
-                    } else if (guestId) {
-                        // Guest: Upload to guest path
-                        imageUrlForDisplay = await storageService.uploadGuestImage(guestId, resultBase64);
-                        // Track guest session
-                        await storageService.saveGuestSession(guestId, userIp, imageUrlForDisplay);
-                    } else {
-                        // Fallback (should rarely happen if context is right)
+                    // Generate
+                    const resultBase64 = await generateStyledImage(prompt, imagesToUse, `Style: ${selectedStyle} - Variation ${index}`);
+
+                    let imageUrlForDisplay = '';
+
+                    // Upload / Process Result
+                    // Upload / Process Result
+                    try {
+                        // Use context method to ensure sync with Global Gallery State + DB + Cloudinary
+                        // This handles both User and Guest flows internally
+                        const savedUrls = await addImagesToGallery([resultBase64]);
+
+                        if (savedUrls && savedUrls.length > 0) {
+                            imageUrlForDisplay = savedUrls[0];
+                        } else {
+                            // Fallback if save returned nothing (shouldn't happen usually)
+                            const blob = await dataURLtoBlob(resultBase64);
+                            imageUrlForDisplay = URL.createObjectURL(blob);
+                            generatedBlobUrlsRef.current.push(imageUrlForDisplay);
+                        }
+                    } catch (uploadErr) {
+                        console.error("Cloud upload/save failed, falling back to local blob:", uploadErr);
                         const blob = await dataURLtoBlob(resultBase64);
                         imageUrlForDisplay = URL.createObjectURL(blob);
                         generatedBlobUrlsRef.current.push(imageUrlForDisplay);
                     }
-                } catch (uploadErr) {
-                    console.error("Cloud upload failed, falling back to local blob:", uploadErr);
-                    const blob = await dataURLtoBlob(resultBase64);
-                    imageUrlForDisplay = URL.createObjectURL(blob);
-                    generatedBlobUrlsRef.current.push(imageUrlForDisplay);
+
+                    try {
+                        const preGenState = { ...appState, selectedStyle };
+                        logGeneration('poster-creator', preGenState, imageUrlForDisplay, {
+                            api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                        });
+                    } catch (e) {
+                        console.error("Failed to log generation", e);
+                    }
+
+                    // UPDATE STATE IMMEDIATELY upon completion of THIS image
+                    setDisplayImages(prev => [...prev, imageUrlForDisplay]);
+
+                } catch (err) {
+                    console.error(`Error generating image ${index + 1}:`, err);
+                    // Optional: Add a "failed" placeholder or toast
+                } finally {
+                    // Decrement pending count regardless of success/failure
+                    setPendingImageSlots(prev => Math.max(0, prev - 1));
                 }
-
-                // Add to current session display
-                newImages.push(imageUrlForDisplay);
-                setDisplayImages([...newImages]);
-
-                // Decrease pending count
-                setPendingImageSlots(imageCount - i - 1);
-            }
-
-            // Clear pending when done
-            setPendingImageSlots(0);
-
-            // Update state to mark generation complete
-            onStateChange({
-                ...appState,
-                stage: 'configuring',
-                generatedImage: newImages[0] || null,
-                historicalImages: [],
             });
 
-            // Open lightbox on first image
-            openLightbox(appState.productImages.length);
+            // Await all to ensure function doesn't exit early (though state updates happen generally)
+            await Promise.all(generationPromises);
+            console.log("All parallel generations completed.");
 
-            // Save to Gallery (Background)
-            // We use the base64 data to ensure it's saved to Cloudinary/IndexedDB via the central handler
-            // This ensures it appears in the Library
-            addImagesToGallery(newImages);
-
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-            onStateChange({ ...appState, stage: 'configuring', error: errorMessage });
+        } catch (error) {
+            console.error('Fatal error in generation setup:', error);
+            onStateChange({ ...appState, error: 'Failed to start generation.' });
             setPendingImageSlots(0);
         }
     };
+
 
     const handleDownloadAll = () => {
         const inputImages: ImageForZip[] = appState.productImages.map((url, i) => ({

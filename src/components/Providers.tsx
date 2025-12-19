@@ -1,5 +1,7 @@
 "use client";
 import React from 'react';
+import { Toaster } from 'react-hot-toast';
+
 import { AuthProvider } from '../contexts/AuthContext';
 import { SidebarProvider } from '../contexts/SidebarContext';
 import { ThemeProvider } from '../contexts/ThemeContext';
@@ -13,7 +15,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
                 <SidebarProvider>
                     <AppControlProvider>
                         <ImageEditorProvider>
+                            <Toaster position="top-center" />
                             <OAuthRedirect />
+
                             {children}
                         </ImageEditorProvider>
                     </AppControlProvider>

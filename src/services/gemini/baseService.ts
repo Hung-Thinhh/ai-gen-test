@@ -74,6 +74,43 @@ export function parseDataUrl(imageDataUrl: string): { mimeType: string; data: st
 }
 
 /**
+ * Ensures an image input is in the { mimeType, data } format.
+ * If input is a URL, it fetches and converts to base64.
+ * If input is already a data URL, it calls parseDataUrl.
+ */
+export async function normalizeImageInput(input: string): Promise<{ mimeType: string; data: string }> {
+    console.log(`[baseService] normalizeImageInput called with input length: ${input.length}, startsWith: ${input.substring(0, 30)}...`);
+    if (input.startsWith('data:')) {
+        return parseDataUrl(input);
+    }
+
+    try {
+        const response = await fetch(input);
+        if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
+        const blob = await response.blob();
+
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64data = reader.result as string;
+                // reader.result includes "data:image/xyz;base64," prefix
+                const match = base64data.match(/^data:(.+);base64,(.+)$/);
+                if (match) {
+                    resolve({ mimeType: match[1], data: match[2] });
+                } else {
+                    reject(new Error("Failed to convert blob to base64"));
+                }
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    } catch (error) {
+        throw new Error(`Failed to process image URL: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
+
+/**
  * Processes the Gemini API response, extracting the image or throwing an error if none is found.
  * @param response The response from the generateContent call.
  * @returns A data URL string for the generated image.

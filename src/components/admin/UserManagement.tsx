@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Box,
     Typography,
@@ -24,7 +24,8 @@ import {
     Select,
     FormControl,
     InputLabel,
-    MenuItem
+    MenuItem,
+    CircularProgress
 } from '@mui/material';
 import {
     Search as SearchIcon,
@@ -36,19 +37,11 @@ import {
     CheckCircle as CheckCircleIcon,
     Warning as WarningIcon
 } from '@mui/icons-material';
+import { useAuth } from '../../contexts/AuthContext';
+import * as storageService from '../../services/storageService';
+import toast from 'react-hot-toast';
 
-// Mock Data with Plan and Credits
-const INITIAL_USERS = [
-    { id: 1, name: 'Yaga Masamichi', email: 'yaga.masamichi@gmail.com', role: 'Admin', plan: 'Enterprise', credits: 5000, phone: '+1202-555-0180', created: '14 January, 2022', avatar: 'https://i.pravatar.cc/150?u=1', banned: false },
-    { id: 2, name: 'Manami Suda', email: 'manami.suda@gmail.com', role: 'User', plan: 'Free', credits: 15, phone: '+44 20 7946 2233', created: '07 February, 2023', avatar: 'https://i.pravatar.cc/150?u=2', banned: false },
-    { id: 3, name: 'Okkotsu Yuta', email: 'okkotsu.yuta@gmail.com', role: 'User', plan: 'Pro', credits: 450, phone: '+81 80-6543-8899', created: '21 June, 2023', avatar: 'https://i.pravatar.cc/150?u=3', banned: true },
-    { id: 4, name: 'Kugisaki Nobara', email: 'kugisaki.nobara@gmail.com', role: 'Supervisor', plan: 'Pro', credits: 890, phone: '+61 2 9374 4000', created: '03 November, 2023', avatar: 'https://i.pravatar.cc/150?u=4', banned: false },
-    { id: 5, name: 'Nanami Kento', email: 'nanami.kento@gmail.com', role: 'Admin', plan: 'Enterprise', credits: 9000, phone: '+1303-555-0134', created: '30 August, 2021', avatar: 'https://i.pravatar.cc/150?u=5', banned: false },
-    { id: 6, name: 'Fushiguro Megumi', email: 'fushiguro.megumi@gmail.com', role: 'User', plan: 'Free', credits: 0, phone: '+49 30 901820', created: '19 May, 2022', avatar: 'https://i.pravatar.cc/150?u=6', banned: false },
-    { id: 7, name: 'Nitta Akari', email: 'nitta.akari@gmail.com', role: 'Supervisor', plan: 'Pro', credits: 120, phone: '+33 1 4020 5000', created: '12 March, 2023', avatar: 'https://i.pravatar.cc/150?u=7', banned: false },
-    { id: 8, name: 'Inumaki Toge', email: 'inumaki.toge@gmail.com', role: 'User', plan: 'Free', credits: 10, phone: '+82 10-7788-5566', created: '28 July, 2023', avatar: 'https://i.pravatar.cc/150?u=8', banned: false },
-];
-
+// Helper for badges
 const RoleBadge = ({ role }: { role: string }) => {
     let displayRole = role;
     if (role === 'Admin') displayRole = 'Quản trị viên';
@@ -86,7 +79,7 @@ const PlanBadge = ({ plan }: { plan: string }) => {
 
     return (
         <Chip
-            label={plan}
+            label={plan || 'Free'} // Default to Free if undefined
             size="small"
             sx={{
                 bgcolor: bg,
@@ -100,14 +93,45 @@ const PlanBadge = ({ plan }: { plan: string }) => {
 }
 
 export default function UserManagement() {
-    const [users, setUsers] = useState(INITIAL_USERS);
+    const { token } = useAuth();
+    const [users, setUsers] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
     const [openEdit, setOpenEdit] = useState(false);
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [openBanConfirm, setOpenBanConfirm] = useState(false);
     const [userToBan, setUserToBan] = useState<any>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    // Fetch Users on Mount
+    useEffect(() => {
+        const fetchUsers = async () => {
+            setLoading(true);
+            const data = await storageService.getAllUsers(token || undefined);
+
+            // Map Supabase fields to UI fields if necessary
+            // Supabase 'profiles' table usually has: id, email (maybe), full_name, avatar_url, credits, ...
+            const mappedUsers = data.map((u: any) => ({
+                id: u.user_id,
+                name: u.full_name || u.email || 'Unnamed User',
+                email: u.email || 'No Email', // Note: Email might not be in profiles table depending on schema
+                role: u.role || 'User',
+                plan: u.plan || 'Free',
+                credits: u.current_credits || 0,
+                phone: u.phone || '',
+                created: u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A',
+                avatar: u.avatar_url || `https://i.pravatar.cc/150?u=${u.user_id}`,
+                banned: u.banned || false
+            }));
+
+            setUsers(mappedUsers);
+            setLoading(false);
+        };
+
+        fetchUsers();
+    }, [token]);
 
     const handleEditClick = (user: any) => {
-        setCurrentUser(user);
+        setCurrentUser({ ...user }); // Clone to avoid direct mutation
         setOpenEdit(true);
     };
 
@@ -116,10 +140,28 @@ export default function UserManagement() {
         setCurrentUser(null);
     };
 
-    const handleSaveUser = () => {
+    const handleSaveUser = async () => {
         if (!currentUser) return;
+
+        // Optimistic Update
         setUsers(users.map(u => u.id === currentUser.id ? currentUser : u));
         handleCloseEdit();
+
+        // API Call
+        const updates = {
+            role: currentUser.role,
+            plan: currentUser.plan,
+            current_credits: parseInt(currentUser.credits), // Ensure number
+            // Add other editable fields here
+        };
+
+        const success = await storageService.updateUser(currentUser.id, updates, token || undefined);
+        if (success) {
+            toast.success('Cập nhật người dùng thành công');
+        } else {
+            toast.error('Lỗi khi cập nhật người dùng');
+            // Revert on failure (optional, requires keeping old state)
+        }
     };
 
     const handleChange = (field: string, value: any) => {
@@ -131,15 +173,33 @@ export default function UserManagement() {
         setOpenBanConfirm(true);
     };
 
-    const handleConfirmBan = () => {
+    const handleConfirmBan = async () => {
         if (userToBan) {
+            const newBanStatus = !userToBan.banned;
+
+            // Optimistic Update
             setUsers(users.map(u =>
-                u.id === userToBan.id ? { ...u, banned: !u.banned } : u
+                u.id === userToBan.id ? { ...u, banned: newBanStatus } : u
             ));
+
+            setOpenBanConfirm(false);
+            setUserToBan(null);
+
+            // API Call
+            const success = await storageService.toggleUserBan(userToBan.id, newBanStatus, token || undefined);
+            if (success) {
+                toast.success(newBanStatus ? 'Đã cấm người dùng' : 'Đã bỏ cấm người dùng');
+            } else {
+                toast.error('Lỗi khi thay đổi trạng thái cấm');
+            }
         }
-        setOpenBanConfirm(false);
-        setUserToBan(null);
     };
+
+    // Filtering
+    const filteredUsers = users.filter(user =>
+        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     return (
         <Box sx={{ width: '100%', bgcolor: '#FFFFFF', borderRadius: 2, p: 3, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
@@ -175,6 +235,8 @@ export default function UserManagement() {
                     <TextField
                         placeholder="Tìm kiếm..."
                         size="small"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
                         InputProps={{
                             startAdornment: (
                                 <InputAdornment position="start">
@@ -218,56 +280,70 @@ export default function UserManagement() {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {users.map((row) => (
-                            <TableRow
-                                key={row.id}
-                                sx={{
-                                    '&:last-child td, &:last-child th': { border: 0 },
-                                    '&:hover': { bgcolor: '#F9FAFB' }
-                                }}
-                            >
-                                <TableCell padding="checkbox" sx={{ borderBottom: '1px solid #F3F4F6' }}><Checkbox /></TableCell>
-                                <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
-                                    <Avatar src={row.avatar} sx={{ width: 40, height: 40 }} variant="rounded" />
-                                </TableCell>
-                                <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
-                                    <Typography variant="body2" fontWeight={600} color="#111827">{row.name}</Typography>
-                                </TableCell>
-                                <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
-                                    <Typography variant="body2" color="primary.main">{row.email}</Typography>
-                                </TableCell>
-                                <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
-                                    <PlanBadge plan={row.plan} />
-                                </TableCell>
-                                <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
-                                    <Typography variant="body2" fontWeight={600} color="#374151">{row.credits?.toLocaleString()}</Typography>
-                                </TableCell>
-                                <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
-                                    <RoleBadge role={row.role} />
-                                </TableCell>
-                                <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
-                                    <Typography variant="body2" color="#6B7280">{row.phone}</Typography>
-                                </TableCell>
-                                <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
-                                    <Typography variant="body2" color="#6B7280">{row.created}</Typography>
-                                </TableCell>
-                                <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
-                                    <Stack direction="row" spacing={1}>
-                                        <IconButton size="small" onClick={() => handleEditClick(row)} color="primary">
-                                            <EditIcon fontSize="small" />
-                                        </IconButton>
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => handleBanClick(row)}
-                                            color={row.banned ? "success" : "error"}
-                                            title={row.banned ? "Bỏ cấm người dùng" : "Cấm người dùng"}
-                                        >
-                                            {row.banned ? <CheckCircleIcon fontSize="small" /> : <BlockIcon fontSize="small" />}
-                                        </IconButton>
-                                    </Stack>
+                        {loading ? (
+                            <TableRow>
+                                <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
+                                    <CircularProgress />
                                 </TableCell>
                             </TableRow>
-                        ))}
+                        ) : filteredUsers.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
+                                    <Typography color="text.secondary">Không tìm thấy người dùng nào.</Typography>
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            filteredUsers.map((row) => (
+                                <TableRow
+                                    key={row.id}
+                                    sx={{
+                                        '&:last-child td, &:last-child th': { border: 0 },
+                                        '&:hover': { bgcolor: '#F9FAFB' }
+                                    }}
+                                >
+                                    <TableCell padding="checkbox" sx={{ borderBottom: '1px solid #F3F4F6' }}><Checkbox /></TableCell>
+                                    <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
+                                        <Avatar src={row.avatar} sx={{ width: 40, height: 40 }} variant="rounded" />
+                                    </TableCell>
+                                    <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
+                                        <Typography variant="body2" fontWeight={600} color="#111827">{row.name}</Typography>
+                                    </TableCell>
+                                    <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
+                                        <Typography variant="body2" color="primary.main">{row.email}</Typography>
+                                    </TableCell>
+                                    <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
+                                        <PlanBadge plan={row.plan} />
+                                    </TableCell>
+                                    <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
+                                        <Typography variant="body2" fontWeight={600} color="#374151">{row.credits?.toLocaleString()}</Typography>
+                                    </TableCell>
+                                    <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
+                                        <RoleBadge role={row.role} />
+                                    </TableCell>
+                                    <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
+                                        <Typography variant="body2" color="#6B7280">{row.phone || '-'}</Typography>
+                                    </TableCell>
+                                    <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
+                                        <Typography variant="body2" color="#6B7280">{row.created}</Typography>
+                                    </TableCell>
+                                    <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
+                                        <Stack direction="row" spacing={1}>
+                                            <IconButton size="small" onClick={() => handleEditClick(row)} color="primary">
+                                                <EditIcon fontSize="small" />
+                                            </IconButton>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleBanClick(row)}
+                                                color={row.banned ? "success" : "error"}
+                                                title={row.banned ? "Bỏ cấm người dùng" : "Cấm người dùng"}
+                                            >
+                                                {row.banned ? <CheckCircleIcon fontSize="small" /> : <BlockIcon fontSize="small" />}
+                                            </IconButton>
+                                        </Stack>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
                     </TableBody>
                 </Table>
             </TableContainer>
@@ -275,10 +351,10 @@ export default function UserManagement() {
             {/* Pagination */}
             <Stack direction="row" justifyContent="space-between" alignItems="center" mt={3} px={2}>
                 <Typography variant="body2" color="text.secondary">
-                    Hiển thị 1-8 trên 16 mục
+                    Hiển thị {filteredUsers.length} kết quả
                 </Typography>
                 <Pagination
-                    count={2}
+                    count={Math.ceil(filteredUsers.length / 10)}
                     color="secondary"
                     shape="rounded"
                     sx={{
@@ -309,11 +385,12 @@ export default function UserManagement() {
                                 InputProps={{ readOnly: true }}
                             />
                             <Stack direction="row" spacing={2}>
-                                <FormControl fullWidth disabled>
+                                <FormControl fullWidth>
                                     <InputLabel>Gói</InputLabel>
                                     <Select
-                                        value={currentUser.plan}
+                                        value={currentUser.plan || 'Free'}
                                         label="Gói"
+                                        onChange={(e) => handleChange('plan', e.target.value)}
                                     >
                                         <MenuItem value="Free">Free</MenuItem>
                                         <MenuItem value="Pro">Pro</MenuItem>
@@ -325,8 +402,7 @@ export default function UserManagement() {
                                     type="number"
                                     fullWidth
                                     value={currentUser.credits}
-                                    disabled
-                                    InputProps={{ readOnly: true }}
+                                    onChange={(e) => handleChange('credits', e.target.value)}
                                 />
                             </Stack>
                             <FormControl fullWidth>

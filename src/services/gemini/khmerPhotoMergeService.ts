@@ -38,7 +38,7 @@ export async function generateKhmerImage(
     removeWatermark?: boolean,
     aspectRatio?: string
 ): Promise<string> {
-    const { mimeType: userMime, data: userData } = parseDataUrl(userImageDataUrl);
+    const { mimeType: userMime, data: userData } = await import('./baseService').then(m => m.normalizeImageInput(userImageDataUrl));
     const userImagePart = { inlineData: { mimeType: userMime, data: userData } };
 
     const config: any = {};

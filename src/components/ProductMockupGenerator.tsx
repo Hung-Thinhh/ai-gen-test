@@ -9,22 +9,31 @@ import ActionablePolaroidCard from './ActionablePolaroidCard';
 import { AppScreenHeader, handleFileUpload as utilHandleFileUpload, ResultsView, OptionsPanel, useAppControls } from './uiUtils';
 
 interface ProductMockupState { stage: 'configuring' | 'generating' | 'results'; logoImage: string | null; productImage: string | null; resultImage: string | null; error: string | null; }
-interface ProductMockupProps { mainTitle: string; subtitle: string; useSmartTitleWrapping: boolean; smartTitleWrapWords: number; uploaderCaptionLogo: string; uploaderDescriptionLogo: string; uploaderCaptionProduct: string; uploaderDescriptionProduct: string; addImagesToGallery: (images: string[]) => void; appState: ProductMockupState; onStateChange: (newState: ProductMockupState) => void; onReset: () => void; onGoBack: () => void; logGeneration: (appId: string, preGenState: any, thumbnailUrl: string) => void; }
+interface ProductMockupProps { mainTitle: string; subtitle: string; useSmartTitleWrapping: boolean; smartTitleWrapWords: number; uploaderCaptionLogo: string; uploaderDescriptionLogo: string; uploaderCaptionProduct: string; uploaderDescriptionProduct: string; addImagesToGallery: (images: string[]) => void; appState: ProductMockupState; onStateChange: (newState: ProductMockupState) => void; onReset: () => void; onGoBack: () => void; logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: { api_model_used?: string; }) => void; }
 
 const ProductMockupGenerator: React.FC<ProductMockupProps> = (props) => {
     const { uploaderCaptionLogo, uploaderDescriptionLogo, uploaderCaptionProduct, uploaderDescriptionProduct, addImagesToGallery, appState, onStateChange, onReset, logGeneration, ...headerProps } = props;
-    const { t, checkCredits } = useAppControls();
+    const { t, checkCredits, modelVersion } = useAppControls();
 
     const handleGenerate = async () => {
         if (!appState.logoImage || !appState.productImage) return;
-        if (!await checkCredits()) return;
+
+        // Immediate Feedback
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
+
+        if (!await checkCredits()) {
+            onStateChange({ ...appState, stage: 'configuring' });
+            return;
+        }
+
         try {
             const result = await generateProductMockup(appState.logoImage, appState.productImage);
             onStateChange({ ...appState, stage: 'results', resultImage: result });
             addImagesToGallery([result]);
-            logGeneration('product-mockup', preGenState, result);
+            logGeneration('product-mockup', preGenState, result, {
+                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+            });
         } catch (err) {
             onStateChange({ ...appState, stage: 'results', error: err instanceof Error ? err.message : "Lỗi." });
         }
@@ -39,12 +48,12 @@ const ProductMockupGenerator: React.FC<ProductMockupProps> = (props) => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 w-full max-w-7xl mx-auto px-4">
                 <div className="flex flex-col items-center gap-2">
                     <label htmlFor="logo-upload" className="cursor-pointer w-full"><ActionablePolaroidCard type={appState.logoImage ? 'multi-input' : 'uploader'} caption={uploaderCaptionLogo} status="done" mediaUrl={appState.logoImage || undefined} placeholderType="magic" onImageChange={(url) => onStateChange({ ...appState, logoImage: url })} /></label>
-                    <input id="logo-upload" type="file" className="hidden" accept="image/*" onChange={(e) => { utilHandleFileUpload(e, (url) => { onStateChange({ ...appState, logoImage: url }); addImagesToGallery([url]); }); }} />
+                    <input id="logo-upload" type="file" className="hidden" accept="image/*" onChange={(e) => { utilHandleFileUpload(e, (url) => { onStateChange({ ...appState, logoImage: url }); /* addImagesToGallery([url]);*/ }); }} />
                     <p className="base-font font-bold text-neutral-300 text-center max-w-xs text-xs sm:text-sm">{uploaderDescriptionLogo}</p>
                 </div>
                 <div className="flex flex-col items-center gap-2">
                     <label htmlFor="product-upload" className="cursor-pointer w-full"><ActionablePolaroidCard type={appState.productImage ? 'multi-input' : 'uploader'} caption={uploaderCaptionProduct} status="done" mediaUrl={appState.productImage || undefined} placeholderType="magic" onImageChange={(url) => onStateChange({ ...appState, productImage: url })} /></label>
-                    <input id="product-upload" type="file" className="hidden" accept="image/*" onChange={(e) => { utilHandleFileUpload(e, (url) => { onStateChange({ ...appState, productImage: url }); addImagesToGallery([url]); }); }} />
+                    <input id="product-upload" type="file" className="hidden" accept="image/*" onChange={(e) => { utilHandleFileUpload(e, (url) => { onStateChange({ ...appState, productImage: url }); /* addImagesToGallery([url]);*/ }); }} />
                     <p className="base-font font-bold text-neutral-300 text-center max-w-xs text-xs sm:text-sm">{uploaderDescriptionProduct}</p>
                 </div>
             </div>

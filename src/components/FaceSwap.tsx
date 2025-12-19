@@ -29,7 +29,9 @@ interface FaceSwapProps {
     onStateChange: (newState: FaceSwapState) => void;
     onReset: () => void;
     onGoBack: () => void;
-    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string) => void;
+    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: {
+        api_model_used?: string;
+    }) => void;
 }
 
 const FaceSwap: React.FC<FaceSwapProps> = (props) => {
@@ -46,7 +48,7 @@ const FaceSwap: React.FC<FaceSwapProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, checkCredits } = useAppControls();
+    const { t, checkCredits, modelVersion } = useAppControls();
 
     const handleImageUpload = (imageKey: 'sourceImage' | 'targetFaceImage') => (e: ChangeEvent<HTMLInputElement>) => {
         utilHandleFileUpload(e, (imageDataUrl) => {
@@ -56,16 +58,21 @@ const FaceSwap: React.FC<FaceSwapProps> = (props) => {
                 resultImage: null,
                 error: null,
             });
-            addImagesToGallery([imageDataUrl]);
+            // addImagesToGallery([imageDataUrl]);
         });
     };
 
     const handleGenerate = async () => {
         if (!appState.sourceImage || !appState.targetFaceImage) return;
-        if (!await checkCredits()) return;
 
+        // Immediate Feedback
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
+
+        if (!await checkCredits()) {
+            onStateChange({ ...appState, stage: 'configuring' });
+            return;
+        }
 
         try {
             const result = await swapFaces(
@@ -75,7 +82,9 @@ const FaceSwap: React.FC<FaceSwapProps> = (props) => {
             );
             onStateChange({ ...appState, stage: 'results', resultImage: result });
             addImagesToGallery([result]);
-            logGeneration('face-swap', preGenState, result);
+            logGeneration('face-swap', preGenState, result, {
+                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+            });
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "Đã xảy ra lỗi.";
             onStateChange({ ...appState, stage: 'results', error: errorMessage });

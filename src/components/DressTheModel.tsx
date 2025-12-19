@@ -38,7 +38,9 @@ interface DressTheModelProps {
     onStateChange: (newState: DressTheModelState) => void;
     onReset: () => void;
     onGoBack: () => void;
-    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string) => void;
+    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: {
+        api_model_used?: string;
+    }) => void;
 }
 
 
@@ -52,7 +54,7 @@ const DressTheModel: React.FC<DressTheModelProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, settings, checkCredits } = useAppControls();
+    const { t, settings, checkCredits, modelVersion } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
     const { videoTasks, generateVideo } = useVideoGeneration();
     const isMobile = useMediaQuery('(max-width: 768px)');
@@ -79,7 +81,7 @@ const DressTheModel: React.FC<DressTheModelProps> = (props) => {
                 historicalImages: [],
                 error: null,
             });
-            addImagesToGallery([imageDataUrl]);
+            // REMOVED: addImagesToGallery([imageDataUrl]);
         });
     };
 
@@ -93,7 +95,7 @@ const DressTheModel: React.FC<DressTheModelProps> = (props) => {
                 historicalImages: [],
                 error: null,
             });
-            addImagesToGallery([imageDataUrl]);
+            // REMOVED: addImagesToGallery([imageDataUrl]);
         });
     };
 
@@ -103,9 +105,7 @@ const DressTheModel: React.FC<DressTheModelProps> = (props) => {
             stage: newUrl && appState.clothingImage ? 'configuring' : 'idle',
             modelImage: newUrl,
         });
-        if (newUrl) {
-            addImagesToGallery([newUrl]);
-        }
+        // REMOVED: if (newUrl) addImagesToGallery([newUrl]);
     };
     const handleClothingImageChange = (newUrl: string | null) => {
         onStateChange({
@@ -113,15 +113,13 @@ const DressTheModel: React.FC<DressTheModelProps> = (props) => {
             stage: newUrl && appState.modelImage ? 'configuring' : 'idle',
             clothingImage: newUrl,
         });
-        if (newUrl) {
-            addImagesToGallery([newUrl]);
-        }
+        // REMOVED: if (newUrl) addImagesToGallery([newUrl]);
     };
     const handleGeneratedImageChange = (newUrl: string | null) => {
         if (!newUrl) return;
         const newHistorical = [...appState.historicalImages, newUrl];
         onStateChange({ ...appState, stage: 'results', generatedImage: newUrl, historicalImages: newHistorical });
-        addImagesToGallery([newUrl]);
+        // REMOVED: addImagesToGallery([newUrl]);
     };
 
     const handleOptionChange = (field: keyof DressTheModelState['options'], value: string | boolean) => {
@@ -131,10 +129,15 @@ const DressTheModel: React.FC<DressTheModelProps> = (props) => {
     const executeInitialGeneration = async () => {
         if (!appState.modelImage || !appState.clothingImage) return;
 
-        if (!await checkCredits()) return;
-
+        // Immediate Feedback
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
+
+        if (!await checkCredits()) {
+            onStateChange({ ...appState, stage: 'configuring' });
+            return;
+        }
+
         try {
             // No need to transform options, the service handles '' and 'Tự động' correctly
             const resultUrl = await generateDressedModelImage(appState.modelImage, appState.clothingImage, appState.options);
@@ -143,7 +146,9 @@ const DressTheModel: React.FC<DressTheModelProps> = (props) => {
                 state: { ...appState, stage: 'configuring', generatedImage: null, historicalImages: [], error: null },
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            logGeneration('dress-the-model', preGenState, urlWithMetadata);
+            logGeneration('dress-the-model', preGenState, urlWithMetadata, {
+                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+            });
             onStateChange({ ...appState, stage: 'results', generatedImage: urlWithMetadata, historicalImages: [...appState.historicalImages, urlWithMetadata] });
             addImagesToGallery([urlWithMetadata]);
         } catch (err) {
@@ -155,10 +160,15 @@ const DressTheModel: React.FC<DressTheModelProps> = (props) => {
     const handleRegeneration = async (prompt: string) => {
         if (!appState.generatedImage) return;
 
-        if (!await checkCredits()) return;
-
+        // Immediate Feedback
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
+
+        if (!await checkCredits()) {
+            onStateChange({ ...appState, stage: 'results' }); // Revert
+            return;
+        }
+
         try {
             const resultUrl = await editImageWithPrompt(appState.generatedImage, prompt);
             const settingsToEmbed = {
@@ -166,7 +176,9 @@ const DressTheModel: React.FC<DressTheModelProps> = (props) => {
                 state: { ...appState, stage: 'configuring', generatedImage: null, historicalImages: [], error: null },
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            logGeneration('dress-the-model', preGenState, urlWithMetadata);
+            logGeneration('dress-the-model', preGenState, urlWithMetadata, {
+                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+            });
             onStateChange({ ...appState, stage: 'results', generatedImage: urlWithMetadata, historicalImages: [...appState.historicalImages, urlWithMetadata] });
             addImagesToGallery([urlWithMetadata]);
         } catch (err) {

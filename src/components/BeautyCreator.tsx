@@ -41,7 +41,9 @@ interface BeautyCreatorProps {
     onStateChange: (newState: BeautyCreatorState) => void;
     onReset: () => void;
     onGoBack: () => void;
-    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string) => void;
+    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: {
+        api_model_used?: string;
+    }) => void;
 }
 
 const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
@@ -54,7 +56,7 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, settings, checkCredits } = useAppControls();
+    const { t, settings, checkCredits, modelVersion } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
     const { videoTasks, generateVideo } = useVideoGeneration();
     const isMobile = useMediaQuery('(max-width: 768px)');
@@ -86,7 +88,7 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
             historicalImages: [],
             error: null,
         });
-        addImagesToGallery([imageDataUrl]);
+        // REMOVED: addImagesToGallery([imageDataUrl]);
     };
 
     const handleStyleReferenceImageChange = (imageDataUrl: string | null) => {
@@ -95,9 +97,24 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
             styleReferenceImage: imageDataUrl,
             selectedIdeas: [],
         });
-        if (imageDataUrl) {
-            addImagesToGallery([imageDataUrl]);
-        }
+        // REMOVED: if (imageDataUrl) addImagesToGallery([imageDataUrl]);
+    };
+
+    const handleUploadedImageChange = (newUrl: string | null) => {
+        onStateChange({
+            ...appState,
+            uploadedImage: newUrl,
+            stage: newUrl ? 'configuring' : 'idle'
+        });
+        // REMOVED: if (newUrl) addImagesToGallery([newUrl]);
+    };
+
+    const handleGeneratedImageChange = (idea: string) => (newUrl: string | null) => {
+        if (!newUrl) return;
+        const newGeneratedImages = { ...appState.generatedImages, [idea]: { status: 'done' as 'done', url: newUrl } };
+        const newHistorical = [...appState.historicalImages, { idea: `${idea}-edit`, url: newUrl }];
+        onStateChange({ ...appState, generatedImages: newGeneratedImages, historicalImages: newHistorical });
+        // REMOVED: addImagesToGallery([newUrl]);
     };
 
     const handleOptionChange = (field: keyof BeautyCreatorState['options'], value: string | boolean) => {
@@ -131,7 +148,7 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
             return;
         }
 
-        if (!await checkCredits()) return;
+        // Removed early checkCredits()
 
         hasLoggedGeneration.current = false;
 
@@ -139,7 +156,14 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
             const idea = "Style Reference";
             const preGenState = { ...appState, selectedIdeas: [idea] };
             const generatingState = { ...appState, stage: 'generating' as const, generatedImages: { [idea]: { status: 'pending' as const } }, selectedIdeas: [idea] };
+            // Immediate Feedback
             onStateChange(generatingState);
+
+            if (!await checkCredits()) {
+                // Revert
+                onStateChange({ ...appState, stage: 'configuring' });
+                return;
+            }
 
             try {
                 const resultUrl = await generateBeautyImage(appState.uploadedImage, '', appState.options, appState.styleReferenceImage);
@@ -148,7 +172,9 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
                     state: { ...preGenState, stage: 'configuring', generatedImages: {}, historicalImages: [], error: null },
                 };
                 const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-                logGeneration('beauty-creator', preGenState, urlWithMetadata);
+                logGeneration('beauty-creator', preGenState, urlWithMetadata, {
+                    api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                });
                 onStateChange({
                     ...generatingState,
                     stage: 'results',
@@ -180,7 +206,14 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
         const randomCount = ideasToGenerate.filter(i => i === randomConceptString).length;
 
         if (randomCount > 0) {
+            // Immediate Feedback
             setIsAnalyzing(true);
+
+            if (!await checkCredits()) {
+                setIsAnalyzing(false);
+                return;
+            }
+
             try {
                 const suggestedCategories = await analyzeForBeautyConcepts(appState.uploadedImage, IDEAS_BY_CATEGORY);
 
@@ -213,12 +246,21 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
             }
         }
 
+        // Immediate Feedback
         onStateChange({ ...appState, stage: 'generating' });
 
         const initialGeneratedImages = { ...appState.generatedImages };
         // FIX: Add 'as const' to prevent type widening of 'status' to string.
         ideasToGenerate.forEach(idea => { initialGeneratedImages[idea] = { status: 'pending' as const }; });
         onStateChange({ ...appState, stage: 'generating', generatedImages: initialGeneratedImages, selectedIdeas: ideasToGenerate });
+
+        // Double check credits if needed
+        if (randomCount === 0) {
+            if (!await checkCredits()) {
+                onStateChange({ ...appState, stage: 'configuring' });
+                return;
+            }
+        }
 
         const concurrencyLimit = 2;
         const ideasQueue = [...ideasToGenerate];
@@ -235,7 +277,9 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
                 const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
 
                 if (!hasLoggedGeneration.current) {
-                    logGeneration('beauty-creator', preGenState, urlWithMetadata);
+                    logGeneration('beauty-creator', preGenState, urlWithMetadata, {
+                        api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                    });
                     hasLoggedGeneration.current = true;
                 }
 
@@ -298,7 +342,9 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
                 state: { ...appState, stage: 'configuring', generatedImages: {}, historicalImages: [], error: null },
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            logGeneration('beauty-creator', preGenState, urlWithMetadata);
+            logGeneration('beauty-creator', preGenState, urlWithMetadata, {
+                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+            });
             onStateChange({
                 ...appState,
                 // FIX: Add 'as const' to prevent type widening of 'status' to string.
@@ -313,24 +359,7 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
         }
     };
 
-    const handleUploadedImageChange = (newUrl: string | null) => {
-        onStateChange({
-            ...appState,
-            uploadedImage: newUrl,
-            stage: newUrl ? 'configuring' : 'idle'
-        });
-        if (newUrl) {
-            addImagesToGallery([newUrl]);
-        }
-    };
 
-    const handleGeneratedImageChange = (idea: string) => (newUrl: string | null) => {
-        if (!newUrl) return;
-        const newGeneratedImages = { ...appState.generatedImages, [idea]: { status: 'done' as 'done', url: newUrl } };
-        const newHistorical = [...appState.historicalImages, { idea: `${idea}-edit`, url: newUrl }];
-        onStateChange({ ...appState, generatedImages: newGeneratedImages, historicalImages: newHistorical });
-        addImagesToGallery([newUrl]);
-    };
 
     const handleBackToOptions = () => onStateChange({ ...appState, stage: 'configuring', generatedImages: {}, historicalImages: [] });
 

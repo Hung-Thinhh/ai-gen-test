@@ -5,7 +5,6 @@ import {
     Box,
     Typography,
     Paper,
-    Grid,
     TextField,
     Button,
     FormControlLabel,
@@ -50,8 +49,8 @@ export default function Settings() {
 
             {saved && <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }}>Đã lưu cài đặt thành công!</Alert>}
 
-            <Grid container spacing={3}>
-                <Grid item xs={12} md={8}>
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
+                <Box sx={{ flex: { md: '8' } }}>
                     {/* General Settings */}
                     <Paper sx={{ p: 4, mb: 4, bgcolor: '#FFFFFF', borderRadius: 3, border: '1px solid #E5E7EB' }} elevation={0}>
                         <Stack direction="row" gap={2} alignItems="center" mb={3}>
@@ -61,8 +60,8 @@ export default function Settings() {
                             <Typography variant="h6" fontWeight={700}>Cấu hình chung</Typography>
                         </Stack>
 
-                        <Grid container spacing={3}>
-                            <Grid item xs={12} md={6}>
+                        <Stack spacing={3}>
+                            <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
                                 <TextField
                                     fullWidth
                                     label="Tên trang web"
@@ -70,8 +69,6 @@ export default function Settings() {
                                     variant="outlined"
                                     size="small"
                                 />
-                            </Grid>
-                            <Grid item xs={12} md={6}>
                                 <TextField
                                     fullWidth
                                     label="Email hỗ trợ"
@@ -79,19 +76,17 @@ export default function Settings() {
                                     variant="outlined"
                                     size="small"
                                 />
-                            </Grid>
-                            <Grid item xs={12}>
-                                <TextField
-                                    fullWidth
-                                    label="Thông báo Banner"
-                                    multiline
-                                    rows={2}
-                                    placeholder="Nhập thông báo hiển thị trên đầu trang..."
-                                    variant="outlined"
-                                    helperText="Hiển thị thông báo quan trọng cho tất cả người dùng"
-                                />
-                            </Grid>
-                        </Grid>
+                            </Stack>
+                            <TextField
+                                fullWidth
+                                label="Thông báo Banner"
+                                multiline
+                                rows={2}
+                                placeholder="Nhập thông báo hiển thị trên đầu trang..."
+                                variant="outlined"
+                                helperText="Hiển thị thông báo quan trọng cho tất cả người dùng"
+                            />
+                        </Stack>
                     </Paper>
 
                     {/* Feature Flags */}
@@ -103,8 +98,8 @@ export default function Settings() {
                             <Typography variant="h6" fontWeight={700}>Quản lý Tính năng</Typography>
                         </Stack>
 
-                        <Grid container spacing={2}>
-                            <Grid item xs={12} sm={6}>
+                        <Stack spacing={2} direction={{ xs: 'column', sm: 'row' }} flexWrap="wrap">
+                            <Box sx={{ flex: { sm: '1 1 calc(50% - 8px)' } }}>
                                 <Box sx={{ p: 2, border: '1px solid #F3F4F6', borderRadius: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Box>
                                         <Typography variant="subtitle2" fontWeight={600}>Cho phép Khách</Typography>
@@ -112,8 +107,8 @@ export default function Settings() {
                                     </Box>
                                     <Switch defaultChecked color="success" size="small" />
                                 </Box>
-                            </Grid>
-                            <Grid item xs={12} sm={6}>
+                            </Box>
+                            <Box sx={{ flex: { sm: '1 1 calc(50% - 8px)' } }}>
                                 <Box sx={{ p: 2, border: '1px solid #F3F4F6', borderRadius: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Box>
                                         <Typography variant="subtitle2" fontWeight={600}>Thư viện công khai</Typography>
@@ -121,8 +116,8 @@ export default function Settings() {
                                     </Box>
                                     <Switch defaultChecked color="success" size="small" />
                                 </Box>
-                            </Grid>
-                            <Grid item xs={12} sm={6}>
+                            </Box>
+                            <Box sx={{ flex: { sm: '1 1 calc(50% - 8px)' } }}>
                                 <Box sx={{ p: 2, border: '1px solid #F3F4F6', borderRadius: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Box>
                                         <Typography variant="subtitle2" fontWeight={600}>Đăng ký thành viên</Typography>
@@ -130,8 +125,8 @@ export default function Settings() {
                                     </Box>
                                     <Switch defaultChecked color="primary" size="small" />
                                 </Box>
-                            </Grid>
-                            <Grid item xs={12} sm={6}>
+                            </Box>
+                            <Box sx={{ flex: { sm: '1 1 calc(50% - 8px)' } }}>
                                 <Box sx={{ p: 2, border: '1px solid #FEF3C7', bgcolor: '#FFFBEB', borderRadius: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Box>
                                         <Typography variant="subtitle2" fontWeight={600} color="warning.dark">Bảo trì hệ thống</Typography>
@@ -139,12 +134,12 @@ export default function Settings() {
                                     </Box>
                                     <Switch color="warning" size="small" />
                                 </Box>
-                            </Grid>
-                        </Grid>
+                            </Box>
+                        </Stack>
                     </Paper>
-                </Grid>
+                </Box>
 
-                <Grid item xs={12} md={4}>
+                <Box sx={{ flex: { md: '4' } }}>
                     {/* Danger Zone */}
                     <Paper sx={{ p: 3, bgcolor: '#FEF2F2', borderRadius: 3, border: '1px solid #FECACA' }} elevation={0}>
                         <Stack direction="row" gap={1.5} alignItems="center" mb={2}>
@@ -174,8 +169,8 @@ export default function Settings() {
                             Reset User Sessions
                         </Button>
                     </Paper>
-                </Grid>
-            </Grid>
+                </Box>
+            </Stack>
         </Box>
     );
 }

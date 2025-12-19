@@ -38,7 +38,9 @@ interface ImageInterpolationProps {
     onStateChange: (newState: ImageInterpolationState) => void;
     onReset: () => void;
     onGoBack: () => void;
-    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string) => void;
+    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: {
+        api_model_used?: string;
+    }) => void;
 }
 
 const ASPECT_RATIO_OPTIONS = ['Giữ nguyên', '1:1', '2:3', '4:5', '9:16', '1:2', '3:2', '5:4', '16:9', '2:1'];
@@ -53,7 +55,7 @@ const ImageInterpolation: React.FC<ImageInterpolationProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, settings, checkCredits } = useAppControls();
+    const { t, settings, checkCredits, modelVersion } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
     const { videoTasks, generateVideo } = useVideoGeneration();
     const [localGeneratedPrompt, setLocalGeneratedPrompt] = useState(appState.generatedPrompt);
@@ -157,10 +159,14 @@ const ImageInterpolation: React.FC<ImageInterpolationProps> = (props) => {
         const referenceImageToUse = appState.referenceImage || appState.inputImage;
         if (!referenceImageToUse || !appState.generatedPrompt) return;
 
-        if (!await checkCredits()) return;
-
+        // Immediate Feedback
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null, finalPrompt: null });
+
+        if (!await checkCredits()) {
+            onStateChange({ ...appState, stage: 'configuring' });
+            return;
+        }
 
         const skipAdaptation = !appState.referenceImage && !appState.additionalNotes.trim();
         let finalPromptText = '';
@@ -188,7 +194,9 @@ const ImageInterpolation: React.FC<ImageInterpolationProps> = (props) => {
                 state: { ...appState, stage: 'configuring', finalPrompt: null, generatedImage: null, historicalImages: [], error: null },
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            logGeneration('image-interpolation', preGenState, urlWithMetadata);
+            logGeneration('image-interpolation', preGenState, urlWithMetadata, {
+                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+            });
 
             const newHistory = [...appState.historicalImages, { url: urlWithMetadata, prompt: finalPromptText }];
 
@@ -215,10 +223,14 @@ const ImageInterpolation: React.FC<ImageInterpolationProps> = (props) => {
     const handleRegeneration = async (prompt: string) => {
         if (!appState.generatedImage) return;
 
-        if (!await checkCredits()) return;
-
+        // Immediate Feedback
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
+
+        if (!await checkCredits()) {
+            onStateChange({ ...appState, stage: 'results' }); // Revert
+            return;
+        }
 
         try {
             const resultUrl = await editImageWithPrompt(
@@ -233,7 +245,9 @@ const ImageInterpolation: React.FC<ImageInterpolationProps> = (props) => {
                 state: { ...appState, stage: 'configuring', finalPrompt: null, generatedImage: null, historicalImages: [], error: null },
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            logGeneration('image-interpolation', preGenState, urlWithMetadata);
+            logGeneration('image-interpolation', preGenState, urlWithMetadata, {
+                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+            });
 
             const newHistory = [...appState.historicalImages, { url: urlWithMetadata, prompt: prompt }];
 

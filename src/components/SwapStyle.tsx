@@ -42,7 +42,9 @@ interface SwapStyleProps {
     onStateChange: (newState: SwapStyleState) => void;
     onReset: () => void;
     onGoBack: () => void;
-    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string) => void;
+    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: {
+        api_model_used?: string;
+    }) => void;
 }
 
 const SwapStyle: React.FC<SwapStyleProps> = (props) => {
@@ -53,7 +55,7 @@ const SwapStyle: React.FC<SwapStyleProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, settings, checkCredits } = useAppControls();
+    const { t, settings, checkCredits, modelVersion } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
     const { videoTasks, generateVideo } = useVideoGeneration();
     const [localNotes, setLocalNotes] = useState(appState.options.notes);
@@ -96,7 +98,7 @@ const SwapStyle: React.FC<SwapStyleProps> = (props) => {
             historicalImages: [],
             error: null,
         });
-        addImagesToGallery([imageDataUrl]);
+        // addImagesToGallery([imageDataUrl]);
     };
 
     const handleOptionChange = (field: keyof SwapStyleState['options'], value: string | boolean) => {
@@ -109,10 +111,14 @@ const SwapStyle: React.FC<SwapStyleProps> = (props) => {
     const executeInitialGeneration = async () => {
         if (!appState.contentImage) return;
 
-        if (!await checkCredits()) return;
-
+        // Immediate Feedback
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
+
+        if (!await checkCredits()) {
+            onStateChange({ ...appState, stage: 'configuring' });
+            return;
+        }
 
         try {
             let resultUrl: string;
@@ -131,7 +137,9 @@ const SwapStyle: React.FC<SwapStyleProps> = (props) => {
                 state: { ...appState, stage: 'configuring', generatedImage: null, historicalImages: [], error: null },
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            logGeneration('swap-style', preGenState, urlWithMetadata);
+            logGeneration('swap-style', preGenState, urlWithMetadata, {
+                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+            });
             onStateChange({
                 ...appState,
                 stage: 'results',
@@ -148,10 +156,14 @@ const SwapStyle: React.FC<SwapStyleProps> = (props) => {
     const handleRegeneration = async (prompt: string) => {
         if (!appState.generatedImage) return;
 
-        if (!await checkCredits()) return;
-
+        // Immediate Feedback
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
+
+        if (!await checkCredits()) {
+            onStateChange({ ...appState, stage: 'results' }); // Revert to results
+            return;
+        }
 
         try {
             const resultUrl = await editImageWithPrompt(appState.generatedImage, prompt);
@@ -160,7 +172,9 @@ const SwapStyle: React.FC<SwapStyleProps> = (props) => {
                 state: { ...appState, stage: 'configuring', generatedImage: null, historicalImages: [], error: null },
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            logGeneration('swap-style', preGenState, urlWithMetadata);
+            logGeneration('swap-style', preGenState, urlWithMetadata, {
+                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+            });
             onStateChange({
                 ...appState,
                 stage: 'results',
@@ -176,16 +190,16 @@ const SwapStyle: React.FC<SwapStyleProps> = (props) => {
 
     const handleContentImageChange = (newUrl: string | null) => {
         onStateChange({ ...appState, contentImage: newUrl, stage: newUrl ? 'configuring' : 'idle' });
-        if (newUrl) {
-            addImagesToGallery([newUrl]);
-        }
+        // if (newUrl) {
+        //     addImagesToGallery([newUrl]);
+        // }
     };
 
     const handleStyleImageChange = (newUrl: string | null) => {
         onStateChange({ ...appState, styleImage: newUrl });
-        if (newUrl) {
-            addImagesToGallery([newUrl]);
-        }
+        // if (newUrl) {
+        //     addImagesToGallery([newUrl]);
+        // }
     };
 
     const handleGeneratedImageChange = (newUrl: string | null) => {

@@ -39,7 +39,7 @@ const ProductSceneGenerator: React.FC<ProductSceneProps> = (props) => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 w-full max-w-7xl mx-auto px-4">
                 <div className="flex flex-col items-center gap-2">
                     <label htmlFor="prodscene-upload" className="cursor-pointer w-full"><ActionablePolaroidCard type={appState.productImage ? 'multi-input' : 'uploader'} caption={uploaderCaption} status="done" mediaUrl={appState.productImage || undefined} placeholderType="magic" onImageChange={(url) => onStateChange({ ...appState, productImage: url })} /></label>
-                    <input id="prodscene-upload" type="file" className="hidden" accept="image/*" onChange={(e) => { utilHandleFileUpload(e, (url) => { onStateChange({ ...appState, productImage: url, resultImage: null, error: null }); addImagesToGallery([url]); }); }} />
+                    <input id="prodscene-upload" type="file" className="hidden" accept="image/*" onChange={(e) => { utilHandleFileUpload(e, (url) => { onStateChange({ ...appState, productImage: url, resultImage: null, error: null }); /* addImagesToGallery([url]); */ }); }} />
                     <p className="base-font font-bold text-neutral-300 text-center max-w-xs text-xs sm:text-sm">{uploaderDescription}</p>
                 </div>
             </div>

@@ -5,7 +5,6 @@ import {
     Box,
     Typography,
     Paper,
-    Grid,
     Stack,
     Chip,
     Button
@@ -91,32 +90,29 @@ export default function Analytics() {
                 </Button>
             </Stack>
 
-            <Grid container spacing={3}>
-                <Grid item xs={12}>
-                    <Paper sx={{ p: 4, bgcolor: '#FFFFFF', borderRadius: 3, border: '1px solid #E5E7EB' }} elevation={0}>
-                        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={3}>
-                            <Box>
-                                <Typography variant="h6" fontWeight={700}>Lưu lượng truy cập</Typography>
-                                <Typography variant="caption" color="text.secondary">Dữ liệu theo thời gian thực</Typography>
-                            </Box>
-                            <Chip label="Live" color="error" size="small" />
-                        </Stack>
-                        <AreaChartMock />
-                    </Paper>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                    <Paper sx={{ p: 4, bgcolor: '#FFFFFF', borderRadius: 3, border: '1px solid #E5E7EB' }} elevation={0}>
+            <Stack spacing={3}>
+                <Paper sx={{ p: 4, bgcolor: '#FFFFFF', borderRadius: 3, border: '1px solid #E5E7EB' }} elevation={0}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={3}>
+                        <Box>
+                            <Typography variant="h6" fontWeight={700}>Lưu lượng truy cập</Typography>
+                            <Typography variant="caption" color="text.secondary">Dữ liệu theo thời gian thực</Typography>
+                        </Box>
+                        <Chip label="Live" color="error" size="small" />
+                    </Stack>
+                    <AreaChartMock />
+                </Paper>
+
+                <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
+                    <Paper sx={{ p: 4, bgcolor: '#FFFFFF', borderRadius: 3, border: '1px solid #E5E7EB', flex: 1 }} elevation={0}>
                         <Typography variant="h6" fontWeight={700} mb={3}>Tăng trưởng User</Typography>
                         <BarChartMock />
                     </Paper>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                    <Paper sx={{ p: 4, bgcolor: '#FFFFFF', borderRadius: 3, border: '1px solid #E5E7EB' }} elevation={0}>
+                    <Paper sx={{ p: 4, bgcolor: '#FFFFFF', borderRadius: 3, border: '1px solid #E5E7EB', flex: 1 }} elevation={0}>
                         <Typography variant="h6" fontWeight={700} mb={3}>Doanh thu (Tháng)</Typography>
                         <BarChartMock />
                     </Paper>
-                </Grid>
-            </Grid>
+                </Stack>
+            </Stack>
         </Box>
     );
 }
