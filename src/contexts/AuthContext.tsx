@@ -135,6 +135,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             async (event, session) => {
                 console.log('🔐 Supabase auth event:', event);
 
+                // ✅ Log chi tiết khi SIGNED_IN để confirm OAuth thành công
+                if (event === 'SIGNED_IN') {
+                    console.log('✅ SIGNED_IN event received - OAuth login successful!');
+                }
+
                 if (session) {
                     console.log('📦 Session Info:', {
                         access_token: session.access_token.substring(0, 20) + '...',
@@ -214,14 +219,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Check if hash contains auth-related parameters
             if (window.location.hash.includes('access_token') ||
                 window.location.hash.includes('refresh_token')) {
-                console.log('🔗 Cleaning up OAuth callback URL...');
+                console.log('🔗 OAuth hash detected in URL');
+                console.log('⏳ Waiting for Supabase to process tokens before cleanup...');
 
-                // Use history API to remove hash without page reload
-                window.history.replaceState(
-                    null,
-                    '',
-                    window.location.pathname + window.location.search
-                );
+                // Small delay to ensure Supabase processes the hash first
+                setTimeout(() => {
+                    console.log('🔗 Cleaning up OAuth callback URL...');
+                    // Use history API to remove hash without page reload
+                    window.history.replaceState(
+                        null,
+                        '',
+                        window.location.pathname + window.location.search
+                    );
+                }, 100); // 100ms delay to ensure Supabase reads hash first
             }
         }
     }, []);

@@ -6,7 +6,6 @@ import { AuthProvider } from '../contexts/AuthContext';
 import { SidebarProvider } from '../contexts/SidebarContext';
 import { ThemeProvider } from '../contexts/ThemeContext';
 import { AppControlProvider, ImageEditorProvider } from './uiContexts';
-import { OAuthRedirect } from './OAuthRedirect';
 
 export function Providers({ children }: { children: React.ReactNode }) {
     return (
@@ -16,7 +15,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
                     <AppControlProvider>
                         <ImageEditorProvider>
                             <Toaster position="top-center" />
-                            <OAuthRedirect />
 
                             {children}
                         </ImageEditorProvider>
