@@ -125,23 +125,37 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            console.log(`[Gemini Debug] Attempt ${attempt}: Sending request. Has API Key? ${hasApiKey}. Model: ${model}`);
-            const response = await ai.models.generateContent({
-                model: model,
-                contents: { parts },
-                config: finalConfig,
+            console.log(`[Gemini Debug] Attempt ${attempt}: Sending request to Internal API. Model: ${model}`);
+
+            const response = await fetch('/api/gemini/generate-image', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    parts,
+                    config: finalConfig,
+                    model: model
+                })
             });
 
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `Server responded with ${response.status}`);
+            }
+
+            const data: GenerateContentResponse = await response.json();
+
             // Validate that the response contains an image.
-            const imagePart = response.candidates?.[0]?.content?.parts?.find(part => part.inlineData);
+            const imagePart = data.candidates?.[0]?.content?.parts?.find((part: any) => part.inlineData);
             if (imagePart?.inlineData) {
                 // Success! Increment usage count
                 incrementUsage(currentVersion);
-                return response;
+                return data;
             }
 
             // If no image is found, treat it as a failure and prepare for retry.
-            const textResponse = response.text || "No text response received.";
+            const textResponse = data.text || "No text response received.";
             lastError = new Error(`The AI model responded with text instead of an image: "${textResponse}"`);
             console.warn(`Attempt ${attempt}/${maxRetries}: No image returned. Retrying... Response text: ${textResponse}`);
 
