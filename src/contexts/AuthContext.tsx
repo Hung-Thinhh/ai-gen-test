@@ -102,21 +102,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                 // No cache, fetch from DB
                 console.log('🔍 [Initial Load] No cache, fetching role for user:', session.user.id);
-                const { data, error } = await supabase
-                    .from('users')
-                    .select('role')
-                    .eq('user_id', session.user.id)
-                    .single();
+                try {
+                    const { data, error } = await supabase
+                        .from('users')
+                        .select('role')
+                        .eq('user_id', session.user.id)
+                        .single();
 
-                if (error) {
-                    console.error('❌ [Initial Load] Error fetching role:', error);
+                    if (error) {
+                        console.warn('⚠️ [Initial Load] Could not fetch role (RLS or missing user), defaulting to "user":', error);
+                        setUserRole('user');
+                        setCachedRole(session.user.id, 'user');
+                    } else {
+                        console.log('👤 [Initial Load] Role data from DB:', data);
+                        const fetchedRole = data?.role || 'user';
+                        console.log('✅ [Initial Load] Setting user role to:', fetchedRole);
+                        setUserRole(fetchedRole);
+                        setCachedRole(session.user.id, fetchedRole);
+                    }
+                } catch (err) {
+                    console.warn('⚠️ [Initial Load] Exception fetching role, defaulting to "user":', err);
+                    setUserRole('user');
+                    setCachedRole(session.user.id, 'user');
                 }
-
-                console.log('👤 [Initial Load] Role data from DB:', data);
-                const fetchedRole = data?.role || 'user';
-                console.log('✅ [Initial Load] Setting user role to:', fetchedRole);
-                setUserRole(fetchedRole);
-                setCachedRole(session.user.id, fetchedRole);
             }
 
             setIsLoading(false);
@@ -147,21 +155,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (session?.user) {
                     // Fetch role
                     console.log('🔍 Fetching role for user:', session.user.id);
-                    const { data, error } = await supabase
-                        .from('users')
-                        .select('role')
-                        .eq('user_id', session.user.id)
-                        .single();
+                    try {
+                        const { data, error } = await supabase
+                            .from('users')
+                            .select('role')
+                            .eq('user_id', session.user.id)
+                            .single();
 
-                    if (error) {
-                        console.error('❌ Error fetching role:', error);
+                        if (error) {
+                            console.warn('⚠️ Could not fetch role (RLS or missing user), defaulting to "user":', error);
+                            setUserRole('user');
+                            setCachedRole(session.user.id, 'user');
+                        } else {
+                            console.log('👤 Role data from DB:', data);
+                            const fetchedRole = data?.role || 'user';
+                            console.log('✅ Setting user role to:', fetchedRole);
+                            setUserRole(fetchedRole);
+                            setCachedRole(session.user.id, fetchedRole); // Cache it
+                        }
+                    } catch (err) {
+                        console.warn('⚠️ Exception fetching role, defaulting to "user":', err);
+                        setUserRole('user');
+                        setCachedRole(session.user.id, 'user');
                     }
-
-                    console.log('👤 Role data from DB:', data);
-                    const fetchedRole = data?.role || 'user';
-                    console.log('✅ Setting user role to:', fetchedRole);
-                    setUserRole(fetchedRole);
-                    setCachedRole(session.user.id, fetchedRole); // Cache it
                 } else {
                     setUserRole(null);
                 }
