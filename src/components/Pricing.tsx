@@ -78,24 +78,22 @@ export const PricingCard: React.FC<{ plan: PricingPackage }> = ({ plan }) => {
                     timestamp: new Date().toISOString()
                 });
 
-                // If Cloudflare error, show detailed info
-                if (data.details?.type === 'CLOUDFLARE_BLOCKED') {
-                    console.error('[Payment Client] 🚫 CLOUDFLARE BLOCKED:', data.details.message);
-                    console.error('[Payment Client] 💡 SOLUTION:', data.details.solution);
-                }
-
                 throw new Error(data.error || 'Failed to create payment');
             }
 
-            console.log('[Payment] Payment URL:', data.payment_url);
+            console.log('[Payment] Response:', data);
 
-            // 3. Redirect to SePay payment page
-            toast.success('Đang chuyển đến trang thanh toán...');
+            // Store VA payment data in sessionStorage
+            sessionStorage.setItem('va_payment_data', JSON.stringify(data));
 
-            // Small delay for toast to show
+            // Navigate to VA payment page (using window.location for reliability)
+            console.log('[Payment] Navigating to:', `/payment/va?order_id=${data.order_id}`);
+            toast.success('Đã tạo thanh toán');
+
+            // Use setTimeout to ensure sessionStorage is saved
             setTimeout(() => {
-                window.location.href = data.payment_url;
-            }, 500);
+                window.location.href = `/payment/va?order_id=${data.order_id}`;
+            }, 100);
 
         } catch (error) {
             console.error('[Payment] Error:', error);

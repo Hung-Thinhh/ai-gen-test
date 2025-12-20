@@ -88,7 +88,7 @@ export const PRICING_PACKAGES: PricingPackage[] = [
         id: 'starter',
         name: 'Starter',
         credits: 500,
-        price: 49000,
+        price: 2000,
         pricePerCredit: 98,
         target: 'Cá nhân',
         features: ['500 credits', 'Hỗ trợ cơ bản', 'Không giới hạn thời gian']

@@ -33,21 +33,27 @@ function PaymentSuccessContent() {
             try {
                 console.log('[Payment Success] Checking status for order:', orderId, 'retry:', currentRetry);
 
-                const { data: transaction, error } = await supabase
-                    .from('payment_transactions')
-                    .select('*')
-                    .eq('order_id', orderId)
-                    .single();
+                // Use API instead of direct Supabase query (avoids RLS issues)
+                const response = await fetch(`/api/sepay/check-payment?order_id=${orderId}`);
+                const result = await response.json();
 
-                if (error) {
-                    console.error('[Payment Success] Query error:', error);
+                if (!response.ok || !result.success) {
+                    console.error('[Payment Success] API error:', result);
                     setStatus('error');
                     toast.error('Không thể kiểm tra trạng thái thanh toán');
                     return;
                 }
 
-                console.log('[Payment Success] Transaction status:', transaction?.status);
+                const transaction = {
+                    status: result.status,
+                    credits: result.credits,
+                    amount: result.amount,
+                    order_id: orderId
+                };
+
+                console.log('[Payment Success] Transaction status:', transaction.status);
                 setTransactionData(transaction);
+
 
                 if (transaction?.status === 'completed') {
                     setStatus('success');

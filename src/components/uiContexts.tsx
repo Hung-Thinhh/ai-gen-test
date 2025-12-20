@@ -532,6 +532,8 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         if (!settings) return; // Wait for settings to load
         // Ignore admin routes to prevents conflict with AdminLayout
         if (pathname?.startsWith('/admin')) return;
+        // Ignore payment routes - they have their own navigation logic
+        if (pathname?.startsWith('/payment')) return;
 
         let targetView = 'overview';
         const path = pathname;

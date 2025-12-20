@@ -17,6 +17,7 @@ export function middleware(request: NextRequest) {
         '/history',
         '/auth',
         '/admin',  // Admin panel routes
+        '/payment', // Payment routes (success, cancel, va)
     ];
 
     // Check if the route is valid (matches exact or starts with prefix)

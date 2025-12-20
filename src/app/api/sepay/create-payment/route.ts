@@ -128,105 +128,37 @@ export async function POST(req: NextRequest) {
 
         console.log('[SePay] Transaction created:', transaction.id);
 
-        // 7. Call SePay API to create payment
-        const sepayApiKey = process.env.SEPAY_API_KEY;
-        const returnUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/payment/success?order_id=${orderId}`;
-        const cancelUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/payment/cancel?order_id=${orderId}`;
-        const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/sepay/webhook`;
+        // 7. Generate VA Payment Info (VietQR)
+        const vaAccount = process.env.SEPAY_VA_ACCOUNT || '02627122301';
+        const vaBankCode = process.env.SEPAY_VA_BANK_CODE || '970423';
+        const vaName = process.env.SEPAY_VA_NAME || 'TRAN THANH NGAN';
+        const vaBank = process.env.SEPAY_VA_BANK || 'TPBank';
+        const vaPrefix = process.env.SEPAY_VA_PREFIX || 'TKP102';
 
-        // If no API key configured, use mock payment URL for testing
-        if (!sepayApiKey) {
-            console.log('[SePay] API key not configured, using mock payment URL for testing');
-            const mockPaymentUrl = `https://sandbox.sepay.vn/payment?order_id=${orderId}&amount=${selectedPackage.price}&credits=${selectedPackage.credits}`;
+        // Generate payment content (nội dung chuyển khoản)
+        const paymentContent = `${vaPrefix} ${orderId}`;
 
-            console.log('[SePay] Mock Payment URL:', mockPaymentUrl);
+        // Generate VietQR link  
+        const qrUrl = `https://qr.sepay.vn/img?acc=${vaAccount}&bank=${vaBankCode}&amount=${selectedPackage.price}&des=${encodeURIComponent(paymentContent)}`;
 
-            return NextResponse.json({
-                success: true,
-                payment_url: mockPaymentUrl,
-                order_id: orderId
-            } as CreatePaymentResponse);
-        }
+        console.log('[SePay VA] Generated QR URL:', qrUrl);
+        console.log('[SePay VA] Payment content:', paymentContent);
 
-        // Prepare SePay request
-        const sepayRequest = {
-            amount: selectedPackage.price,
+        return NextResponse.json({
+            success: true,
+            payment_type: 'VA',
+            qr_url: qrUrl,
+            bank_info: {
+                bank: vaBank,
+                bank_code: vaBankCode,
+                account: vaAccount,
+                name: vaName,
+                amount: selectedPackage.price,
+                content: paymentContent
+            },
             order_id: orderId,
-            return_url: returnUrl,
-            cancel_url: cancelUrl,
-            notify_url: webhookUrl,
-            buyer_email: '', // Will be filled if available
-            description: `Mua ${selectedPackage.credits} credits - ${selectedPackage.name}`
-        };
-
-        console.log('[SePay] API Request:', { ...sepayRequest, notify_url: '***' });
-
-        // Call real SePay API with browser-like headers to bypass Cloudflare
-        try {
-            const sepayResponse = await fetch('https://my.sepay.vn/userapi/transactions/create', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${sepayApiKey}`,
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Accept': 'application/json, text/plain, */*',
-                    'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
-                    'Accept-Encoding': 'gzip, deflate, br',
-                    'Origin': 'https://dukyai.com',
-                    'Referer': 'https://dukyai.com/',
-                    'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-                    'sec-ch-ua-mobile': '?0',
-                    'sec-ch-ua-platform': '"Windows"',
-                    'sec-fetch-dest': 'empty',
-                    'sec-fetch-mode': 'cors',
-                    'sec-fetch-site': 'cross-site'
-                },
-                body: JSON.stringify(sepayRequest)
-            });
-
-            console.log('[SePay] Response status:', sepayResponse.status);
-
-            if (!sepayResponse.ok) {
-                const errorText = await sepayResponse.text();
-                console.error('[SePay] API error:', errorText);
-
-                // DISABLED: Fallback to mock URL (user wants to see real errors)
-                /*
-                if (sepayResponse.status === 403 && errorText.includes('Cloudflare')) {
-                    console.warn('[SePay] ⚠️ Cloudflare blocked the request. Using mock URL for testing.');
-                    console.warn('[SePay] 💡 Solution: Contact SePay support to whitelist your server IP.');
-                    
-                    const mockPaymentUrl = `https://sandbox.sepay.vn/payment?order_id=${orderId}&amount=${selectedPackage.price}&credits=${selectedPackage.credits}`;
-                    
-                    return NextResponse.json({
-                        success: true,
-                        payment_url: mockPaymentUrl,
-                        order_id: orderId,
-                        warning: 'Using mock URL - SePay API blocked by Cloudflare'
-                    } as CreatePaymentResponse);
-                }
-                */
-
-                throw new Error(`SePay API failed with status ${sepayResponse.status}`);
-            }
-
-            const sepayData = await sepayResponse.json();
-            console.log('[SePay] API Response:', sepayData);
-
-            return NextResponse.json({
-                success: true,
-                payment_url: sepayData.data?.payment_url || sepayData.payment_url,
-                order_id: orderId
-            } as CreatePaymentResponse);
-        } catch (error) {
-            console.error('[SePay] API call failed:', error);
-
-            // Return detailed error for client-side logging
-            const errorMessage = error instanceof Error ? error.message : 'Payment creation failed';
-            const errorDetails = error instanceof Error ? error.stack : undefined;
-
-            throw new Error(`SePay API Error: ${errorMessage}`);
-        }
+            expires_in: 600 // 10 minutes
+        } as CreatePaymentResponse);
 
     } catch (error) {
         console.error('[SePay] Payment creation error:', error);
