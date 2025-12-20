@@ -70,6 +70,20 @@ export const PricingCard: React.FC<{ plan: PricingPackage }> = ({ plan }) => {
             const data = await response.json();
 
             if (!response.ok || !data.success) {
+                // Log detailed error to client console
+                console.error('[Payment Client] Payment creation failed:', {
+                    status: response.status,
+                    error: data.error,
+                    details: data.details,
+                    timestamp: new Date().toISOString()
+                });
+
+                // If Cloudflare error, show detailed info
+                if (data.details?.type === 'CLOUDFLARE_BLOCKED') {
+                    console.error('[Payment Client] 🚫 CLOUDFLARE BLOCKED:', data.details.message);
+                    console.error('[Payment Client] 💡 SOLUTION:', data.details.solution);
+                }
+
                 throw new Error(data.error || 'Failed to create payment');
             }
 

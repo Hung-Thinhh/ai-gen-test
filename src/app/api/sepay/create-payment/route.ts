@@ -221,30 +221,30 @@ export async function POST(req: NextRequest) {
         } catch (error) {
             console.error('[SePay] API call failed:', error);
 
-            // DISABLED: Fallback for testing real errors
-            /*
-            if (error instanceof Error && (error.message.includes('403') || error.message.includes('Cloudflare'))) {
-                console.warn('[SePay] Falling back to mock payment URL due to Cloudflare protection');
-                const mockPaymentUrl = `https://sandbox.sepay.vn/payment?order_id=${orderId}&amount=${selectedPackage.price}&credits=${selectedPackage.credits}`;
-                
-                return NextResponse.json({
-                    success: true,
-                    payment_url: mockPaymentUrl,
-                    order_id: orderId,
-                    warning: 'Using mock URL - please contact SePay support'
-                } as CreatePaymentResponse);
-            }
-            */
+            // Return detailed error for client-side logging
+            const errorMessage = error instanceof Error ? error.message : 'Payment creation failed';
+            const errorDetails = error instanceof Error ? error.stack : undefined;
 
-            throw error;
+            throw new Error(`SePay API Error: ${errorMessage}`);
         }
 
     } catch (error) {
         console.error('[SePay] Payment creation error:', error);
+
+        // Build detailed error response for client debugging
+        const errorMessage = error instanceof Error ? error.message : 'Payment creation failed';
+        const isCloudflareError = errorMessage.includes('403') || errorMessage.includes('Cloudflare');
+
         return NextResponse.json(
             {
                 success: false,
-                error: error instanceof Error ? error.message : 'Payment creation failed'
+                error: errorMessage,
+                details: isCloudflareError ? {
+                    type: 'CLOUDFLARE_BLOCKED',
+                    message: 'SePay API is protected by Cloudflare and blocking the request',
+                    solution: 'Contact support@sepay.vn to whitelist server IP: 115.77.125.6',
+                    timestamp: new Date().toISOString()
+                } : undefined
             } as CreatePaymentResponse,
             { status: 500 }
         );

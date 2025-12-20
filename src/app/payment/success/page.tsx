@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import toast from 'react-hot-toast';
@@ -12,9 +12,13 @@ function PaymentSuccessContent() {
     const [status, setStatus] = useState<'checking' | 'success' | 'pending' | 'error'>('checking');
     const [transactionData, setTransactionData] = useState<any>(null);
     const [retryCount, setRetryCount] = useState(0);
-    const maxRetries = 10; // Max 20 seconds (10 retries * 2s)
+    const hasChecked = useRef(false);
 
     useEffect(() => {
+        // Prevent multiple executions
+        if (hasChecked.current) return;
+        hasChecked.current = true;
+
         if (!orderId) {
             setStatus('error');
             toast.error('Không tìm thấy mã đơn hàng');
@@ -22,12 +26,13 @@ function PaymentSuccessContent() {
         }
 
         let retryTimeout: NodeJS.Timeout;
+        let currentRetry = 0;
+        const maxRetries = 10;
 
         const checkPaymentStatus = async () => {
             try {
-                console.log('[Payment Success] Checking status for order:', orderId, 'retry:', retryCount);
+                console.log('[Payment Success] Checking status for order:', orderId, 'retry:', currentRetry);
 
-                // Query transaction status
                 const { data: transaction, error } = await supabase
                     .from('payment_transactions')
                     .select('*')
@@ -51,7 +56,6 @@ function PaymentSuccessContent() {
                         icon: '✅'
                     });
 
-                    // Redirect to home after 3 seconds
                     setTimeout(() => {
                         router.push('/');
                     }, 3000);
@@ -66,10 +70,11 @@ function PaymentSuccessContent() {
 
                 } else {
                     // Still pending, retry
-                    if (retryCount < maxRetries) {
+                    if (currentRetry < maxRetries) {
                         setStatus('pending');
-                        setRetryCount(prev => prev + 1);
-                        retryTimeout = setTimeout(checkPaymentStatus, 2000); // Retry after 2s
+                        currentRetry++;
+                        setRetryCount(currentRetry);
+                        retryTimeout = setTimeout(checkPaymentStatus, 2000);
                     } else {
                         setStatus('pending');
                         toast('Thanh toán đang được xử lý. Vui lòng kiểm tra lại sau.', {
@@ -92,7 +97,7 @@ function PaymentSuccessContent() {
                 clearTimeout(retryTimeout);
             }
         };
-    }, [orderId, retryCount, router]);
+    }, [orderId, router]);
 
     return (
         <div className="min-h-screen bg-neutral-900 flex items-center justify-center p-4">
@@ -113,7 +118,7 @@ function PaymentSuccessContent() {
                             Giao dịch đang được xử lý. Vui lòng đợi...
                         </p>
                         <p className="text-xs text-neutral-500">
-                            Đang thử lần {retryCount}/{maxRetries}
+                            Đang thử lần {retryCount}/10
                         </p>
                     </>
                 )}
