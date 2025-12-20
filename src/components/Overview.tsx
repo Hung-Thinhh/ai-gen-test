@@ -187,9 +187,9 @@ const FEATURED_PROMPTS = [
 
 const Overview: React.FC = () => {
     const appControls = useAppControls() as any;
-    const { t, handleSelectApp, settings, language, modelVersion, handleModelVersionChange } = appControls;
-    const v2UsageCount = appControls.v2UsageCount ?? 0;
-    const v3UsageCount = appControls.v3UsageCount ?? 0;
+    const { t, handleSelectApp, settings, language, modelVersion, handleModelVersionChange, guestCredits, userCredits, isLoggedIn } = appControls;
+    // Calculate credits display
+    const currentCredits = isLoggedIn ? userCredits : guestCredits;
     const isMobile = useIsMobile();
     const promptsScrollRef = useRef<HTMLDivElement>(null);
 
@@ -204,8 +204,7 @@ const Overview: React.FC = () => {
                 <MobileHomeHeader
                     modelVersion={modelVersion}
                     onModelChange={handleModelVersionChange}
-                    v2Credits={v2UsageCount}
-                    v3Credits={v3UsageCount}
+                    credits={currentCredits}
                 />
             )}
 

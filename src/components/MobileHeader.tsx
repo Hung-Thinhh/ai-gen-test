@@ -10,17 +10,15 @@ import { SearchIcon } from './icons';
 interface HomeHeaderProps {
     modelVersion?: 'v2' | 'v3';
     onModelChange?: (version: 'v2' | 'v3') => void;
-    v2Credits?: number;
-    v3Credits?: number;
+    credits?: number; // Unified credits from user/guest balance
 }
 
 export const MobileHomeHeader: React.FC<HomeHeaderProps> = ({
     modelVersion = 'v2',
     onModelChange,
-    v2Credits = 0,
-    v3Credits = 0
+    credits = 0
 }) => {
-    const currentCredits = modelVersion === 'v2' ? v2Credits : v3Credits;
+    const currentCredits = credits;
 
     return (
         <header className="mobile-home-header">
@@ -51,8 +49,8 @@ export const MobileHomeHeader: React.FC<HomeHeaderProps> = ({
                 </div>
                 {/* Credits Display */}
                 <div className="credits-badge">
-                    <span className="credits-icon">⚡</span>
-                    <span className="credits-count">{currentCredits}</span>
+                    <span className="credits-icon">💰</span>
+                    <span className="credits-count">{credits.toLocaleString('vi-VN')}</span>
                 </div>
             </div>
         </header>
