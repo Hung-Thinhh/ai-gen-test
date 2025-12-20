@@ -3,89 +3,101 @@
  * SPDX-License-Identifier: Apache-2.0
  * Pricing Component - Display subscription packages
  */
-import React from 'react';
+import React, { useState } from 'react';
 import { useAppControls } from './uiUtils';
-import { SparklesIcon } from './icons';
-
-interface PricingPlan {
-    id: string;
-    name: string;
-    credits: string;
-    price: string;
-    pricePerCredit: string;
-    discount?: string;
-    target: string;
-    popular?: boolean;
-    features?: string[];
-}
-
-const pricingPlans: PricingPlan[] = [
-    {
-        id: 'free',
-        name: 'Free',
-        credits: '50/tháng',
-        price: '0',
-        pricePerCredit: '-',
-        target: 'Trial',
-        features: ['Reset monthly', '50 credits miễn phí']
-    },
-    {
-        id: 'starter',
-        name: 'Starter',
-        credits: '500',
-        price: '__,___',
-        pricePerCredit: '98đ',
-        target: 'Cá nhân',
-        features: ['500 credits', 'Hỗ trợ cơ bản']
-    },
-    {
-        id: 'creator',
-        name: 'Creator',
-        credits: '1,500',
-        price: '___,000',
-        pricePerCredit: '79đ',
-        discount: '-20%',
-        target: 'Freelancer',
-        popular: true,
-        features: ['1,500 credits', 'Ưu tiên xử lý', 'Hỗ trợ nhanh']
-    },
-    {
-        id: 'pro',
-        name: 'Pro',
-        credits: '5,000',
-        price: '___,000',
-        pricePerCredit: '60đ',
-        discount: '-40%',
-        target: 'Agency nhỏ',
-        features: ['5,000 credits', 'Ưu tiên cao', 'Hỗ trợ 24/7']
-    },
-    {
-        id: 'business',
-        name: 'Business',
-        credits: '20,000',
-        price: '___,000',
-        pricePerCredit: '45đ',
-        discount: '-55%',
-        target: 'Doanh nghiệp',
-        features: ['20,000 credits', 'Team access', 'Báo cáo chi tiết']
-    },
-    {
-        id: 'enterprise',
-        name: 'Enterprise',
-        credits: 'Unlimited',
-        price: 'Liên hệ',
-        pricePerCredit: 'Custom',
-        target: 'Studio lớn',
-        features: ['Unlimited credits', 'API access', 'Dedicated support']
-    }
-];
+import { supabase } from '../lib/supabase/client';
+import toast from 'react-hot-toast';
+import type { PricingPackage } from '@/types/payment';
+import { PRICING_PACKAGES } from '@/types/payment';
 
 interface PricingProps {
     onClose?: () => void;
 }
 
-export const PricingCard: React.FC<{ plan: PricingPlan }> = ({ plan }) => {
+export const PricingCard: React.FC<{ plan: PricingPackage }> = ({ plan }) => {
     const { language } = useAppControls();
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    const handlePurchase = async () => {
+        // Handle free package
+        if (plan.id === 'free') {
+            toast.success('Bạn đang sử dụng gói miễn phí!');
+            return;
+        }
+
+        // Handle enterprise package
+        if (plan.id === 'enterprise') {
+            window.location.href = 'mailto:support@dukyai.com?subject=Enterprise Package Inquiry';
+            return;
+        }
+
+        setIsProcessing(true);
+
+        try {
+            // 1. Check if user is logged in
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+            // DEV MODE: Allow testing without login
+            const isDev = process.env.NODE_ENV === 'development';
+            const testUserId = 'test-user-' + Date.now().toString().slice(-8);
+
+            if (!session && !isDev) {
+                toast.error('Vui lòng đăng nhập để mua credits');
+                setIsProcessing(false);
+                return;
+            }
+
+            // Use real user ID if logged in, otherwise use test ID in dev mode
+            const userId = session?.user.id || testUserId;
+            const accessToken = session?.access_token || 'dev-token';
+
+            console.log('[Payment] Creating payment for package:', plan.id);
+            console.log('[Payment] User ID:', userId, isDev && !session ? '(DEV MODE - Test User)' : '');
+
+            // 2. Call API to create payment
+            const response = await fetch('/api/sepay/create-payment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`
+                },
+                body: JSON.stringify({
+                    packageId: plan.id,
+                    userId: userId
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'Failed to create payment');
+            }
+
+            console.log('[Payment] Payment URL:', data.payment_url);
+
+            // 3. Redirect to SePay payment page
+            toast.success('Đang chuyển đến trang thanh toán...');
+
+            // Small delay for toast to show
+            setTimeout(() => {
+                window.location.href = data.payment_url;
+            }, 500);
+
+        } catch (error) {
+            console.error('[Payment] Error:', error);
+            toast.error(error instanceof Error ? error.message : 'Không thể tạo thanh toán. Vui lòng thử lại.');
+            setIsProcessing(false);
+        }
+    };
+
+    const formatPrice = (price: number) => {
+        return new Intl.NumberFormat('vi-VN').format(price);
+    };
+
+    const formatCredits = (credits: number) => {
+        if (credits >= 999999) return 'Unlimited';
+        return new Intl.NumberFormat('vi-VN').format(credits);
+    };
 
     return (
         <div className={`relative flex flex-col h-full p-4 rounded-xl transition-all ${plan.popular
@@ -102,7 +114,7 @@ export const PricingCard: React.FC<{ plan: PricingPlan }> = ({ plan }) => {
             {/* Discount Badge */}
             {plan.discount && (
                 <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-green-500/20 text-green-400 text-[10px] font-bold rounded">
-                    {plan.discount}
+                    -{plan.discount}%
                 </div>
             )}
 
@@ -116,23 +128,25 @@ export const PricingCard: React.FC<{ plan: PricingPlan }> = ({ plan }) => {
 
             {/* Price */}
             <div className="mb-2">
-                {plan.price === 'Liên hệ' ? (
-                    <span className="text-lg md:text-2xl font-bold text-white">Liên hệ</span>
-                ) : plan.price === '0' ? (
-                    <span className="text-lg md:text-2xl font-bold text-white">Miễn phí</span>
+                {plan.price === 0 ? (
+                    plan.id === 'free' ? (
+                        <span className="text-lg md:text-2xl font-bold text-white">Miễn phí</span>
+                    ) : (
+                        <span className="text-lg md:text-2xl font-bold text-white">Liên hệ</span>
+                    )
                 ) : (
                     <div>
-                        <span className="text-lg md:text-2xl font-bold text-white">{plan.price}</span>
-                        <span className="text-neutral-400 text-[10px] md:text-sm"> đ/tháng</span>
+                        <span className="text-lg md:text-2xl font-bold text-white">{formatPrice(plan.price)}</span>
+                        <span className="text-neutral-400 text-[10px] md:text-sm"> đ</span>
                     </div>
                 )}
             </div>
 
             {/* Credits */}
             <div className="text-[11px] text-neutral-400 md:text-sm mb-2">
-                <span className="text-yellow-400">⚡</span> {plan.credits} credits
-                {plan.pricePerCredit !== '-' && plan.pricePerCredit !== 'Custom' && (
-                    <span className="text-neutral-500 block">({plan.pricePerCredit}/credit)</span>
+                <span className="text-yellow-400">⚡</span> {formatCredits(plan.credits)} credits
+                {plan.pricePerCredit > 0 && (
+                    <span className="text-neutral-500 block">({plan.pricePerCredit}đ/credit)</span>
                 )}
             </div>
 
@@ -147,18 +161,25 @@ export const PricingCard: React.FC<{ plan: PricingPlan }> = ({ plan }) => {
             </ul>
 
             {/* CTA Button */}
-            <button className={`w-full py-2 rounded-lg text-xs font-semibold transition-all ${plan.popular
-                ? 'bg-gradient-to-r from-orange-500 to-yellow-500 text-white hover:opacity-90'
-                : plan.id === 'free'
-                    ? 'bg-orange-400 text-white hover:opacity-50'
-                    : 'bg-gradient-to-r from-orange-500 to-yellow-500 text-white border border-neutral-600 hover:opacity-90'
-                }`}>
-                {plan.id === 'free'
-                    ? 'Dùng thử'
-                    : plan.id === 'enterprise'
-                        ? 'Liên hệ'
-                        : 'Mua ngay'
-                }
+            <button
+                onClick={handlePurchase}
+                disabled={isProcessing}
+                className={`w-full py-2 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${plan.popular
+                    ? 'bg-gradient-to-r from-orange-500 to-yellow-500 text-white hover:opacity-90'
+                    : plan.id === 'free'
+                        ? 'bg-orange-400 text-white hover:opacity-50'
+                        : 'bg-gradient-to-r from-orange-500 to-yellow-500 text-white border border-neutral-600 hover:opacity-90'
+                    }`}
+            >
+                {isProcessing ? (
+                    'Đang xử lý...'
+                ) : (
+                    plan.id === 'free'
+                        ? 'Dùng thử'
+                        : plan.id === 'enterprise'
+                            ? 'Liên hệ'
+                            : 'Mua ngay'
+                )}
             </button>
         </div>
     );
@@ -183,7 +204,7 @@ export const Pricing: React.FC<PricingProps> = ({ onClose }) => {
 
             {/* Pricing Grid - Mobile 2 cols, Desktop 3 cols */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
-                {pricingPlans.map((plan) => (
+                {PRICING_PACKAGES.map((plan) => (
                     <PricingCard key={plan.id} plan={plan} />
                 ))}
             </div>

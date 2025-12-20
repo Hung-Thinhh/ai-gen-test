@@ -1,0 +1,16 @@
+# Environment Variables for SePay Integration
+
+# Supabase Service Role Key (REQUIRED)
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
+
+# SePay API Configuration
+# Lấy từ: https://my.sepay.vn/ → Settings → API → Tạo Token mới
+SEPAY_API_KEY=your_sepay_api_token_here
+
+# Secret key để verify webhook signature (optional)
+# Nếu bạn config webhook với authentication, điền secret key ở đây
+SEPAY_SECRET_KEY=your_webhook_secret_if_configured
+
+# Application URLs
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
