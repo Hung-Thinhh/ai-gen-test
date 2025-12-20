@@ -1,15 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import toast from 'react-hot-toast';
 
-export default function PaymentSuccess() {
+function PaymentSuccessContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const orderId = searchParams.get('order_id');
-
     const [status, setStatus] = useState<'checking' | 'success' | 'pending' | 'error'>('checking');
     const [transactionData, setTransactionData] = useState<any>(null);
     const [retryCount, setRetryCount] = useState(0);
@@ -181,5 +180,17 @@ export default function PaymentSuccess() {
                 )}
             </div>
         </div>
+    );
+}
+
+export default function PaymentSuccess() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-neutral-900 flex items-center justify-center">
+                <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        }>
+            <PaymentSuccessContent />
+        </Suspense>
     );
 }

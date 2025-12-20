@@ -1,10 +1,10 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import toast from 'react-hot-toast';
 
-export default function PaymentCancel() {
+function PaymentCancelContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const orderId = searchParams.get('order_id');
@@ -53,5 +53,17 @@ export default function PaymentCancel() {
                 )}
             </div>
         </div>
+    );
+}
+
+export default function PaymentCancel() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-neutral-900 flex items-center justify-center">
+                <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        }>
+            <PaymentCancelContent />
+        </Suspense>
     );
 }
