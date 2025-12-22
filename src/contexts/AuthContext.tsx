@@ -69,6 +69,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [userRole, setUserRole] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
+    // DEBUG RENDER
+    console.log('🔄 [AuthContext] Render. User:', user?.id || 'null', 'Loading:', isLoading);
+
     useEffect(() => {
         // SAFETY FALLBACK: Force loading to false after 3s to prevent infinite spinner
         const safetyTimer = setTimeout(() => {
@@ -202,6 +205,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
 
                 setUser(session?.user ?? null);
+                console.log('🔄 [AuthContext] Updating User State:', session?.user?.id || 'null');
                 setToken(session?.access_token ?? null);
 
                 // Create/update user in database when signed in
