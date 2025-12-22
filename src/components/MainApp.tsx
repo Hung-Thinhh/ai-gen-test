@@ -170,7 +170,8 @@ function MainApp() {
         v3UsageCount,
         refreshUsageCounts,
         handleModelVersionChange,
-        handleResolutionChange
+        handleResolutionChange,
+        logGeneration // IMPORTED FROM CONTEXT
     } = useAppControls();
 
     const { imageToEdit, closeImageEditor } = useImageEditor();
@@ -206,71 +207,6 @@ function MainApp() {
             document.body.style.overflow = 'auto';
         };
     }, [isSearchOpen, isGalleryOpen, isImageLayoutModalOpen, isBeforeAfterModalOpen, isAppCoverCreatorModalOpen, isStoryboardingModalVisible, isLayerComposerVisible, imageToEdit]);
-
-    const getExportableState = useCallback((appState: any, appId: string): any => {
-        const exportableState = JSON.parse(JSON.stringify(appState));
-
-        const keysToRemove = [
-            'generatedImage', 'generatedImages', 'historicalImages',
-            'finalPrompt', 'error',
-        ];
-
-        if (appId !== 'image-interpolation') {
-            keysToRemove.push('generatedPrompt', 'promptSuggestions');
-        }
-
-        const processState = (obj: any) => {
-            if (typeof obj !== 'object' || obj === null) return;
-
-            for (const key of keysToRemove) {
-                if (key in obj) delete obj[key];
-            }
-
-            for (const key in obj) {
-                if (typeof obj[key] === 'object') {
-                    processState(obj[key]);
-                }
-            }
-
-            if ('stage' in obj && (obj.stage === 'generating' || obj.stage === 'results' || obj.stage === 'prompting')) {
-                obj.stage = 'configuring';
-            }
-        };
-
-        processState(exportableState);
-        return exportableState;
-    }, []);
-
-    const logGeneration = useCallback(async (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: {
-        tool_id?: number;
-        credits_used?: number;
-        api_model_used?: string;
-        generation_time_ms?: number;
-        error_message?: string;
-        output_images?: any;
-        generation_count?: number;
-    }) => {
-        if (!settings) return;
-
-        const appConfig = settings.apps.find((app: AppConfig) => app.id === appId);
-        const appName = appConfig ? t(appConfig.titleKey) : appId;
-
-        const cleanedState = getExportableState(preGenState, appId);
-
-        const smallThumbnailUrl = await createThumbnailDataUrl(thumbnailUrl, 128, 128);
-
-        const entry: Omit<GenerationHistoryEntry, 'id' | 'timestamp'> = {
-            appId,
-            appName: appName.replace(/\n/g, ' '),
-            thumbnailUrl: smallThumbnailUrl,
-            settings: {
-                viewId: appId,
-                state: cleanedState,
-            },
-            ...extraDetails // Spread extra details into the entry
-        };
-        addGenerationToHistory(entry);
-    }, [addGenerationToHistory, settings, t, getExportableState]);
 
     const renderContent = () => {
         if (!settings) return null; // Wait for settings to load

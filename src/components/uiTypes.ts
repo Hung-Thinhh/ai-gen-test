@@ -861,6 +861,7 @@ export interface AppControlContextType {
     v2UsageCount: number;
     v3UsageCount: number;
     refreshUsageCounts: () => void;
+    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: any) => Promise<void>; // NEW
     addGenerationToHistory: (entryData: Omit<GenerationHistoryEntry, 'id' | 'timestamp'>) => Promise<void>;
     refreshGallery: () => Promise<void>; // NEW
     addImagesToGallery: (newImages: string[]) => Promise<string[] | undefined>;

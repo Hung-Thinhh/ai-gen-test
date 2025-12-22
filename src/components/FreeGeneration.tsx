@@ -241,6 +241,7 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
                 viewId: 'free-generation',
                 state: { ...appState, stage: 'configuring', generatedImages: [], historicalImages: [], error: null },
             };
+            const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
             const creditCost = modelVersion === 'v3' ? 3 : 1;
             logGeneration('free-generation', preGenState, urlWithMetadata, {
                 credits_used: creditCost,
