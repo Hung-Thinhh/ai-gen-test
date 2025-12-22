@@ -29,7 +29,15 @@ interface KhmerPhotoMergeProps {
     onStateChange: (newState: KhmerPhotoMergeState) => void;
     onReset: () => void;
     onGoBack: () => void;
-    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: { api_model_used?: string; }) => void;
+    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: {
+        tool_id?: number;
+        credits_used?: number;
+        api_model_used?: string;
+        generation_time_ms?: number;
+        error_message?: string;
+        output_images?: any;
+        generation_count?: number;
+    }) => void;
     useSmartTitleWrapping?: boolean;
     smartTitleWrapWords?: number;
 }
