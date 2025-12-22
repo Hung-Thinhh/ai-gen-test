@@ -179,9 +179,12 @@ const KhmerPhotoMerge: React.FC<KhmerPhotoMergeProps> = (props) => {
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
 
+
             logGeneration('khmer-photo-merge', preGenState, urlWithMetadata, {
+                generation_count: 1,
                 api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
             });
+
 
             onStateChange({
                 ...appState,
@@ -247,7 +250,7 @@ const KhmerPhotoMerge: React.FC<KhmerPhotoMergeProps> = (props) => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {/* Upload Box */}
                                 <div className="themed-card backdrop-blur-md p-4 rounded-2xl flex flex-col items-center gap-4">
-                                    <h3 className="text-lg font-bold text-yellow-400">{t('common_uploadImage') || '1. Tải ảnh lên'}</h3>
+                                    <h3 className="text-lg font-bold text-yellow-400">{t('khmerPhotoMerge_uploaderCaption') || '1. Tải ảnh lên'}</h3>
                                     <ActionablePolaroidCard
                                         type={appState.uploadedImage ? 'photo-input' : 'uploader'}
                                         mediaUrl={appState.uploadedImage ?? undefined}

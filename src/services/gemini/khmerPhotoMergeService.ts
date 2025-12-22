@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
-*/
+ */
 import { Type } from "@google/genai";
 import ai from './client';
 import {
@@ -16,11 +16,24 @@ function getPrimaryPrompt(templatePrompt: string, customPrompt: string, removeWa
     const watermarkText = removeWatermark ? ' Yêu cầu quan trọng: Kết quả cuối cùng không được chứa bất kỳ watermark, logo, hay chữ ký nào.' : '';
     const aspectRatioText = (aspectRatio && aspectRatio !== 'Giữ nguyên') ? `Bức ảnh kết quả BẮT BUỘC phải có tỷ lệ khung hình chính xác là ${aspectRatio}.` : '';
 
-    return `${aspectRatioText}\nHóa thân người trong ảnh vào phong cách Khmer sau: "${templatePrompt}".
-    1. YÊU CẦU TUYỆT ĐỐI: Giữ nguyên 100% khuôn mặt, ngũ quan, biểu cảm và đặc điểm nhận dạng của người trong ảnh gốc. Không được thay đổi khuôn mặt.
-    2. Chỉ thay đổi trang phục và bối cảnh theo mô tả.
-    3. Ảnh kết quả phải chân thực, sắc nét, chất lượng cao 8k.${modificationText}${watermarkText}
-    LƯU Ý: Đây là tính năng ghép mặt, hãy đảm bảo khuôn mặt trong ảnh kết quả giống hệt ảnh gốc.`;
+    return `${aspectRatioText}\n**NHIỆM VỤ:** Tạo ảnh mới từ ảnh gốc bằng cách thay đổi trang phục và bối cảnh theo phong cách Khmer: "${templatePrompt}".
+
+**YÊU CẦU TUYỆT ĐỐI VỀ KHUÔN MẶT (QUAN TRỌNG NHẤT):**
+1. PHẢI SAO CHÉP CHÍNH XÁC 100% khuôn mặt từ ảnh gốc - đây là yêu cầu TỐI QUAN TRỌNG.
+2. Giữ nguyên hoàn toàn: hình dạng mắt, mũi, miệng, cằm, má, trán, lông mày, màu da, kết cấu da.
+3. Giữ nguyên biểu cảm, góc nhìn, tư thế đầu từ ảnh gốc.
+4. Đây là tính năng FACE SWAP/GHÉP MẶT - khuôn mặt trong ảnh kết quả PHẢI GIỐNG HỆT ảnh gốc.
+
+**CHỈ ĐƯỢC THAY ĐỔI:**
+- Trang phục (theo mô tả)
+- Bối cảnh/phông nền (theo mô tả)
+- Tư thế cơ thể (nếu cần theo template)
+
+**YÊU CẦU KỸ THUẬT:**
+- Chất lượng 8K, sắc nét, chân thực
+- Ánh sáng tự nhiên, màu sắc sống động${modificationText}${watermarkText}
+
+**LƯU Ý:** Khuôn mặt là yếu tố KHÔNG ĐƯỢC THAY ĐỔI. Hãy sao chép chính xác 100% khuôn mặt từ ảnh gốc.`;
 }
 
 function getFallbackPrompt(templatePrompt: string, customPrompt: string, removeWatermark?: boolean, aspectRatio?: string): string {
@@ -28,7 +41,7 @@ function getFallbackPrompt(templatePrompt: string, customPrompt: string, removeW
     const watermarkText = removeWatermark ? ' Không watermark.' : '';
     const aspectRatioText = (aspectRatio && aspectRatio !== 'Giữ nguyên') ? `Tỷ lệ ${aspectRatio}.` : '';
 
-    return `${aspectRatioText}\nGhép khuôn mặt người trong ảnh vào trang phục Khmer: ${templatePrompt}.${modificationText}${watermarkText} YÊU CẦU: Giữ nguyên hoàn toàn khuôn mặt của người trong ảnh gốc.`;
+    return `${aspectRatioText}\nFACE SWAP: Sao chép CHÍNH XÁC 100% khuôn mặt người trong ảnh gốc vào trang phục Khmer: ${templatePrompt}. QUAN TRỌNG: Giữ nguyên hoàn toàn khuôn mặt, ngũ quan, biểu cảm. Chỉ thay đổi trang phục và bối cảnh.${modificationText}${watermarkText}`;
 }
 
 export async function generateKhmerImage(

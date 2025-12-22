@@ -201,10 +201,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     console.log('🔄 Token refreshed successfully');
                 }
 
-                // Always update loading state after processing
-                if (isLoading) {
-                    setIsLoading(false);
-                }
+                // Always update loading state after processing auth event
+                // Remove stale closure check to prevent infinite loading
+                setIsLoading(false);
             }
         );
 

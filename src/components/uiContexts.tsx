@@ -351,10 +351,15 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         });
 
         // Log to Supabase if logged in
+        console.log('[History] Attempting to log to Supabase. isLoggedIn:', isLoggedIn, 'user:', user?.id);
         if (isLoggedIn && user) {
+            console.log('[History] User logged in, calling logGenerationHistory for user:', user.id);
             // Non-blocking log
             storageService.logGenerationHistory(user.id, newEntry, token || undefined)
-                .catch(err => console.error("Failed to log generation to Supabase:", err));
+                .then(() => console.log('[History] Successfully logged to Supabase'))
+                .catch(err => console.error("[History] Failed to log generation to Supabase:", err));
+        } else {
+            console.warn('[History] Skipping Supabase log - user not logged in or user object missing');
         }
 
     }, [isLoggedIn, user, token]);
