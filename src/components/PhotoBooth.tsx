@@ -29,6 +29,8 @@ interface PhotoBoothProps {
     onGoBack: () => void;
     logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: {
         api_model_used?: string;
+        credits_used?: number;
+        generation_count?: number;
     }) => void;
 }
 
@@ -65,7 +67,10 @@ const PhotoBooth: React.FC<PhotoBoothProps> = (props) => {
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
 
-        if (!await checkCredits()) {
+        const creditCostPerImage = modelVersion === 'v3' ? 3 : 1;
+        const totalCost = appState.options.photoCount * creditCostPerImage;
+
+        if (!await checkCredits(totalCost)) {
             onStateChange({ ...appState, stage: 'configuring' });
             return;
         }
@@ -75,6 +80,8 @@ const PhotoBooth: React.FC<PhotoBoothProps> = (props) => {
             onStateChange({ ...appState, stage: 'results', resultImage: result });
             addImagesToGallery([result]);
             logGeneration('photo-booth', preGenState, result, {
+                credits_used: creditCostPerImage,
+                generation_count: appState.options.photoCount,
                 api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
             });
         } catch (err) {

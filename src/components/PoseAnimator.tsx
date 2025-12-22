@@ -11,7 +11,7 @@ import ActionablePolaroidCard from './ActionablePolaroidCard';
 import { AppScreenHeader, handleFileUpload as utilHandleFileUpload, ResultsView, OptionsPanel, useAppControls } from './uiUtils';
 
 interface PoseAnimatorState { stage: 'configuring' | 'generating' | 'results'; poseReferenceImage: string | null; targetImage: string | null; resultImage: string | null; options: { instructions: string }; error: string | null; }
-interface PoseAnimatorProps { mainTitle: string; subtitle: string; useSmartTitleWrapping: boolean; smartTitleWrapWords: number; uploaderCaptionPose: string; uploaderDescriptionPose: string; uploaderCaptionTarget: string; uploaderDescriptionTarget: string; addImagesToGallery: (images: string[]) => void; appState: PoseAnimatorState; onStateChange: (newState: PoseAnimatorState) => void; onReset: () => void; onGoBack: () => void; logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: { api_model_used?: string; }) => void; }
+interface PoseAnimatorProps { mainTitle: string; subtitle: string; useSmartTitleWrapping: boolean; smartTitleWrapWords: number; uploaderCaptionPose: string; uploaderDescriptionPose: string; uploaderCaptionTarget: string; uploaderDescriptionTarget: string; addImagesToGallery: (images: string[]) => void; appState: PoseAnimatorState; onStateChange: (newState: PoseAnimatorState) => void; onReset: () => void; onGoBack: () => void; logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: { api_model_used?: string; credits_used?: number; generation_count?: number; }) => void; }
 
 const PoseAnimator: React.FC<PoseAnimatorProps> = (props) => {
     const { uploaderCaptionPose, uploaderDescriptionPose, uploaderCaptionTarget, uploaderDescriptionTarget, addImagesToGallery, appState, onStateChange, onReset, logGeneration, ...headerProps } = props;
@@ -24,7 +24,8 @@ const PoseAnimator: React.FC<PoseAnimatorProps> = (props) => {
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
 
-        if (!await checkCredits()) {
+        const creditCostPerImage = modelVersion === 'v3' ? 3 : 1;
+        if (!await checkCredits(creditCostPerImage)) {
             onStateChange({ ...appState, stage: 'configuring' });
             return;
         }
@@ -35,6 +36,8 @@ const PoseAnimator: React.FC<PoseAnimatorProps> = (props) => {
             onStateChange({ ...appState, stage: 'results', resultImage: result });
             addImagesToGallery([result]);
             logGeneration('pose-animator', preGenState, result, {
+                credits_used: creditCostPerImage,
+                generation_count: 1,
                 api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
             });
         } catch (err) {

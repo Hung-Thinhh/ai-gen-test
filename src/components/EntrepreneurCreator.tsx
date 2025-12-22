@@ -42,6 +42,8 @@ interface EntrepreneurCreatorProps {
     onGoBack: () => void;
     logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: {
         api_model_used?: string;
+        credits_used?: number;
+        generation_count?: number;
     }) => void;
 }
 
@@ -144,6 +146,7 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
 
         // Removed early checkCredits()
 
+        const creditCostPerImage = modelVersion === 'v3' ? 3 : 1;
         hasLoggedGeneration.current = false;
 
         if (appState.styleReferenceImage) {
@@ -155,7 +158,7 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
             // Immediate Feedback
             onStateChange(generatingState);
 
-            if (!await checkCredits()) {
+            if (!await checkCredits(creditCostPerImage)) {
                 // Revert
                 onStateChange({ ...appState, stage: 'configuring' });
                 return;
@@ -176,6 +179,8 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
                 };
                 const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
                 logGeneration('entrepreneur-creator', preGenState, urlWithMetadata, {
+                    credits_used: creditCostPerImage,
+                    generation_count: 1,
                     api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
                 });
                 onStateChange({
@@ -212,7 +217,7 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
             // Immediate Feedback
             setIsAnalyzing(true);
 
-            if (!await checkCredits()) {
+            if (!await checkCredits(creditCostPerImage)) {
                 setIsAnalyzing(false);
                 return;
             }
@@ -261,7 +266,7 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
         onStateChange({ ...appState, stage: stage, generatedImages: initialGeneratedImages, selectedIdeas: ideasToGenerate });
 
         if (randomCount === 0) {
-            if (!await checkCredits()) {
+            if (!await checkCredits(creditCostPerImage)) {
                 onStateChange({ ...appState, stage: 'configuring' });
                 return;
             }
@@ -283,6 +288,8 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
 
                 if (!hasLoggedGeneration.current) {
                     logGeneration('entrepreneur-creator', preGenState, urlWithMetadata, {
+                        generation_count: 1,
+                        credits_used: creditCostPerImage,
                         api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
                     });
                     hasLoggedGeneration.current = true;

@@ -22,7 +22,10 @@ import {
 
 export const useImageEditorState = (
     imageToEdit: ImageToEdit | null,
-    canvasViewRef: React.RefObject<HTMLDivElement | null>
+    canvasViewRef: React.RefObject<HTMLDivElement | null>,
+    checkCredits: (cost?: number) => Promise<boolean>,
+    logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: any) => void,
+    modelVersion: string
 ) => {
     // --- State & Refs ---
     const [internalImageUrl, setInternalImageUrl] = useState<string | null>(null);
@@ -1320,6 +1323,11 @@ export const useImageEditorState = (
 
     const handleAiEdit = useCallback(async () => {
         if (!aiEditPrompt.trim() || !internalImageUrl) return;
+
+        // Credit check
+        const creditCost = modelVersion === 'v3' ? 3 : 1;
+        if (!await checkCredits(creditCost)) return;
+
         setIsLoading(true);
 
         try {
@@ -1383,6 +1391,13 @@ export const useImageEditorState = (
                     colorAdjustments: INITIAL_COLOR_ADJUSTMENTS, drawingCanvasDataUrl: null,
                 };
                 pushHistory(appliedState);
+
+                logGeneration('image-editor-ai-edit', { imageToEdit: internalImageUrl, prompt: aiEditPrompt }, resultUrl, {
+                    credits_used: creditCost,
+                    generation_count: 1,
+                    api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                });
+
                 setAiEditPrompt('');
             };
 
@@ -1621,10 +1636,22 @@ export const useImageEditorState = (
             commitState();
         },
         handleRemoveBackground: async () => {
-            if (!internalImageUrl) return; setIsLoading(true);
+            if (!internalImageUrl) return;
+
+            // Credit check
+            const creditCost = modelVersion === 'v3' ? 3 : 1;
+            if (!await checkCredits(creditCost)) return;
+
+            setIsLoading(true);
             try {
                 const resultUrl = await removeImageBackground(internalImageUrl);
                 resetAll(true); setInternalImageUrl(resultUrl); commitState();
+
+                logGeneration('image-editor-bg-remove', { imageToEdit: internalImageUrl }, resultUrl, {
+                    credits_used: creditCost,
+                    generation_count: 1,
+                    api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                });
             } catch (err) { alert(`Error removing background: ${err instanceof Error ? err.message : "An unknown error occurred."}`); }
             finally { setIsLoading(false); }
         },

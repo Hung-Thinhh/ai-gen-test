@@ -164,7 +164,9 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
         } else {
             // Immediate feedback for normal generation
             onStateChange({ ...appState, stage: 'generating', error: null, generatedImages: [] });
-            if (!await checkCredits()) {
+
+            const creditCostPerImage = modelVersion === 'v3' ? 3 * appState.options.numberOfImages : 1 * appState.options.numberOfImages;
+            if (!await checkCredits(creditCostPerImage)) {
                 onStateChange({ ...appState, stage: 'configuring' });
                 return;
             }
@@ -195,8 +197,9 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
             );
 
             if (urlsWithMetadata.length > 0) {
+                const creditCost = modelVersion === 'v3' ? 3 * urlsWithMetadata.length : 1 * urlsWithMetadata.length;
                 logGeneration('free-generation', preGenState, urlsWithMetadata[0], {
-                    credits_used: 1,
+                    credits_used: creditCost,
                     api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image',
                     generation_count: urlsWithMetadata.length,
                     output_images: urlsWithMetadata
@@ -238,9 +241,9 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
                 viewId: 'free-generation',
                 state: { ...appState, stage: 'configuring', generatedImages: [], historicalImages: [], error: null },
             };
-            const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
+            const creditCost = modelVersion === 'v3' ? 3 : 1;
             logGeneration('free-generation', preGenState, urlWithMetadata, {
-                credits_used: 1,
+                credits_used: creditCost,
                 api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image',
                 generation_count: 1,
                 output_images: [urlWithMetadata]

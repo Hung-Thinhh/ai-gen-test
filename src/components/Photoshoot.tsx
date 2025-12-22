@@ -9,7 +9,7 @@ import ActionablePolaroidCard from './ActionablePolaroidCard';
 import { AppScreenHeader, handleFileUpload as utilHandleFileUpload, ResultsView, OptionsPanel, useAppControls } from './uiUtils';
 
 interface PhotoshootState { stage: 'configuring' | 'generating' | 'results'; personImage: string | null; outfitImage: string | null; resultImage: string | null; options: { background: string; pose: string; lighting: string; notes: string }; error: string | null; }
-interface PhotoshootProps { mainTitle: string; subtitle: string; useSmartTitleWrapping: boolean; smartTitleWrapWords: number; uploaderCaptionPerson: string; uploaderDescriptionPerson: string; uploaderCaptionOutfit: string; uploaderDescriptionOutfit: string; addImagesToGallery: (images: string[]) => void; appState: PhotoshootState; onStateChange: (newState: PhotoshootState) => void; onReset: () => void; onGoBack: () => void; logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: { api_model_used?: string; }) => void; }
+interface PhotoshootProps { mainTitle: string; subtitle: string; useSmartTitleWrapping: boolean; smartTitleWrapWords: number; uploaderCaptionPerson: string; uploaderDescriptionPerson: string; uploaderCaptionOutfit: string; uploaderDescriptionOutfit: string; addImagesToGallery: (images: string[]) => void; appState: PhotoshootState; onStateChange: (newState: PhotoshootState) => void; onReset: () => void; onGoBack: () => void; logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: { api_model_used?: string; credits_used?: number; generation_count?: number; }) => void; }
 
 const Photoshoot: React.FC<PhotoshootProps> = (props) => {
     const { uploaderCaptionPerson, uploaderDescriptionPerson, uploaderCaptionOutfit, uploaderDescriptionOutfit, addImagesToGallery, appState, onStateChange, onReset, logGeneration, ...headerProps } = props;
@@ -22,7 +22,8 @@ const Photoshoot: React.FC<PhotoshootProps> = (props) => {
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
 
-        if (!await checkCredits()) {
+        const creditCostPerImage = modelVersion === 'v3' ? 3 : 1;
+        if (!await checkCredits(creditCostPerImage)) {
             onStateChange({ ...appState, stage: 'configuring' });
             return;
         }
@@ -34,6 +35,8 @@ const Photoshoot: React.FC<PhotoshootProps> = (props) => {
             onStateChange({ ...appState, stage: 'results', resultImage: result });
             addImagesToGallery([result]);
             logGeneration('photoshoot', preGenState, result, {
+                credits_used: creditCostPerImage,
+                generation_count: 1,
                 api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
             });
         } catch (err) {

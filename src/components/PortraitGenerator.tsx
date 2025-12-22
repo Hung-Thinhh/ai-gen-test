@@ -9,7 +9,7 @@ import ActionablePolaroidCard from './ActionablePolaroidCard';
 import { AppScreenHeader, ResultsView, OptionsPanel, useAppControls } from './uiUtils';
 
 interface PortraitGeneratorState { stage: 'configuring' | 'generating' | 'results'; prompt: string; uploadedImage: string | null; resultImage: string | null; options: { style: string; lighting: string; background: string; notes: string }; error: string | null; }
-interface PortraitGeneratorProps { mainTitle: string; subtitle: string; useSmartTitleWrapping: boolean; smartTitleWrapWords: number; addImagesToGallery: (images: string[]) => void; appState: PortraitGeneratorState; onStateChange: (newState: PortraitGeneratorState) => void; onReset: () => void; onGoBack: () => void; logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: { api_model_used?: string; }) => void; }
+interface PortraitGeneratorProps { mainTitle: string; subtitle: string; useSmartTitleWrapping: boolean; smartTitleWrapWords: number; addImagesToGallery: (images: string[]) => void; appState: PortraitGeneratorState; onStateChange: (newState: PortraitGeneratorState) => void; onReset: () => void; onGoBack: () => void; logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: { api_model_used?: string; credits_used?: number; generation_count?: number; }) => void; }
 
 // Simple Uploader Component
 const Uploader = ({ onImageUpload, currentImage, onRemove }: { onImageUpload: (file: File) => void, currentImage: string | null, onRemove: () => void }) => {
@@ -54,7 +54,8 @@ const PortraitGenerator: React.FC<PortraitGeneratorProps> = (props) => {
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
 
-        if (!await checkCredits()) {
+        const creditCostPerImage = modelVersion === 'v3' ? 3 : 1;
+        if (!await checkCredits(creditCostPerImage)) {
             onStateChange({ ...appState, stage: 'configuring' });
             return;
         }
@@ -66,6 +67,8 @@ const PortraitGenerator: React.FC<PortraitGeneratorProps> = (props) => {
             onStateChange({ ...appState, stage: 'results', resultImage: result });
             addImagesToGallery([result]);
             logGeneration('portrait-generator', preGenState, result, {
+                credits_used: creditCostPerImage,
+                generation_count: 1,
                 api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
             });
         } catch (err) {

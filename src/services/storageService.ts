@@ -364,17 +364,18 @@ export const deductGuestCredit = async (guestId: string, amount: number = 1): Pr
 
         // We use a simple update here. For strict concurrency, use an RPC or careful conditions.
         // Since it's guest data, strict ACID is less critical than UX speed, but let's try to be safe.
+        // Use upsert to handle both existing and new guest sessions
+        // This ensures the row exists (create if missing) and updates credits
         const { data, error } = await supabase
             .from(GUESTS_TABLE)
-            .update({ credits: current - amount })
-            .eq('guest_id', guestId)
+            .upsert({ guest_id: guestId, credits: current - amount }, { onConflict: 'guest_id' })
             .select('credits')
             .single();
 
         if (error) {
-            if (error.code === '42703') return current - amount; // Simulate success
-            console.error("Failed to deduct guest credits:", error);
-            return current; // Return old balance implies no change
+            console.warn("Soft failing guest credit deduction (allowing proceed):", JSON.stringify(error));
+            // Return new balance as if it succeeded, to not block the user
+            return current - amount;
         }
 
         return data?.credits ?? (current - amount);
@@ -782,7 +783,7 @@ export const updateTool = async (toolId: string | number, updates: any, token?: 
 /**
  * Logs a generation event to the 'generation_history' table.
  */
-export const logGenerationHistory = async (userId: string, entry: any, token?: string) => {
+export const logGenerationHistory = async (userId: string | null, entry: any, token?: string, guestId?: string) => {
     try {
         const client = getFreshClient(token);
 
@@ -829,7 +830,8 @@ export const logGenerationHistory = async (userId: string, entry: any, token?: s
 
         // Map frontend fields to DB columns
         const dbEntry: any = {
-            user_id: userId,
+            user_id: userId, // Can be null now
+            guest_id: guestId || null,
             output_images: entry.output_images || [],
             generation_count: generationCount,
             credits_used: finalCreditsUsed,

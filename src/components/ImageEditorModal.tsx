@@ -27,7 +27,8 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({ imageToEdit,
     } = useAppControls();
 
     const canvasViewRef = useRef<HTMLDivElement>(null);
-    const editorState = useImageEditorState(imageToEdit, canvasViewRef);
+    const { checkCredits, logGeneration, modelVersion } = useAppControls();
+    const editorState = useImageEditorState(imageToEdit, canvasViewRef, checkCredits, logGeneration, modelVersion);
     const {
         internalImageUrl,
         isLoading,

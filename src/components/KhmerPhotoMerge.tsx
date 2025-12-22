@@ -84,29 +84,135 @@ const TEMPLATES = [
         prompt: 'Để biến đổi ảnh gốc thành ảnh kết quả,Thay thế trang phục hiện tại bằng bộ quần áo truyền thống Thái Lan màu xanh dương có hoa văn, bao gồm áo dài tay, thắt lưng bản rộng trang trí phức tạp, khăn choàng thắt eo nhiều màu sắc và quần hoa văn, đồng thời bổ sung một mặt dây chuyền vàng lớn. Chỉnh sửa tư thế của đối tượng thành tư thế đứng thẳng, hai tay chắp trước ngực theo cử chỉ "Wai" truyền thống Thái Lan. Thay đổi hoàn toàn bối cảnh phía sau từ bức tường nội thất thành một con đường có hàng cây xanh mờ ảo, sử dụng hiệu ứng xóa phông nông (shallow depth of field) để làm nổi bật đối tượng. Áp dụng ánh sáng tự nhiên dịu nhẹ, khuếch tán, với tông màu hơi ấm, tăng cường độ bão hòa màu sắc của trang phục truyền thống để tạo nên một bức chân dung văn hóa trang trọng và thanh lịch.'
     },
     {
-        category: 'female',
+        category: 'male',
         url: 'https://res.cloudinary.com/dmxmzannb/image/upload/v1765884577/b1510ee578a56788fda997fa930b2112_aduard.jpg',
         prompt: 'hãy thay thế trang phục hiện đại bằng bộ trang phục truyền thống Khmer hoặc Thái Lan sang trọng, gồm sampot, kben quấn quanh người và các bộ trang sức vàng chạm khắc tinh xảo ở cổ, tay, và thắt lưng; đồng thời chỉnh sửa kiểu tóc thành kiểu vuốt ngược, gọn gàng và tạo dáng đứng uy nghi, hơi nghiêng mặt sang một bên, toát lên thần thái vương giả. Thay đổi phông nền từ tường nhà đơn điệu thành một kiến trúc đền thờ hoặc cung điện truyền thống Đông Nam Á được chiếu sáng lung linh vào ban đêm, áp dụng hiệu ứng bokeh nhẹ để làm nổi bật chủ thể. Điều chỉnh góc máy từ ngang tầm mắt thành góc thấp hơn một chút để tôn lên vẻ bề thế của chủ thể và kiến trúc, mở rộng khung hình để bao gồm toàn bộ phần trên của cơ thể và phần lớn kiến trúc phía sau. Chuyển đổi ánh sáng từ ánh sáng phẳng trong nhà thành ánh sáng đêm ấm áp, kịch tính với tông vàng chủ đạo phát ra từ hậu cảnh, tạo ra các vùng bóng sâu, ánh sáng nổi bật và hiệu ứng rim light mạnh mẽ từ phía sau, đồng thời nâng cao độ tương phản và bão hòa màu sắc để mang lại một không gian huyền ảo, lộng lẫy theo phong cách nhiếp ảnh chân dung nghệ thuật, làm mịn da và làm nổi bật chi tiết trang sức.'
     },
     {
         category: 'couple',
-        url: 'https://res.cloudinary.com/dmxmzannb/image/upload/v1765883087/yjszilec12cyhn3t5fw8.jpg', // Placeholder
-        prompt: 'Tạo ảnh cặp đôi nam nữ mặc trang phục cưới truyền thống Khmer Apsara. Nam giới mặc áo trắng cổ đứng, quần kben vàng kim. Nữ giới mặc áo quây vàng kim, váy dài xếp ly, đội mũ mão Apsara cao. Cả hai đứng cạnh nhau trong khung cảnh đền Angkor Wat lúc hoàng hôn. Ánh sáng vàng ấm áp, lãng mạn.'
+        url: '/templates/khmer/couple_umbrella_silver.png',
+        prompt: 'Tạo ảnh cặp đôi nam nữ đi dạo lãng mạn. Nam cầm dù (ô) giấy dầu truyền thống che cho nữ. Nam mặc áo cổ đứng màu xám bạc/xanh nhạt, quần kben tím than. Nữ mặc trang phục truyền thống màu xám bạc thêu kim tuyến, váy tím than. Bối cảnh con đường đất hoặc khuôn viên chùa rợp bóng cây. Ánh sáng tự nhiên dịu dàng.'
     },
     {
         category: 'couple',
-        url: 'https://res.cloudinary.com/dmxmzannb/image/upload/v1765881380/ivhltootd8z8svfcfv8s.png', // Placeholder
-        prompt: 'Tạo ảnh cặp đôi nam nữ đang đi dạo trong khuôn viên đền cổ Khmer. Nam mặc trang phục lụa màu xanh hoàng gia, Nữ mặc trang phục màu hồng phấn nhẹ nhàng. Cả hai đều đeo trang sức vàng truyền thống. Bối cảnh là đường đi lát đá cổ kính với các bức tượng thần thoại hai bên. Ánh sáng tự nhiên ban ngày, tươi sáng.'
+        url: '/templates/khmer/couple_stairs_grey.png',
+        prompt: 'Tạo ảnh cặp đôi nam nữ bước đi trên bậc thang đền cổ. Nam và Nữ mặc trang phục tông màu xám bạc (silver) sang trọng, hiện đại. Nữ cầm hoa. Bối cảnh kiến trúc đền tháp đá xám phía sau. Phong cách ảnh cưới ngoại cảnh sang trọng.'
     },
     {
         category: 'couple',
-        url: 'https://res.cloudinary.com/dmxmzannb/image/upload/v1765883723/hanh-trinh-review-chua-botum-vong-sa-som-rong-cung-co-nang-xinh-dep-3-1664797655_sil4qd.jpg', // Placeholder
-        prompt: 'Tạo ảnh cặp đôi nam nữ đang ngồi trên chiếu dệt hoa văn truyền thống trong một ngôi chùa vàng lộng lẫy. Cả hai chắp tay cầu nguyện (tư thế Wai). Nam mặc áo trắng quần nâu, Nữ mặc áo lụa vàng và váy sarong xanh ngọc. Phông nền là nội thất chùa với các cột gỗ sơn son thếp vàng. Ánh sáng tĩnh lặng, linh thiêng.'
+        url: '/templates/khmer/couple_umbrella_forest.png',
+        prompt: 'Tạo ảnh cặp đôi nam nữ đi dạo trong rừng cây. Nam cầm dù trắng. Trang phục truyền thống đơn giản, thanh lịch. Bối cảnh đường đất đỏ, hàng cây cao vút (rừng cao su hoặc rừng dầu). Ánh sáng dịu nhẹ xuyên qua tán cây.'
     },
     {
         category: 'couple',
-        url: 'https://res.cloudinary.com/dmxmzannb/image/upload/v1765883993/CHAU-CHAU-38-510x765_bpxmbn.jpg', // Placeholder
-        prompt: 'Tạo ảnh chân dung cận cảnh cặp đôi nam nữ trong trang phục lễ hội Khmer rực rỡ. Tập trung vào các chi tiết trang sức mũ mão, vòng cổ tinh xảo. Nam và nữ đứng sát nhau, nhìn về phía trước với ánh mắt hạnh phúc. Phông nền mờ ảo (bokeh) là ánh đèn lễ hội lung linh về đêm.'
+        url: '/templates/khmer/couple_sitting_cream.png',
+        prompt: 'Tạo ảnh cặp đôi nam nữ ngồi ghế gỗ kiểu studio. Nam mặc áo trắng kem, quần kben hồng da. Nữ mặc trang phục lụa vàng kem/hồng phấn sang trọng, đeo trang sức vàng. Bối cảnh phông xám studio chuyên nghiệp hoặc nội thất hoàng gia. Phong cách ảnh cưới trong nhà ấm cúng.'
+    },
+    {
+        category: 'couple',
+        url: '/templates/khmer/couple_standing_red.png',
+        prompt: 'Tạo ảnh cặp đôi nam nữ nắm tay nhau đi dạo hoặc đứng chắp tay. Cả hai mặc trang phục truyền thống màu đỏ tím (burgundy) rực rỡ, đeo nhiều trang sức vàng. Nam mặc áo xám bạc quần đỏ. Nữ mặc áo đỏ quấn sabai đỏ. Bối cảnh con đường đất tự nhiên. Ánh sáng ấm áp.'
+    },
+    {
+        category: 'couple',
+        url: '/templates/khmer/couple_white_cream_umbrella.png',
+        prompt: 'Tạo ảnh cặp đôi nam nữ mặc trang phục cưới truyền thống Khmer Apsara. Nam giới mặc áo trắng cổ đứng, quần kben nâu đồng. Nữ giới mặc áo quây vàng nhạt, xám, tay cầm dù trắng. Bối cảnh rừng cây tự nhiên.'
+    },
+    {
+        category: 'couple',
+        url: '/templates/khmer/couple_white_grey_studio.png',
+        prompt: 'Tạo ảnh cặp đôi nam nữ mặc trang phục cưới truyền thống. Nam giới mặc áo xám bạc, quần kben tím than. Nữ giới mặc áo xám, quấn khăn rằn xám tím. Bối cảnh phông nền đen studio sang trọng, ấn tượng.'
+    },
+    {
+        category: 'couple',
+        url: '/templates/khmer/couple_black_bg_umbrella.png',
+        prompt: 'Tạo ảnh cặp đôi nam nữ mặc trang phục cưới truyền thống. Nam giới mặc áo xám bạc, quần kben nâu hoa văn. Nữ giới mặc áo kem, váy nâu hoa văn, tay cầm dù trắng. Bối cảnh phông nền đen studio chuyên nghiệp.'
+    },
+    {
+        category: 'couple',
+        url: '/templates/khmer/couple_black_bg_offering.png',
+        prompt: 'Tạo ảnh cặp đôi nam nữ mặc trang phục cưới truyền thống. Nam giới mặc áo xám bạc. Nữ giới bưng mâm lễ vật hoa sen hồng thắm. Bối cảnh phông nền đen studio làm nổi bật chủ thể.'
+    },
+    {
+        category: 'couple',
+        url: '/templates/khmer/couple_red_garden.png',
+        prompt: 'Tạo ảnh cặp đôi nam nữ nắm tay nhau đi dạo trong vườn. Nam giới mặc áo vàng kem, quần kben đỏ tía. Nữ mặc trang phục đỏ tía (burgundy) rực rỡ, đeo trang sức vàng. Bối cảnh sân vườn, nhà sàn gỗ truyền thống.'
+    },
+
+    {
+        category: 'female',
+        url: '/templates/khmer/female_prayer_lying_buddha.png',
+        prompt: 'Tạo ảnh nữ giới quỳ gối chắp tay cầu nguyện (Wai). Mặc trang phục truyền thống Thái/Khmer màu nâu vàng với sabai thêu kim tuyến, váy sampot dệt hoa văn. Đầu cài trâm vàng và hoa. Bối cảnh ngôi chùa cổ kính với tượng Phật nằm khổng lồ mờ ảo phía sau lúc hoàng hôn vàng ấm áp. Phong cách nhiếp ảnh chân thực, tôn nghiêm.'
+    },
+    {
+        category: 'female',
+        url: '/templates/khmer/female_dancer_lying_buddha.png',
+        prompt: 'Tạo ảnh nữ giới đứng múa điệu Apsara uyển chuyển, tay cong mềm mại. Mặc trang phục lụa nâu vàng sang trọng, đeo nhiều trang sức vàng ở cổ và tay. Bối cảnh tượng Phật nằm khổng lồ phía sau, ánh sáng chiều tà ấm áp tạo cảm giác linh thiêng và huyền bí.'
+    },
+    {
+        category: 'female',
+        url: '/templates/khmer/female_red_shawl.png',
+        prompt: 'Tạo ảnh nữ giới đứng chắp tay cầu nguyện, mắt nhắm nhẹ thành tâm. Mặc trang phục màu đỏ thẫm/đỏ rượu vang, đầu trùm khăn lụa cùng màu kín đáo và trang nghiêm, cài trâm vàng. Trang sức vàng nổi bật trên nền vải đỏ. Bối cảnh tượng Phật nằm phía xa dưới bầu trời hoàng hôn.'
+    },
+    {
+        category: 'female',
+        url: '/templates/khmer/female_naga_dancer.jpg',
+        prompt: 'Tạo ảnh nữ giới đang múa, tay cầm phụ kiện hình đầu rồng Naga vàng quyền lực. Mặc trang phục áo quây vàng kim lấp lánh và váy xanh lá cây đậm hoa văn. Đầu đội mũ miện vàng. Bối cảnh đền tháp Khmer tuyệt đẹp dưới bầu trời hoàng hôn tím hồng huyền ảo.'
+    },
+    {
+        category: 'female',
+        url: '/templates/khmer/female_naga_portrait.jpg',
+        prompt: 'Tạo ảnh chân dung cận cảnh nữ giới với vẻ đẹp sắc sảo, thần thái. Đầu đội mũ vương miện Naga (rắn thần) vàng ròng lộng lẫy, đeo trang sức tinh xảo. Một tay đưa lên phía trước mờ ảo. Ánh sáng vàng chiếu rọi kịch tính (rim light) từ bên cạnh trên nền tối, làm nổi bật khuôn mặt và ánh kim loại của trang sức.'
+    },
+    {
+        category: 'female',
+        url: '/templates/khmer/female_offering_bowl.png',
+        prompt: 'Tạo ảnh nữ giới tạo dáng đứng nghiêng, tay nâng bát vàng dâng lễ (hoặc cầm nến). Mặc trang phục Khmer màu nâu vàng, sampot họa tiết cổ điển. Bối cảnh tượng Phật trắng khổng lồ phía sau. Ánh sáng hoàng hôn vàng dịu.'
+    },
+    {
+        category: 'female',
+        url: '/templates/khmer/female_falcon_hunter.jpg',
+        prompt: 'Tạo ảnh nữ giới phong cách mạnh mẽ, quyến rũ (như Nữ hoàng săn bắn cổ đại hoặc Công chúa chiến binh). Tay đang giữ một con chim ưng/đại bàng (nếu có thể giữ chi tiết này). Mặc áo quây xanh ngọc lục bảo (Emerald Green) và váy sampot xanh lá đậm. Đầu đội mũ miện vàng cao vút. Bối cảnh kiến trúc đá trắng chạm khắc rồng. Phong thái sắc sảo, quyền lực.'
+    },
+    {
+        category: 'female',
+        url: '/templates/khmer/female_balcony_pink.jpg',
+        prompt: 'Tạo ảnh nữ giới đứng tựa lan can đá trắng bên hồ nước. Mặc trang phục lụa hồng pastel dịu dàng, thêu kim tuyến vàng nhẹ. Gương mặt thanh tú, hiền dịu. Bối cảnh vườn thượng uyển hoặc hồ sen lúc hoàng hôn.'
+    },
+    {
+        category: 'female',
+        url: '/templates/khmer/female_lotus_flower.jpg',
+        prompt: 'Tạo ảnh nữ giới cầm hoa sen hồng trên tay, phong thái nhẹ nhàng, thanh tao. Mặc áo lụa hồng nhạt (baby pink) và hồng cánh sen. Đầu đội mũ miện vàng. Bối cảnh sân chùa với cờ phướn và kiến trúc đền tháp nhiều màu sắc phía sau.'
+    },
+    {
+        category: 'female',
+        url: '/templates/khmer/female_gold_veil.jpg',
+        prompt: 'Tạo ảnh chân dung nữ giới đang cười duyên dáng, e ấp che mặt bằng tấm khăn voan lụa vàng trong suốt thêu họa tiết rồng phượng. Mặc trang phục truyền thống màu xám bạc hoặc trắng sang trọng. Bối cảnh đền tháp mờ ảo.'
+    },
+    {
+        category: 'male',
+        url: '/templates/khmer/male_white_suit_naga.png',
+        prompt: 'Tạo ảnh nam giới mặc áo khoác trắng lụa kiểu hoàng gia, cổ đứng, khuy vàng, thắt lưng vàng kim loại và quần kben màu vàng thêu họa tiết. Đeo dây chéo ngực trang trí. Đứng tự tin tại lối vào ngôi đền với lan can hình rắn thần Naga xanh phía sau. Phong cách thanh lịch, hiện đại pha lẫn truyền thống.'
+    },
+    {
+        category: 'male',
+        url: '/templates/khmer/male_warrior_sword.png',
+        prompt: 'Tạo ảnh nam giới hóa thân thành chiến binh/dũng sĩ Khmer cổ đại. Cởi trần khoe cơ bắp, đeo vòng cổ vàng lớn (tấm ốp ngực) và bắp tay. Mặc quần kben họa tiết xám/bạc. Tay cầm kiếm dài sắc bén. Bối cảnh tàn tích đền đá cổ kính rêu phong, không khí hùng tráng, bụi bặm chiến trường.'
+    },
+    {
+        category: 'male',
+        url: '/templates/khmer/male_boat_prayer.png',
+        prompt: 'Tạo ảnh nam giới đang ngồi quỳ cầu nguyện trên mũi thuyền rồng (loại đua thuyền truyền thống) giữa sông. Cởi trần, quấn khăn rằn (hoặc vòng hoa) trên đầu, đeo vòng cổ hoa. Mặc quần kben xanh dương. Bối cảnh sông nước mênh mông với các thuyền khác và kiến trúc đền tháp bờ xa. Không khí lễ hội đua thuyền.'
+    },
+    {
+        category: 'male',
+        url: '/templates/khmer/male_white_suit_umbrella.png',
+        prompt: 'Tạo ảnh nam giới mặc áo trắng cổ đứng sang trọng, quần kben nâu vàng. Tay cầm dù (ô) trắng cán dài truyền thống một cách nho nhã. Bối cảnh con đường rợp bóng cây xanh mát trong khuôn viên chùa. Phong cách thư sinh, nho nhã.'
+    },
+    {
+        category: 'male',
+        url: '/templates/khmer/male_mask_holder.png',
+        prompt: 'Tạo ảnh nam giới đứng nghiêng người, tay cầm một chiếc mặt nạ khổng lồ (mặt nạ Yeak/Chằn tinh hoặc Hanuaman) sơn son thếp vàng rực rỡ. Nam giới cởi trần, quấn khăn/dây trang trí chéo người, mặc quần kben vàng óng ánh. Bối cảnh hoàng hôn với bầu trời mây kịch tính và kiến trúc tháp vàng phía sau.'
     }
 ];
 
@@ -212,8 +318,11 @@ const KhmerPhotoMerge: React.FC<KhmerPhotoMergeProps> = (props) => {
         onStateChange({ ...appState, stage: 'generating', error: null });
         console.log("State updated to generating (immediate feedback)");
 
-        if (!await checkCredits()) {
-            console.warn("checkCredits returned false");
+        // Calculate credit cost based on model version (v3 = 3, v2 = 1)
+        const creditCost = modelVersion === 'v3' ? 3 : 1;
+
+        if (!await checkCredits(creditCost)) {
+            console.warn(`checkCredits failed for cost ${creditCost}`);
             // Revert
             onStateChange({ ...appState, stage: 'configuring' });
             return;
@@ -247,6 +356,7 @@ const KhmerPhotoMerge: React.FC<KhmerPhotoMergeProps> = (props) => {
 
             logGeneration('khmer-photo-merge', preGenState, urlWithMetadata, {
                 generation_count: 1,
+                credits_used: creditCost,
                 api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
             });
 

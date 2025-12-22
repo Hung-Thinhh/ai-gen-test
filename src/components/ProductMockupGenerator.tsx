@@ -9,7 +9,7 @@ import ActionablePolaroidCard from './ActionablePolaroidCard';
 import { AppScreenHeader, handleFileUpload as utilHandleFileUpload, ResultsView, OptionsPanel, useAppControls } from './uiUtils';
 
 interface ProductMockupState { stage: 'configuring' | 'generating' | 'results'; logoImage: string | null; productImage: string | null; resultImage: string | null; error: string | null; }
-interface ProductMockupProps { mainTitle: string; subtitle: string; useSmartTitleWrapping: boolean; smartTitleWrapWords: number; uploaderCaptionLogo: string; uploaderDescriptionLogo: string; uploaderCaptionProduct: string; uploaderDescriptionProduct: string; addImagesToGallery: (images: string[]) => void; appState: ProductMockupState; onStateChange: (newState: ProductMockupState) => void; onReset: () => void; onGoBack: () => void; logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: { api_model_used?: string; }) => void; }
+interface ProductMockupProps { mainTitle: string; subtitle: string; useSmartTitleWrapping: boolean; smartTitleWrapWords: number; uploaderCaptionLogo: string; uploaderDescriptionLogo: string; uploaderCaptionProduct: string; uploaderDescriptionProduct: string; addImagesToGallery: (images: string[]) => void; appState: ProductMockupState; onStateChange: (newState: ProductMockupState) => void; onReset: () => void; onGoBack: () => void; logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: { api_model_used?: string; credits_used?: number; generation_count?: number; }) => void; }
 
 const ProductMockupGenerator: React.FC<ProductMockupProps> = (props) => {
     const { uploaderCaptionLogo, uploaderDescriptionLogo, uploaderCaptionProduct, uploaderDescriptionProduct, addImagesToGallery, appState, onStateChange, onReset, logGeneration, ...headerProps } = props;
@@ -22,7 +22,8 @@ const ProductMockupGenerator: React.FC<ProductMockupProps> = (props) => {
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
 
-        if (!await checkCredits()) {
+        const creditCostPerImage = modelVersion === 'v3' ? 3 : 1;
+        if (!await checkCredits(creditCostPerImage)) {
             onStateChange({ ...appState, stage: 'configuring' });
             return;
         }
@@ -32,6 +33,8 @@ const ProductMockupGenerator: React.FC<ProductMockupProps> = (props) => {
             onStateChange({ ...appState, stage: 'results', resultImage: result });
             addImagesToGallery([result]);
             logGeneration('product-mockup', preGenState, result, {
+                credits_used: creditCostPerImage,
+                generation_count: 1,
                 api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
             });
         } catch (err) {

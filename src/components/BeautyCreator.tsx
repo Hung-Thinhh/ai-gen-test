@@ -43,6 +43,8 @@ interface BeautyCreatorProps {
     onGoBack: () => void;
     logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: {
         api_model_used?: string;
+        credits_used?: number;
+        generation_count?: number;
     }) => void;
 }
 
@@ -150,6 +152,7 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
 
         // Removed early checkCredits()
 
+        const creditCostPerImage = modelVersion === 'v3' ? 3 : 1;
         hasLoggedGeneration.current = false;
 
         if (appState.styleReferenceImage) {
@@ -159,7 +162,7 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
             // Immediate Feedback
             onStateChange(generatingState);
 
-            if (!await checkCredits()) {
+            if (!await checkCredits(creditCostPerImage)) {
                 // Revert
                 onStateChange({ ...appState, stage: 'configuring' });
                 return;
@@ -173,6 +176,8 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
                 };
                 const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
                 logGeneration('beauty-creator', preGenState, urlWithMetadata, {
+                    credits_used: creditCostPerImage,
+                    generation_count: 1,
                     api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
                 });
                 onStateChange({
@@ -256,7 +261,8 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
 
         // Double check credits if needed
         if (randomCount === 0) {
-            if (!await checkCredits()) {
+            const creditCost = modelVersion === 'v3' ? 3 : 1;
+            if (!await checkCredits(creditCost)) {
                 onStateChange({ ...appState, stage: 'configuring' });
                 return;
             }
@@ -273,11 +279,26 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
 
         const processIdea = async (idea: string) => {
             try {
+                // Check credits for each image if random concepts were involved
+                if (randomCount > 0) {
+                    if (!await checkCredits(creditCostPerImage)) {
+                        // If credit check fails, mark this specific idea as error and continue with others
+                        currentAppState = {
+                            ...currentAppState,
+                            generatedImages: { ...currentAppState.generatedImages, [idea]: { status: 'error' as const, error: t('common_notEnoughCredits') } },
+                        };
+                        onStateChange(currentAppState);
+                        return;
+                    }
+                }
+
                 const resultUrl = await generateBeautyImage(appState.uploadedImage!, idea, appState.options);
                 const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
 
                 if (!hasLoggedGeneration.current) {
                     logGeneration('beauty-creator', preGenState, urlWithMetadata, {
+                        generation_count: 1,
+                        credits_used: creditCostPerImage,
                         api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
                     });
                     hasLoggedGeneration.current = true;

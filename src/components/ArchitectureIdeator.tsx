@@ -39,6 +39,8 @@ interface ArchitectureIdeatorProps {
     onGoBack: () => void;
     logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: {
         api_model_used?: string;
+        credits_used?: number;
+        generation_count?: number;
     }) => void;
 }
 
@@ -106,7 +108,8 @@ const ArchitectureIdeator: React.FC<ArchitectureIdeatorProps> = (props) => {
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
 
-        if (!await checkCredits()) {
+        const creditCostPerImage = modelVersion === 'v3' ? 3 : 1;
+        if (!await checkCredits(creditCostPerImage)) {
             onStateChange({ ...appState, stage: 'configuring' });
             return;
         }
@@ -119,6 +122,8 @@ const ArchitectureIdeator: React.FC<ArchitectureIdeatorProps> = (props) => {
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
             logGeneration('architecture-ideator', preGenState, urlWithMetadata, {
+                credits_used: creditCostPerImage,
+                generation_count: 1,
                 api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
             });
             onStateChange({
@@ -141,7 +146,8 @@ const ArchitectureIdeator: React.FC<ArchitectureIdeatorProps> = (props) => {
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
 
-        if (!await checkCredits()) {
+        const creditCostPerImage = modelVersion === 'v3' ? 3 : 1;
+        if (!await checkCredits(creditCostPerImage)) {
             onStateChange({ ...appState, stage: 'results' }); // Revert to results as we are regenerating
             return;
         }
@@ -154,6 +160,8 @@ const ArchitectureIdeator: React.FC<ArchitectureIdeatorProps> = (props) => {
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
             logGeneration('architecture-ideator', preGenState, urlWithMetadata, {
+                credits_used: creditCostPerImage,
+                generation_count: 1,
                 api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
             });
             onStateChange({

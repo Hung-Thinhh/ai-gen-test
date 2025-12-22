@@ -350,16 +350,23 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             return updatedHistory;
         });
 
-        // Log to Supabase if logged in
-        console.log('[History] Attempting to log to Supabase. isLoggedIn:', isLoggedIn, 'user:', user?.id);
+        // Log to Supabase if logged in OR if it's a guest
+        console.log('[History] Attempting to log to Supabase. isLoggedIn:', isLoggedIn, 'user:', user?.id, 'guestId:', guestId);
+
         if (isLoggedIn && user) {
             console.log('[History] User logged in, calling logGenerationHistory for user:', user.id);
-            // Non-blocking log
+            // non-blocking log
             storageService.logGenerationHistory(user.id, newEntry, token || undefined)
-                .then(() => console.log('[History] Successfully logged to Supabase'))
+                .then(() => console.log('[History] Successfully logged to Supabase for User'))
                 .catch(err => console.error("[History] Failed to log generation to Supabase:", err));
+        } else if (guestId) {
+            console.log('[History] Guest User, calling logGenerationHistory for guest:', guestId);
+            // non-blocking log for guest
+            storageService.logGenerationHistory(null, newEntry, token || undefined, guestId)
+                .then(() => console.log('[History] Successfully logged to Supabase for Guest'))
+                .catch(err => console.error("[History] Failed to log generation to Supabase (Guest):", err));
         } else {
-            console.warn('[History] Skipping Supabase log - user not logged in or user object missing');
+            console.warn('[History] Skipping Supabase log - user not logged in and no guestId found');
         }
 
     }, [isLoggedIn, user, token]);

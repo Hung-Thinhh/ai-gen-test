@@ -9,15 +9,16 @@ import ActionablePolaroidCard from './ActionablePolaroidCard';
 import { AppScreenHeader, handleFileUpload as utilHandleFileUpload, ResultsView, OptionsPanel, useAppControls } from './uiUtils';
 
 interface ProductSceneState { stage: 'configuring' | 'generating' | 'results'; productImage: string | null; resultImage: string | null; options: { scene: string; lighting: string; angle: string }; error: string | null; }
-interface ProductSceneProps { mainTitle: string; subtitle: string; useSmartTitleWrapping: boolean; smartTitleWrapWords: number; uploaderCaption: string; uploaderDescription: string; addImagesToGallery: (images: string[]) => void; appState: ProductSceneState; onStateChange: (newState: ProductSceneState) => void; onReset: () => void; onGoBack: () => void; logGeneration: (appId: string, preGenState: any, thumbnailUrl: string) => void; }
+interface ProductSceneProps { mainTitle: string; subtitle: string; useSmartTitleWrapping: boolean; smartTitleWrapWords: number; uploaderCaption: string; uploaderDescription: string; addImagesToGallery: (images: string[]) => void; appState: ProductSceneState; onStateChange: (newState: ProductSceneState) => void; onReset: () => void; onGoBack: () => void; logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: { api_model_used?: string; credits_used?: number; generation_count?: number; }) => void; }
 
 const ProductSceneGenerator: React.FC<ProductSceneProps> = (props) => {
     const { uploaderCaption, uploaderDescription, addImagesToGallery, appState, onStateChange, onReset, logGeneration, ...headerProps } = props;
-    const { t, checkCredits } = useAppControls();
+    const { t, checkCredits, modelVersion } = useAppControls();
 
     const handleGenerate = async () => {
         if (!appState.productImage) return;
-        if (!await checkCredits()) return;
+        const creditCostPerImage = modelVersion === 'v3' ? 3 : 1;
+        if (!await checkCredits(creditCostPerImage)) return;
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
         try {
@@ -25,7 +26,11 @@ const ProductSceneGenerator: React.FC<ProductSceneProps> = (props) => {
             const result = await generateStyledImage(prompt, [appState.productImage]);
             onStateChange({ ...appState, stage: 'results', resultImage: result });
             addImagesToGallery([result]);
-            logGeneration('product-scene', preGenState, result);
+            logGeneration('product-scene', preGenState, result, {
+                credits_used: creditCostPerImage,
+                generation_count: 1,
+                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+            });
         } catch (err) {
             onStateChange({ ...appState, stage: 'results', error: err instanceof Error ? err.message : "Lỗi." });
         }

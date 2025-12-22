@@ -31,6 +31,8 @@ interface FaceSwapProps {
     onGoBack: () => void;
     logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: {
         api_model_used?: string;
+        credits_used?: number;
+        generation_count?: number;
     }) => void;
 }
 
@@ -69,7 +71,8 @@ const FaceSwap: React.FC<FaceSwapProps> = (props) => {
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
 
-        if (!await checkCredits()) {
+        const creditCostPerImage = modelVersion === 'v3' ? 3 : 1;
+        if (!await checkCredits(creditCostPerImage)) {
             onStateChange({ ...appState, stage: 'configuring' });
             return;
         }
@@ -83,6 +86,8 @@ const FaceSwap: React.FC<FaceSwapProps> = (props) => {
             onStateChange({ ...appState, stage: 'results', resultImage: result });
             addImagesToGallery([result]);
             logGeneration('face-swap', preGenState, result, {
+                credits_used: creditCostPerImage,
+                generation_count: 1,
                 api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
             });
         } catch (err) {

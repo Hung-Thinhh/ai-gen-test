@@ -251,6 +251,8 @@ interface PosterCreatorProps {
     onGoBack: () => void;
     logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: {
         api_model_used?: string;
+        credits_used?: number;
+        generation_count?: number;
     }) => void;
 }
 
@@ -738,7 +740,9 @@ ${aspectRatioPrompt}
         }, 100);
 
         // Check credits for TOTAL images
-        if (!await checkCredits(imageCount)) {
+        const creditCostPerImage = modelVersion === 'v3' ? 3 : 1;
+        const totalCost = imageCount * creditCostPerImage;
+        if (!await checkCredits(totalCost)) {
             setPendingImageSlots(0); // Revert
             return;
         }
@@ -799,6 +803,8 @@ ${aspectRatioPrompt}
                     try {
                         const preGenState = { ...appState, selectedStyle };
                         logGeneration('poster-creator', preGenState, imageUrlForDisplay, {
+                            credits_used: creditCostPerImage,
+                            generation_count: 1,
                             api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
                         });
                     } catch (e) {

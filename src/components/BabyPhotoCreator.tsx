@@ -45,6 +45,8 @@ interface BabyPhotoCreatorProps {
     onGoBack: () => void;
     logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: {
         api_model_used?: string;
+        credits_used?: number;
+        generation_count?: number;
     }) => void;
 }
 
@@ -139,6 +141,7 @@ const BabyPhotoCreator: React.FC<BabyPhotoCreatorProps> = (props) => {
 
         // Removed early checkCredits() to allow immediate UI feedback
 
+        const creditCostPerImage = modelVersion === 'v3' ? 3 : 1;
         hasLoggedGeneration.current = false;
 
         if (appState.styleReferenceImage) {
@@ -150,7 +153,7 @@ const BabyPhotoCreator: React.FC<BabyPhotoCreatorProps> = (props) => {
             // Immediate Feedback
             onStateChange(generatingState);
 
-            if (!await checkCredits()) {
+            if (!await checkCredits(creditCostPerImage)) {
                 // Revert
                 onStateChange({ ...appState, stage: 'configuring' });
                 return;
@@ -171,6 +174,8 @@ const BabyPhotoCreator: React.FC<BabyPhotoCreatorProps> = (props) => {
                 };
                 const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
                 logGeneration('baby-photo-creator', preGenState, urlWithMetadata, {
+                    credits_used: creditCostPerImage,
+                    generation_count: 1,
                     api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
                 });
                 // FIX: Pass a state object instead of a function to `onStateChange`.
@@ -209,7 +214,7 @@ const BabyPhotoCreator: React.FC<BabyPhotoCreatorProps> = (props) => {
             // Immediate Feedback
             setIsEstimatingAge(true);
 
-            if (!await checkCredits()) {
+            if (!await checkCredits(creditCostPerImage)) {
                 setIsEstimatingAge(false);
                 return;
             }
@@ -251,7 +256,7 @@ const BabyPhotoCreator: React.FC<BabyPhotoCreatorProps> = (props) => {
 
         // Double check credits if we didn't check in analysis
         if (randomCount === 0) {
-            if (!await checkCredits()) {
+            if (!await checkCredits(creditCostPerImage)) {
                 onStateChange({ ...appState, stage: 'configuring' });
                 return;
             }
@@ -273,6 +278,8 @@ const BabyPhotoCreator: React.FC<BabyPhotoCreatorProps> = (props) => {
 
                 if (!hasLoggedGeneration.current) {
                     logGeneration('baby-photo-creator', preGenState, urlWithMetadata, {
+                        generation_count: 1,
+                        credits_used: creditCostPerImage,
                         api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
                     });
                     hasLoggedGeneration.current = true;
