@@ -494,7 +494,9 @@ export interface IDPhotoCreatorState {
 
 export interface KhmerPhotoMergeState {
     stage: 'idle' | 'configuring' | 'generating' | 'results';
-    uploadedImage: string | null;
+    activeTab: 'female' | 'male' | 'couple'; // New field
+    uploadedImage: string | null; // Female (in couple mode) or Single Person
+    uploadedImage2: string | null; // Male (in couple mode)
     selectedStyleImage: string | null;
     generatedImage: string | null;
     historicalImages: { style: string; url: string }[];
@@ -778,7 +780,9 @@ export const getInitialStateForApp = (viewId: string): AnyAppState => {
         case 'khmer-photo-merge':
             return {
                 stage: 'idle',
+                activeTab: 'female',
                 uploadedImage: null,
+                uploadedImage2: null,
                 selectedStyleImage: null,
                 generatedImage: null,
                 historicalImages: [],
