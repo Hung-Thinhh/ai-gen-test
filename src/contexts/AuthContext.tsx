@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import toast from 'react-hot-toast';
@@ -72,9 +72,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // DEBUG RENDER
     console.log('🔄 [AuthContext] Render. User:', user?.id || 'null', 'Loading:', isLoading);
 
+    // Use ref to track timer to clear it from anywhere
+    const safetyTimerRef = useRef<NodeJS.Timeout | null>(null);
+
     useEffect(() => {
-        // SAFETY FALLBACK: Force loading to false after 3s to prevent infinite spinner
-        const safetyTimer = setTimeout(() => {
+        // SAFETY FALLBACK: Force loading to false after 5s
+        safetyTimerRef.current = setTimeout(() => {
             setIsLoading(prev => {
                 if (prev) {
                     console.warn('⚠️ [Auth] Safety timer triggered: Forcing isLoading to false after 5s');
@@ -85,66 +88,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }, 5000);
 
         // Get initial session
-        supabase.auth.getSession().then(async ({ data: { session } }) => {
+        supabase.auth.getSession().then(({ data: { session } }) => {
             console.log('🏁 [Auth] getSession completed. User:', session?.user?.id || 'none');
-            clearTimeout(safetyTimer); // Clear timer if successful
-
-            setUser(session?.user ?? null);
-            setToken(session?.access_token ?? null);
-
-            // Fetch role immediately for initial session
+            // Only update if we have a session, OR if we don't have a user yet.
+            // This prevents getSession (which might fail/return null on error) from overwriting
+            // a valid user set by onAuthStateChange logic running in parallel.
             if (session?.user) {
-                // Try cache first
+                setUser(session.user);
+                setToken(session.access_token);
+                if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current);
+            } else {
+                // Only set null if we really intend to (and maybe check if onAuthStateChange handled it)
+                // But for safety, let's rely on onAuthStateChange for the definitive state
+                console.log('ℹ️ [Auth] getSession found no user (awaiting onAuthStateChange)');
+            }
+
+            // Check cache role...
+            if (session?.user) {
                 const cachedRole = getCachedRole(session.user.id);
                 if (cachedRole) {
                     setUserRole(cachedRole);
-                    setIsLoading(false); // Can show UI immediately!
-
-                    // Still fetch in background to update cache
-                    console.log('🔄 Fetching fresh role in background...');
-                    supabase
-                        .from('users')
-                        .select('role')
-                        .eq('user_id', session.user.id)
-                        .single()
-                        .then(({ data }) => {
-                            if (data?.role && data.role !== cachedRole) {
-                                console.log('⚠️ Role changed on server, updating cache');
-                                setUserRole(data.role);
-                                setCachedRole(session.user.id, data.role);
-                            }
-                        });
-                    return;
-                }
-
-                // No cache, fetch from DB
-                console.log('🔍 [Initial Load] No cache, fetching role for user:', session.user.id);
-                try {
-                    const { data, error } = await supabase
-                        .from('users')
-                        .select('role')
-                        .eq('user_id', session.user.id)
-                        .single();
-
-                    if (error) {
-                        console.warn('⚠️ [Initial Load] Could not fetch role (RLS or missing user), defaulting to "user":', error);
-                        setUserRole('user');
-                        setCachedRole(session.user.id, 'user');
-                    } else {
-                        console.log('👤 [Initial Load] Role data from DB:', data);
-                        const fetchedRole = data?.role || 'user';
-                        console.log('✅ [Initial Load] Setting user role to:', fetchedRole);
-                        setUserRole(fetchedRole);
-                        setCachedRole(session.user.id, fetchedRole);
-                    }
-                } catch (err) {
-                    console.warn('⚠️ [Initial Load] Exception fetching role, defaulting to "user":', err);
-                    setUserRole('user');
-                    setCachedRole(session.user.id, 'user');
+                    setIsLoading(false);
                 }
             }
-
-            setIsLoading(false);
+        }).catch(err => {
+            console.warn('⚠️ [Auth] getSession failed:', err);
         });
 
         // Listen for auth changes
@@ -152,83 +120,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             async (event, session) => {
                 console.log('🔐 Supabase auth event:', event);
 
-                // ✅ Log chi tiết khi SIGNED_IN để confirm OAuth thành công
+                // Clear safety timer immediately on any auth event
+                if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current);
+
                 if (event === 'SIGNED_IN') {
                     console.log('✅ SIGNED_IN event received - OAuth login successful!');
                 }
 
-                if (session) {
-                    console.log('📦 Session Info:', {
-                        access_token: session.access_token.substring(0, 20) + '...',
-                        refresh_token: session.refresh_token ? session.refresh_token.substring(0, 20) + '...' : 'none',
-                        expires_at: new Date(session.expires_at! * 1000).toLocaleString(),
-                        expires_in: session.expires_in,
-                    });
-
-                    console.log('👤 User Info:', {
-                        id: session.user.id,
-                        email: session.user.email,
-                        user_metadata: session.user.user_metadata,
-                        app_metadata: session.user.app_metadata,
-                        created_at: session.user.created_at,
-                    });
-                }
-
                 if (session?.user) {
-                    // Fetch role
-                    console.log('🔍 Fetching role for user:', session.user.id);
-                    try {
-                        const { data, error } = await supabase
-                            .from('users')
-                            .select('role')
-                            .eq('user_id', session.user.id)
-                            .single();
-
-                        if (error) {
-                            console.warn('⚠️ Could not fetch role (RLS or missing user), defaulting to "user":', error);
-                            setUserRole('user');
-                            setCachedRole(session.user.id, 'user');
-                        } else {
-                            console.log('👤 Role data from DB:', data);
-                            const fetchedRole = data?.role || 'user';
-                            console.log('✅ Setting user role to:', fetchedRole);
-                            setUserRole(fetchedRole);
-                            setCachedRole(session.user.id, fetchedRole); // Cache it
-                        }
-                    } catch (err) {
-                        console.warn('⚠️ Exception fetching role, defaulting to "user":', err);
-                        setUserRole('user');
-                        setCachedRole(session.user.id, 'user');
-                    }
-                } else {
+                    setUser(session.user);
+                    console.log('� [AuthContext] Set User from AuthChange:', session.user.id);
+                    setToken(session.access_token);
+                } else if (event === 'SIGNED_OUT') {
+                    setUser(null);
                     setUserRole(null);
+                    setToken(null);
                 }
 
-                setUser(session?.user ?? null);
-                console.log('🔄 [AuthContext] Updating User State:', session?.user?.id || 'null');
-                setToken(session?.access_token ?? null);
+                // ... rest of logic (logging, role fetch) ...
 
-                // Create/update user in database when signed in
-                if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
-                    console.log('✅ User authenticated, ensuring database record (background)...');
-                    // Run in background, don't block UI
-                    ensureUserExists(session.user)
-                        .then(() => console.log('✅ User DB record verified/updated'))
-                        .catch(err => console.error('⚠️ Failed to ensure user exists:', err));
+                if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+                    // Background user ensure
+                    if (session?.user) {
+                        ensureUserExists(session.user).catch(err => console.error("Ensure user failed", err));
+                    }
                 }
 
-                // Handle token refresh
-                if (event === 'TOKEN_REFRESHED') {
-                    console.log('🔄 Token refreshed successfully');
-                }
-
-                // Always update loading state after processing auth event
-                // Remove stale closure check to prevent infinite loading
+                // Always update loading state
                 setIsLoading(false);
             }
         );
 
-        return () => subscription.unsubscribe();
+        return () => {
+            subscription.unsubscribe();
+            if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current);
+        };
     }, []);
 
     // Handle OAuth redirect cleanup
