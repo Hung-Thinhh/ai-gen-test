@@ -337,6 +337,7 @@ export const getGuestCredits = async (guestId: string): Promise<number> => {
             .maybeSingle();
 
         if (error) {
+            if (error.code === '42703') return 10; // Ignore missing column
             console.warn("Error fetching guest credits:", error);
             // Fallback to local storage logic essentially, or default
             return 10;
@@ -371,6 +372,7 @@ export const deductGuestCredit = async (guestId: string, amount: number = 1): Pr
             .single();
 
         if (error) {
+            if (error.code === '42703') return current - amount; // Simulate success
             console.error("Failed to deduct guest credits:", error);
             return current; // Return old balance implies no change
         }

@@ -74,12 +74,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const safetyTimer = setTimeout(() => {
             setIsLoading(prev => {
                 if (prev) {
-                    console.warn('⚠️ [Auth] Safety timer triggered: Forcing isLoading to false after 3s');
+                    console.warn('⚠️ [Auth] Safety timer triggered: Forcing isLoading to false after 5s');
                     return false;
                 }
                 return prev;
             });
-        }, 3000);
+        }, 5000);
 
         // Get initial session
         supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -206,8 +206,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                 // Create/update user in database when signed in
                 if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
-                    console.log('✅ User authenticated, ensuring database record...');
-                    await ensureUserExists(session.user);
+                    console.log('✅ User authenticated, ensuring database record (background)...');
+                    // Run in background, don't block UI
+                    ensureUserExists(session.user)
+                        .then(() => console.log('✅ User DB record verified/updated'))
+                        .catch(err => console.error('⚠️ Failed to ensure user exists:', err));
                 }
 
                 // Handle token refresh
