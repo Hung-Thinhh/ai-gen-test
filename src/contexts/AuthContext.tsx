@@ -70,8 +70,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
+        // SAFETY FALLBACK: Force loading to false after 3s to prevent infinite spinner
+        const safetyTimer = setTimeout(() => {
+            setIsLoading(prev => {
+                if (prev) {
+                    console.warn('⚠️ [Auth] Safety timer triggered: Forcing isLoading to false after 3s');
+                    return false;
+                }
+                return prev;
+            });
+        }, 3000);
+
         // Get initial session
         supabase.auth.getSession().then(async ({ data: { session } }) => {
+            console.log('🏁 [Auth] getSession completed. User:', session?.user?.id || 'none');
+            clearTimeout(safetyTimer); // Clear timer if successful
+
             setUser(session?.user ?? null);
             setToken(session?.access_token ?? null);
 
