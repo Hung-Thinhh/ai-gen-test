@@ -420,7 +420,7 @@ const KhmerPhotoMerge: React.FC<KhmerPhotoMergeProps> = (props) => {
                     transition={{ duration: 0.5 }}
                 >
                     {/* 1. Inputs Section */}
-                    {!isLoading && (
+                    {(!isLoading && appState.stage !== 'results') && (
                         <div className="w-full max-w-4xl flex flex-col items-center">
                             {/* Tabs */}
                             <div className="flex gap-2 mb-6 bg-neutral-900/40 p-1.5 rounded-full border border-neutral-800">
@@ -442,7 +442,7 @@ const KhmerPhotoMerge: React.FC<KhmerPhotoMergeProps> = (props) => {
                                 ))}
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+                            <div className={`grid gap-6 w-full ${activeTab === 'couple' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:max-w-md mx-auto'}`}>
                                 {activeTab === 'couple' ? (
                                     <>
                                         {/* Female / Primary Image */}
@@ -491,29 +491,6 @@ const KhmerPhotoMerge: React.FC<KhmerPhotoMergeProps> = (props) => {
                                                 isMobile={isMobile}
                                             />
                                         </div>
-
-                                        {/* Template Preview (Single Mode Only) */}
-                                        <div className="themed-card backdrop-blur-md p-4 rounded-2xl flex flex-col items-center gap-4">
-                                            <h3 className="text-lg font-bold text-yellow-400">{t('khmer_selectStyle') || '2. Chọn mẫu'}</h3>
-                                            {appState.selectedStyleImage ? (
-                                                <ActionablePolaroidCard
-                                                    type="content-input"
-                                                    mediaUrl={appState.selectedStyleImage}
-                                                    caption="Mẫu đã chọn"
-                                                    status="done"
-                                                    onClick={() => openLightbox(lightboxImages.indexOf(appState.selectedStyleImage!))}
-                                                    placeholderType="style"
-                                                    isMobile={isMobile}
-                                                    onImageChange={(url) => handleStyleSelect(url || '')}
-                                                />
-                                            ) : (
-                                                <div className='polaroid-card p-2 cursor-pointer h-auto h-full w-full aspect-[3/4] flex items-center justify-center bg-white/5 rounded-xl border-2 border-dashed border-white/20'>
-                                                    <div className="placeholder-upload-wrapper">
-                                                        <p className="text-neutral-500 text-center px-4">Chọn mẫu bên dưới</p>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
                                     </>
                                 )}
                             </div>
@@ -535,9 +512,9 @@ const KhmerPhotoMerge: React.FC<KhmerPhotoMergeProps> = (props) => {
                     )}
 
                     {/* 3. Results Section */}
-                    {!isLoading && (hasResults || appState.error) && (
+                    {!isLoading && appState.stage === 'results' && (
                         <div className="w-full max-w-4xl mt-6">
-                            <div className="themed-card backdrop-blur-md rounded-2xl p-6 relative">
+                            <div className="themed-card backdrop-blur-md rounded-2xl p-6 relative border-dashed! border-orange-600! px-0!">
                                 <h3 className="base-font font-bold text-xl text-yellow-400 mb-4 text-center">{t('common_result') || 'Kết quả'}</h3>
 
                                 {appState.error && (
@@ -563,16 +540,22 @@ const KhmerPhotoMerge: React.FC<KhmerPhotoMergeProps> = (props) => {
                                 )}
 
                                 <div className="flex gap-4 justify-center">
-                                    <button onClick={onReset} className="px-6 py-2 bg-neutral-700 text-white rounded-full hover:bg-neutral-600 transition-colors">
-                                        {t('common_startOver')}
+                                    <button
+                                        onClick={() => onStateChange({ ...appState, stage: 'configuring' })}
+                                        className="px-6 py-2 bg-neutral-600 cursor-pointer text-white rounded-full hover:bg-neutral-500 transition-colors"
+                                    >
+                                        {t('common_edit') || 'Sửa'}
+                                    </button>
+                                    <button onClick={onReset} className="px-6 py-2 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 shadow-orange-500/20 text-white rounded-full cursor-pointer transition-colors">
+                                        {t('common_startOver') || 'Bắt đầu lại'}
                                     </button>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* 4. Template Grid & Options (Always Visible) */}
-                    {!isLoading && (
+                    {/* 4. Template Grid & Options (Visible only when configuring) */}
+                    {(!isLoading && appState.stage !== 'results') && (
                         <div className="w-full max-w-4xl space-y-6 mt-6">
                             {/* Templates */}
                             <div>
