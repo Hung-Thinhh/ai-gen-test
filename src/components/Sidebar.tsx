@@ -29,6 +29,7 @@ import {
     LayoutIcon,
     AppCoverIcon,
     PlaceholderPersonIcon,
+    BrushIcon
 } from './icons';
 
 interface NavItem {
@@ -66,6 +67,7 @@ const Sidebar: React.FC = () => {
 
         // /tool/* routes map to generators
         if (firstSegment === 'tool') return 'generators';
+        if (firstSegment === 'studio') return 'studio';
 
         return 'overview'; // Default
     }, [pathname]);
@@ -91,6 +93,16 @@ const Sidebar: React.FC = () => {
                 setActivePage('generators');
                 navigateTo('generators');
             },
+        },
+        {
+            id: 'studio',
+            label: 'Studio',
+            icon: BrushIcon,
+            href: '/studio',
+            action: () => {
+                setActivePage('studio');
+                navigateTo('studio');
+            }
         },
         {
             id: 'editor',

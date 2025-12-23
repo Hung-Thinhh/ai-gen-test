@@ -28,3 +28,4 @@ export * from './gemini/presetService'; // NEW: Export the centralized preset se
 export * from './gemini/chatService'; // NEW: Export the new chat service
 export * from './gemini/storyboardingService'; // NEW: Export the new storyboarding service
 export * from './gemini/khmerPhotoMergeService';
+export * from './gemini/studioGenerationService'; // NEW: Export generic studio service

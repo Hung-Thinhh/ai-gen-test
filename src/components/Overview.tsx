@@ -5,6 +5,9 @@ import { useAppControls } from './uiUtils';
 import { useIsMobile } from '../utils/mobileUtils';
 import { MobileHomeHeader } from './MobileHeader';
 import { Pricing } from './Pricing';
+import { HeroSlider } from './HeroSlider';
+import { PersonalGallery } from './PersonalGallery';
+import { ZaloCTA } from './ZaloCTA';
 
 import {
     PlaceholderMagicIcon,
@@ -208,23 +211,8 @@ const Overview: React.FC = () => {
                 />
             )}
 
-            {/* ===== HERO BANNER ===== */}
-            <motion.section
-                className="hero-banner"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-            >
-                <div className="hero-banner-content">
-                    <span className="new-feature-tag">NEW FEATURE</span>
-                    <h2 className="hero-banner-title">Tạo ảnh đón tết 2026</h2>
-                    <p className="hero-banner-desc">Biến những bức ảnh của bạn thành ảnh đẹp ngày tết</p>
-                    <button className="hero-banner-btn" onClick={() => handleSelectApp('swap-style')}>
-                        Try Now / Thử ngay
-                    </button>
-                </div>
-                <div className="hero-banner-bg"></div>
-            </motion.section>
+            {/* ===== HERO BANNER SLIDER ===== */}
+            <HeroSlider />
 
             {/* ===== AI TOOLS GRID ===== */}
             <motion.section
@@ -386,14 +374,17 @@ const Overview: React.FC = () => {
                 </div>
             </motion.section>
 
-            {/* ===== PRICING SECTION ===== */}
+            {/* ===== ZALO CTA SECTION ===== */}
+            <ZaloCTA />
+
+            {/* ===== PERSONAL GALLERY SECTION ===== */}
             <motion.section
-                className="pricing-section"
+                className="gallery-section"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.3 }}
             >
-                <Pricing />
+                <PersonalGallery />
             </motion.section>
 
 

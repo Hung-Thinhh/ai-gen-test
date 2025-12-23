@@ -14,6 +14,11 @@ const beVietnamPro = Be_Vietnam_Pro({
 export const metadata: Metadata = {
   title: "Duky AI",
   description: "AI Generated Images",
+  icons: {
+    icon: '/img/logo_site.webp',
+    shortcut: '/img/logo_site.webp',
+    apple: '/img/logo_site.webp',
+  },
 };
 
 export default function RootLayout({

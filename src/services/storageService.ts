@@ -102,6 +102,18 @@ export const addImageToCloudGallery = async (userId: string, imageUrl: string) =
 };
 
 /**
+ * Uploads a generic asset (File) to Cloudinary and returns URL.
+ */
+export const uploadAsset = async (file: File): Promise<string> => {
+    try {
+        return await uploadToCloudinary(file, 'studio-assets');
+    } catch (error) {
+        console.error("Error uploading asset:", error);
+        throw error;
+    }
+};
+
+/**
  * Adds multiple image URLs to the user's Supabase gallery.
  * Handles Read-Modify-Write to prevent race conditions within the batch.
  */
@@ -709,6 +721,27 @@ const getToolId = async (appIdOrName: string): Promise<number | null> => {
 };
 
 /**
+ * Creates a new tool in the database.
+ */
+export const createTool = async (tool: any) => {
+    try {
+        const { data, error } = await supabase
+            .from('tools')
+            .insert([tool])
+            .select();
+
+        if (error) {
+            console.error("Error creating tool:", error);
+            return false;
+        }
+        return true;
+    } catch (error) {
+        console.error("Error creating tool:", error);
+        return false;
+    }
+};
+
+/**
  * Fetches all tools from the database.
  */
 export const getAllTools = async () => {
@@ -716,13 +749,28 @@ export const getAllTools = async () => {
         const { data, error } = await supabase
             .from('tools')
             .select('*')
-            .order('tool_id', { ascending: true });
+            .order('sort_order', { ascending: true })
+            .range(0, 999);
 
         if (error) {
             console.error("Error fetching tools:", error);
             return [];
         }
-        return data || [];
+
+        const tools = data || [];
+
+        // Custom sort: sort_order 1, 2, 3... first, then 0s at the end
+        tools.sort((a, b) => {
+            const orderA = a.sort_order || 0;
+            const orderB = b.sort_order || 0;
+
+            if (orderA === 0 && orderB !== 0) return 1; // 0 goes after non-zero
+            if (orderA !== 0 && orderB === 0) return -1; // Non-zero goes before 0
+            if (orderA === 0 && orderB === 0) return 0; // Keep relative order
+            return orderA - orderB; // Ascending for non-zeros
+        });
+
+        return tools;
     } catch (error) {
         console.error("Error fetching tools:", error);
         return [];
@@ -930,3 +978,220 @@ export const updatePackage = async (packageId: string | number, updates: any, to
 };
 
 
+
+// --- CATEGORY MANAGEMENT ---
+
+/**
+ * Fetches all categories.
+ */
+export const getAllCategories = async () => {
+    try {
+        const { data, error } = await supabase
+            .from('categories')
+            .select('*')
+            .order('sort_order', { ascending: true })
+            .range(0, 999);
+
+        if (error) {
+            console.error("Error fetching categories:", error);
+            return [];
+        }
+
+        let categories = data || [];
+        // Custom sort similar to tools: sort_order 1, 2, 3... first, then 0s at the end
+        categories.sort((a, b) => {
+            const orderA = a.sort_order || 0;
+            const orderB = b.sort_order || 0;
+
+            if (orderA === 0 && orderB !== 0) return 1;
+            if (orderA !== 0 && orderB === 0) return -1;
+            if (orderA === 0 && orderB === 0) return 0;
+            return orderA - orderB;
+        });
+
+        return categories;
+    } catch (error) {
+        console.error("Error fetching categories:", error);
+        return [];
+    }
+};
+
+/**
+ * Creates a new category.
+ */
+export const createCategory = async (category: any) => {
+    try {
+        const { data, error } = await supabase
+            .from('categories')
+            .insert([category])
+            .select();
+
+        if (error) {
+            console.error("Error creating category:", error);
+            return false;
+        }
+        return true;
+    } catch (error) {
+        console.error("Error creating category:", error);
+        return false;
+    }
+};
+
+/**
+ * Updates a category.
+ */
+export const updateCategory = async (categoryId: string, updates: any) => {
+    try {
+        const { error } = await supabase
+            .from('categories')
+            .update(updates)
+            .eq('id', categoryId);
+
+        if (error) {
+            console.error("Error updating category:", error);
+            return false;
+        }
+        return true;
+    } catch (error) {
+        console.error("Error updating category:", error);
+        return false;
+    }
+};
+
+/**
+ * Deletes a category.
+ */
+export const deleteCategory = async (categoryId: string) => {
+    try {
+        const { error } = await supabase
+            .from('categories')
+            .delete()
+            .eq('id', categoryId);
+
+        if (error) {
+            console.error("Error deleting category:", error);
+            return false;
+        }
+        return true;
+    } catch (error) {
+        console.error("Error deleting category:", error);
+        return false;
+    }
+};
+
+// --- STUDIO MANAGEMENT ---
+
+/**
+ * Fetches all studios.
+ */
+export const getAllStudios = async () => {
+    try {
+        const { data, error } = await supabase
+            .from('studio')
+            .select('*')
+            .order('sort_order', { ascending: true })
+            .select('*, prompts, categories(name)'); // Fetch category name
+
+        if (error) {
+            console.error("Error fetching studios:", error);
+            return [];
+        }
+
+        let studios = data || [];
+        studios.sort((a, b) => {
+            const orderA = a.sort_order || 0;
+            const orderB = b.sort_order || 0;
+            if (orderA === 0 && orderB !== 0) return 1;
+            if (orderA !== 0 && orderB === 0) return -1;
+            if (orderA === 0 && orderB === 0) return 0;
+            return orderA - orderB;
+        });
+
+        return studios;
+    } catch (error) {
+        console.error("Error fetching studios:", error);
+        return [];
+    }
+};
+
+/**
+ * Creates a new studio.
+ */
+export const createStudio = async (studio: any) => {
+    try {
+        const { data, error } = await supabase
+            .from('studio')
+            .insert([studio])
+            .select();
+
+        if (error) {
+            console.error("Error creating studio:", error);
+            return false;
+        }
+        return true;
+    } catch (error) {
+        console.error("Error creating studio:", error);
+        return false;
+    }
+};
+
+/**
+ * Updates a studio.
+ */
+export const updateStudio = async (studioId: string, updates: any) => {
+    try {
+        const { error } = await supabase
+            .from('studio')
+            .update(updates)
+            .eq('id', studioId);
+
+        if (error) {
+            console.error("Error updating studio:", error);
+            return false;
+        }
+        return true;
+    } catch (error) {
+        console.error("Error updating studio:", error);
+        return false;
+    }
+};
+
+/**
+ * Deletes a studio.
+ */
+export const deleteStudio = async (studioId: string) => {
+    try {
+        const { error } = await supabase
+            .from('studio')
+            .delete()
+            .eq('id', studioId);
+
+        if (error) {
+            console.error("Error deleting studio:", error);
+            return false;
+        }
+        return true;
+    } catch (error) {
+        console.error("Error deleting studio:", error);
+        return false;
+    }
+};
+
+export const getStudioBySlug = async (slug: string) => {
+    try {
+        const { data, error } = await supabase
+            .from('studio')
+            .select(`
+                *,
+                categories:category (name)
+            `)
+            .eq('slug', slug)
+            .single();
+
+        if (error) throw error;
+        return data;
+    } catch (error) {
+        console.error('Error fetching studio by slug:', error);
+        return null;
+    }
+};

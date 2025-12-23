@@ -64,6 +64,8 @@ export default function ToolManagement() {
         setLoading(true);
         try {
             const data = await getAllTools();
+            console.log("Raw tools data from DB:", data);
+
             // Helper to safely extract string from potentially localized object
             const getLocString = (val: any) => {
                 if (typeof val === 'string') return val;
@@ -73,17 +75,27 @@ export default function ToolManagement() {
                 return '';
             };
 
-            const mappedTools = data.map((t: any) => ({
-                id: t.tool_id || t.id,
-                name: getLocString(t.name || t.name),
-                description: getLocString(t.description),
-                status: t.status || 'active',
-                usage: t.usage || 'Low',
-                is_active: t.is_active || false,
-                version: t.version || '1.0',
-                avatar: t.preview_image_url || t.avatar || '',
-                tool_key: t.tool_key // Keep original key for reference
-            }));
+            const mappedTools = data.map((t: any) => {
+                // Map numeric usage to text labels for UI compatibility
+                const usageNum = Number(t.usage) || 0;
+                let usageLabel = 'Low';
+                if (usageNum >= 1000) usageLabel = 'Very High';
+                else if (usageNum >= 500) usageLabel = 'High';
+                else if (usageNum >= 100) usageLabel = 'Medium';
+
+                return {
+                    id: t.tool_id || t.id,
+                    name: getLocString(t.name),
+                    description: getLocString(t.description),
+                    status: t.status || 'active',
+                    usage: usageLabel,
+                    is_active: t.is_active !== false, // Default to true if undefined
+                    version: t.version || '1.0',
+                    avatar: t.preview_image_url || t.avatar || '',
+                    tool_key: t.tool_key, // Keep original key for reference
+                    sort_order: t.sort_order || 0
+                };
+            });
             setTools(mappedTools);
         } catch (error) {
             console.error("Failed to fetch tools", error);
@@ -157,7 +169,8 @@ export default function ToolManagement() {
             const updates = {
                 name: currentTool.name,      // Send both to be safe or check schema
                 description: currentTool.description,
-                preview_image_url: finalAvatarUrl
+                preview_image_url: finalAvatarUrl,
+                sort_order: parseInt(currentTool.sort_order) || 0
             };
 
             const success = await updateTool(currentTool.id, updates);
@@ -422,6 +435,15 @@ export default function ToolManagement() {
                                 rows={3}
                                 value={currentTool.description}
                                 onChange={(e) => setCurrentTool({ ...currentTool, description: e.target.value })}
+                            />
+
+                            <TextField
+                                label="Thứ tự hiển thị (Sort Order)"
+                                fullWidth
+                                type="number"
+                                value={currentTool.sort_order}
+                                onChange={(e) => setCurrentTool({ ...currentTool, sort_order: e.target.value })}
+                                helperText="Nhập 1, 2, 3... để đưa lên đầu (1 là cao nhất). Nhập 0 để xếp xuống cuối cùng."
                             />
 
                             <Stack direction="row" spacing={2}>

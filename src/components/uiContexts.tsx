@@ -625,6 +625,9 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         } else if (path.startsWith('/tool/')) {
             // Tool routes: /tool/free-generation
             targetView = path.slice(6); // Remove '/tool/'
+        } else if (path.startsWith('/studio/')) {
+            // Studio detail routes
+            targetView = 'studio';
         } else {
             // System routes: /gallery, /history, etc.
             targetView = path.slice(1); // Remove leading '/'
@@ -636,7 +639,7 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         }
 
         // System views
-        const systemViews = ['overview', 'home', 'generators', 'gallery', 'prompt-library', 'storyboarding', 'profile', 'settings'];
+        const systemViews = ['overview', 'home', 'generators', 'gallery', 'prompt-library', 'storyboarding', 'profile', 'settings', 'studio'];
         if (systemViews.includes(targetView)) {
             navigateTo(targetView);
             return;
@@ -765,7 +768,7 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         // }
 
         // Special system views that are not in settings.apps
-        const systemViews = ['overview', 'home', 'generators', 'gallery', 'prompt-library', 'storyboarding', 'profile', 'settings'];
+        const systemViews = ['overview', 'home', 'generators', 'gallery', 'prompt-library', 'storyboarding', 'profile', 'settings', 'studio'];
 
         if (systemViews.includes(appId)) {
             // Update state
