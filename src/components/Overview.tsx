@@ -243,7 +243,7 @@ const Overview: React.FC = () => {
                             return (
                                 <Link
                                     key={tool.id}
-                                    href={`/tool/${tool.id}`}
+                                    href={tool.id === 'studio' ? '/studio' : `/tool/${tool.id}`}
                                     onClick={() => handleSelectApp(tool.id)}
                                     className="group relative flex flex-col items-center gap-3"
                                 >

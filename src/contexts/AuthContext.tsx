@@ -137,7 +137,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     setToken(null);
                 }
 
-                // ... rest of logic (logging, role fetch) ...
+                if (session?.user) {
+                    try {
+                        const { data, error } = await supabase
+                            .from('users')
+                            .select('role')
+                            .eq('user_id', session.user.id)
+                            .single();
+
+                        if (data && data.role) {
+                            console.log('👑 Fetched role from DB:', data.role);
+                            setUserRole(data.role);
+                            setCachedRole(session.user.id, data.role);
+                        } else if (error) {
+                            console.error('Error fetching role:', error);
+                        }
+                    } catch (e) {
+                        console.error('Exception fetching role:', e);
+                    }
+                }
 
                 if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
                     // Background user ensure
