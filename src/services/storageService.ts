@@ -1,3 +1,4 @@
+import { log } from 'console';
 import { supabase } from '../lib/supabase/client';
 import { uploadToCloudinary } from './cloudinaryService';
 const USERS_TABLE = "users";
@@ -759,17 +760,17 @@ export const getAllTools = async () => {
 
         const tools = data || [];
 
-        // Custom sort: sort_order 1, 2, 3... first, then 0s at the end
+        // Custom sort: sort_order 1, 2, 3... first, then 0s (or nulls) at the end
         tools.sort((a, b) => {
-            const orderA = a.sort_order || 0;
-            const orderB = b.sort_order || 0;
+            const orderA = a.sort_order ? parseInt(a.sort_order) : 0;
+            const orderB = b.sort_order ? parseInt(b.sort_order) : 0;
 
             if (orderA === 0 && orderB !== 0) return 1; // 0 goes after non-zero
             if (orderA !== 0 && orderB === 0) return -1; // Non-zero goes before 0
             if (orderA === 0 && orderB === 0) return 0; // Keep relative order
             return orderA - orderB; // Ascending for non-zeros
         });
-
+        console.log("[Storage] getAllTools returned:", tools);
         return tools;
     } catch (error) {
         console.error("Error fetching tools:", error);
@@ -1195,3 +1196,128 @@ export const getStudioBySlug = async (slug: string) => {
         return null;
     }
 };
+
+// --- PROMPT MANAGEMENT ---
+
+/**
+ * Fetches all prompts.
+ */
+export const getAllPrompts = async (sortBy: 'created_at' | 'usage' = 'created_at') => {
+    try {
+        const { data, error } = await supabase
+            .from('prompts')
+            .select('*')
+            .order(sortBy, { ascending: false });
+
+        if (error) {
+            console.error("Error fetching prompts:", error);
+            return [];
+        }
+        return data || [];
+    } catch (error) {
+        console.error("Error fetching prompts:", error);
+        return [];
+    }
+};
+
+/**
+ * Creates a new prompt.
+ */
+export const createPrompt = async (prompt: any) => {
+    try {
+        const { data, error } = await supabase
+            .from('prompts')
+            .insert([prompt])
+            .select();
+
+        if (error) {
+            console.error("Error creating prompt:", error);
+            return false;
+        }
+        return true;
+    } catch (error) {
+        console.error("Error creating prompt:", error);
+        return false;
+    }
+};
+
+/**
+ * Updates a prompt.
+ */
+export const updatePrompt = async (promptId: string, updates: any) => {
+    try {
+        const { error } = await supabase
+            .from('prompts')
+            .update(updates)
+            .eq('id', promptId);
+
+        if (error) {
+            console.error("Error updating prompt:", error);
+            return false;
+        }
+        return true;
+    } catch (error) {
+        console.error("Error updating prompt:", error);
+        return false;
+    }
+};
+
+/**
+ * Deletes a prompt.
+ */
+export const deletePrompt = async (promptId: string) => {
+    try {
+        const { error } = await supabase
+            .from('prompts')
+            .delete()
+            .eq('id', promptId);
+
+        if (error) {
+            console.error("Error deleting prompt:", error);
+            return false;
+        }
+        return true;
+    } catch (error) {
+        console.error("Error deleting prompt:", error);
+        return false;
+    }
+};
+
+/**
+ * Increments the usage count of a prompt.
+ */
+export const incrementPromptUsage = async (promptId: number) => {
+    try {
+        // First get current usage
+        const { data: currentData, error: fetchError } = await supabase
+            .from('prompts')
+            .select('usage')
+            .eq('id', promptId)
+            .single();
+
+        if (fetchError) {
+            console.error("Error fetching prompt usage:", fetchError);
+            return false;
+        }
+
+        const currentUsage = currentData?.usage || 0;
+        const newUsage = currentUsage + 1;
+
+        // Update with new usage
+        const { error: updateError } = await supabase
+            .from('prompts')
+            .update({ usage: newUsage })
+            .eq('id', promptId);
+
+        if (updateError) {
+            console.error("Error updating prompt usage:", updateError);
+            return false;
+        }
+        return true;
+    } catch (error) {
+        console.error("Error incrementing prompt usage:", error);
+        return false;
+    }
+};
+
+

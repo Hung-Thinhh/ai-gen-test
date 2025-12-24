@@ -8,6 +8,8 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '../lib/utils';
 
+import Link from 'next/link';
+
 // Icon component type
 interface IconProps {
     className?: string;
@@ -19,6 +21,7 @@ interface BottomNavItem {
     label: string;
     icon: React.ComponentType<IconProps>;
     onClick: () => void;
+    href?: string; // Add optional href
 }
 
 interface BottomNavigationProps {
@@ -37,6 +40,32 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({ items, activ
                 const isMidItem = index === midIndex;
 
                 if (isMidItem) {
+                    const content = (
+                        <div className={cn(
+                            "bottom-nav-center-circle",
+                            isActive && "active"
+                        )}>
+                            <Icon
+                                className="w-7 h-7 text-white"
+                                strokeWidth={2.5}
+                            />
+                        </div>
+                    );
+
+                    if (item.href) {
+                        return (
+                            <Link
+                                key={item.id}
+                                href={item.href}
+                                onClick={item.onClick}
+                                className="bottom-nav-item-center"
+                                aria-label={item.label || item.id}
+                            >
+                                {content}
+                            </Link>
+                        );
+                    }
+
                     return (
                         <button
                             key={item.id}
@@ -45,17 +74,32 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({ items, activ
                             className="bottom-nav-item-center"
                             aria-label={item.label || item.id}
                         >
-                            {/* Elevated circular button */}
-                            <div className={cn(
-                                "bottom-nav-center-circle",
-                                isActive && "active"
-                            )}>
-                                <Icon
-                                    className="w-7 h-7 text-white"
-                                    strokeWidth={2.5}
-                                />
-                            </div>
+                            {content}
                         </button>
+                    );
+                }
+
+                if (item.href) {
+                    return (
+                        <Link
+                            key={item.id}
+                            href={item.href}
+                            onClick={item.onClick}
+                            className={`bottom-nav-item ${isActive ? 'active' : ''}`}
+                            aria-label={item.label || item.id}
+                        >
+                            <Icon
+                                className={`bottom-nav-icon-svg ${isActive ? 'text-orange-500' : 'text-white'}`}
+                                strokeWidth={isActive ? 2.5 : 2}
+                            />
+                            {isActive && (
+                                <motion.div
+                                    className="bottom-nav-indicator"
+                                    layoutId="bottom-nav-indicator"
+                                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                                />
+                            )}
+                        </Link>
                     );
                 }
 

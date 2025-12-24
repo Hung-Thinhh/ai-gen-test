@@ -1,11 +1,9 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-import React, { useState, useMemo } from 'react';
+
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppControls } from './uiUtils';
 import { DocumentTextIcon, DownloadIcon } from './icons';
+import { getAllPrompts } from '../services/storageService';
 
 interface Prompt {
     id: string;
@@ -19,25 +17,45 @@ interface PromptLibraryProps {
     onClose: () => void;
 }
 
-// Sample prompts data
-import promptsData from '../data/prompts.json';
-
-const PROMPTS: Prompt[] = promptsData.prompts;
-const CATEGORIES = promptsData.categories;
-
 const ITEMS_PER_PAGE = 20;
 
 export const PromptLibrary: React.FC<PromptLibraryProps> = ({ onClose }) => {
     const { t, language } = useAppControls();
+    const [prompts, setPrompts] = useState<Prompt[]>([]);
     const [activeCategory, setActiveCategory] = useState('all');
     const [currentPage, setCurrentPage] = useState(1);
     const [copiedId, setCopiedId] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchPrompts = async () => {
+            setLoading(true);
+            try {
+                const dbPrompts = await getAllPrompts();
+                if (dbPrompts) {
+                    const mappedPrompts = dbPrompts.map((p: any) => ({
+                        id: p.id,
+                        category: 'all', // Defaulting to 'all' as DB table currently lacks category_id
+                        text: p.content,
+                        imageUrl: p.avt_url || 'https://via.placeholder.com/300x400',
+                        tags: []
+                    }));
+                    setPrompts(mappedPrompts);
+                }
+            } catch (error) {
+                console.error("Failed to load prompts", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchPrompts();
+    }, []);
 
     // Filter prompts by category
     const filteredPrompts = useMemo(() => {
-        if (activeCategory === 'all') return PROMPTS;
-        return PROMPTS.filter(p => p.category === activeCategory);
-    }, [activeCategory]);
+        if (activeCategory === 'all') return prompts;
+        return prompts.filter(p => p.category === activeCategory);
+    }, [activeCategory, prompts]);
 
     // Pagination
     const totalPages = Math.ceil(filteredPrompts.length / ITEMS_PER_PAGE);
@@ -72,85 +90,72 @@ export const PromptLibrary: React.FC<PromptLibraryProps> = ({ onClose }) => {
                 <p className="themed-text-secondary text-center mb-4">{t('promptLibrary_subtitle')}</p>
             </div>
 
-            {/* Category Tabs */}
-            <div className="flex-shrink-0 px-6 py-4 border-b border-white/10 overflow-x-auto prompt-library-categories">
-                <div className="flex gap-2">
-                    {CATEGORIES.map(cat => (
-                        <button
-                            key={cat.id}
-                            onClick={() => handleCategoryChange(cat.id)}
-                            className={`px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${activeCategory === cat.id
-                                ? 'text-black'
-                                : 'themed-text-secondary hover:themed-text'
-                                }`}
-                            style={activeCategory === cat.id ? {
-                                backgroundColor: 'var(--accent-primary)',
-                            } : {}}
-                        >
-                            {language === 'vi' ? cat.labelVi : cat.labelEn}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
             {/* Prompt Grid */}
             <div className="flex-1 overflow-y-auto p-6 prompt-library-container">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 prompt-library-grid">
-                    <AnimatePresence mode="wait">
-                        {paginatedPrompts.map((prompt, index) => (
-                            <motion.div
-                                key={prompt.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -20 }}
-                                transition={{ delay: index * 0.05 }}
-                                className="themed-card rounded-lg overflow-hidden group cursor-pointer"
-                            >
-                                {/* Image */}
-                                <div className="relative aspect-[4/5] overflow-hidden">
-                                    <img
-                                        src={prompt.imageUrl}
-                                        alt={prompt.text}
-                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <div className="absolute bottom-0 left-0 right-0 p-3">
-                                            <p className="text-white text-xs line-clamp-3">{prompt.text}</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Copy Button */}
-                                <button
-                                    onClick={() => handleCopyPrompt(prompt)}
-                                    className="w-full py-2.5 flex items-center justify-center gap-2 transition-colors"
-                                    style={{
-                                        backgroundColor: copiedId === prompt.id ? 'var(--accent-primary)' : 'rgba(249, 115, 22, 0.1)',
-                                        color: copiedId === prompt.id ? '#000' : 'var(--accent-primary)'
-                                    }}
-                                >
-                                    {copiedId === prompt.id ? (
-                                        <>
-                                            <DownloadIcon className="w-4 h-4" />
-                                            <span className="text-sm font-medium">{t('promptLibrary_copied')}</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <DocumentTextIcon className="w-4 h-4" />
-                                            <span className="text-sm font-medium">{t('promptLibrary_copy')}</span>
-                                        </>
-                                    )}
-                                </button>
-                            </motion.div>
-                        ))}
-                    </AnimatePresence>
-                </div>
-
-                {/* Empty State */}
-                {filteredPrompts.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-20 themed-text-tertiary">
-                        <p className="text-lg">{t('promptLibrary_empty')}</p>
+                {loading ? (
+                    <div className="flex items-center justify-center h-full">
+                        <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
                     </div>
+                ) : (
+                    <>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 prompt-library-grid">
+                            <AnimatePresence mode="wait">
+                                {paginatedPrompts.map((prompt, index) => (
+                                    <motion.div
+                                        key={prompt.id}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -20 }}
+                                        transition={{ delay: index * 0.05 }}
+                                        className="themed-card rounded-lg overflow-hidden group cursor-pointer"
+                                    >
+                                        {/* Image */}
+                                        <div className="relative aspect-[4/5] overflow-hidden bg-gray-800">
+                                            <img
+                                                src={prompt.imageUrl}
+                                                alt={prompt.text}
+                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <div className="absolute bottom-0 left-0 right-0 p-3">
+                                                    <p className="text-white text-xs line-clamp-3">{prompt.text}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Copy Button */}
+                                        <button
+                                            onClick={() => handleCopyPrompt(prompt)}
+                                            className="w-full py-2.5 flex items-center justify-center gap-2 transition-colors"
+                                            style={{
+                                                backgroundColor: copiedId === prompt.id ? 'var(--accent-primary)' : 'rgba(249, 115, 22, 0.1)',
+                                                color: copiedId === prompt.id ? '#000' : 'var(--accent-primary)'
+                                            }}
+                                        >
+                                            {copiedId === prompt.id ? (
+                                                <>
+                                                    <DownloadIcon className="w-4 h-4" />
+                                                    <span className="text-sm font-medium">{t('promptLibrary_copied')}</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <DocumentTextIcon className="w-4 h-4" />
+                                                    <span className="text-sm font-medium">{t('promptLibrary_copy')}</span>
+                                                </>
+                                            )}
+                                        </button>
+                                    </motion.div>
+                                ))}
+                            </AnimatePresence>
+                        </div>
+
+                        {/* Empty State */}
+                        {filteredPrompts.length === 0 && (
+                            <div className="flex flex-col items-center justify-center py-20 themed-text-tertiary">
+                                <p className="text-lg">{t('promptLibrary_empty')}</p>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
 
@@ -197,3 +202,4 @@ export const PromptLibrary: React.FC<PromptLibraryProps> = ({ onClose }) => {
         </div>
     );
 };
+

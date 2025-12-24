@@ -8,6 +8,12 @@ import { Pricing } from './Pricing';
 import { HeroSlider } from './HeroSlider';
 import { PersonalGallery } from './PersonalGallery';
 import { ZaloCTA } from './ZaloCTA';
+import { getAllPrompts, incrementPromptUsage, getAllTools } from '../services/storageService';
+
+// ... inside component ...
+
+
+
 
 import {
     PlaceholderMagicIcon,
@@ -64,144 +70,106 @@ const TOOL_ICON_COLORS = [
 // Fallback image if tool config doesn't have one
 const DEFAULT_TOOL_IMAGE = 'https://images.unsplash.com/photo-1620641785835-253c911394a5?w=300&h=300&fit=crop';
 
-// Featured prompts data
-const FEATURED_PROMPTS = [
-    {
-        id: 1,
-        image: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=400&h=300&fit=crop',
-        title: 'Colorful floating shapes in zero gravity',
-        description: '3D abstract art with soft lighting',
-        style: 'Abstract',
-        author: {
-            name: 'Sarah Art',
-            avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=50&h=50&fit=crop'
-        },
-        stats: { views: '12K', likes: '2.4K' }
-    },
-    {
-        id: 2,
-        image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop',
-        title: 'Serene landscape with mountains',
-        description: 'Oil painting style nature scene',
-        style: 'Oil Painting',
-        author: {
-            name: 'Da Vinci AI',
-            avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=50&h=50&fit=crop'
-        },
-        stats: { views: '8.5K', likes: '1.9K' }
-    },
-    {
-        id: 3,
-        image: 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=400&h=300&fit=crop',
-        title: 'Dreamy sunset over ocean waves',
-        description: 'Pastel colors and soft waves',
-        style: 'Landscape',
-        author: {
-            name: 'OceanSoul',
-            avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=50&h=50&fit=crop'
-        },
-        stats: { views: '22K', likes: '5.1K' }
-    },
-    {
-        id: 4,
-        image: 'https://images.unsplash.com/photo-1633469924738-52101af51d87?w=400&h=300&fit=crop',
-        title: 'Cyberpunk city street at night',
-        description: 'Neon lights and rain reflections',
-        style: 'Cyberpunk',
-        author: {
-            name: 'Neon Rider',
-            avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=50&h=50&fit=crop'
-        },
-        stats: { views: '45K', likes: '9.8K' }
-    },
-    {
-        id: 5,
-        image: 'https://images.unsplash.com/photo-1618331835717-801e976710b2?w=400&h=300&fit=crop',
-        title: 'Cute 3D rendered isometric room',
-        description: 'Cozy gaming setup with plants',
-        style: '3D Render',
-        author: {
-            name: 'PolyMaster',
-            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=50&h=50&fit=crop'
-        },
-        stats: { views: '15K', likes: '3.2K' }
-    },
-    {
-        id: 6,
-        image: 'https://images.unsplash.com/photo-1563089145-599997674d42?w=400&h=300&fit=crop',
-        title: 'Anime style portrait with glowing eyes',
-        description: 'Magical girl character design',
-        style: 'Anime',
-        author: {
-            name: 'OtakuArt',
-            avatar: 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=50&h=50&fit=crop'
-        },
-        stats: { views: '67K', likes: '14K' }
-    },
-    {
-        id: 7,
-        image: 'https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?w=400&h=300&fit=crop',
-        title: 'Watercolor painting of cherry blossoms',
-        description: 'Soft pink floral art',
-        style: 'Watercolor',
-        author: {
-            name: 'FloraStudio',
-            avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=50&h=50&fit=crop'
-        },
-        stats: { views: '9K', likes: '1.5K' }
-    },
-    {
-        id: 8,
-        image: 'https://images.unsplash.com/photo-1586075010999-b1d431c19b06?w=400&h=300&fit=crop',
-        title: 'Architectural sketch of modern villa',
-        description: 'Pencil shading and clean lines',
-        style: 'Sketch',
-        author: {
-            name: 'ArchiDraw',
-            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&h=50&fit=crop'
-        },
-        stats: { views: '11K', likes: '2.1K' }
-    },
-    {
-        id: 9,
-        image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&h=300&fit=crop',
-        title: 'Futuristic space station',
-        description: 'Orbiting a purple planet',
-        style: 'Sci-Fi',
-        author: {
-            name: 'SpaceXplorer',
-            avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=50&h=50&fit=crop'
-        },
-        stats: { views: '33K', likes: '7.5K' }
-    },
-    {
-        id: 10,
-        image: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&h=300&fit=crop',
-        title: 'Cinematic portrait of a warrior',
-        description: 'Golden armor and epic lighting',
-        style: 'Portrait',
-        author: {
-            name: 'EpicLens',
-            avatar: 'https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?w=50&h=50&fit=crop'
-        },
-        stats: { views: '50K', likes: '11K' }
-    },
-];
+interface FeaturedPrompt {
+    id: number;
+    image: string;
+    title: string;
+    description: string;
+    style: string;
+    author: {
+        name: string;
+        avatar: string;
+    };
+    stats: { views: string; likes: string; };
+}
 
 const Overview: React.FC = () => {
     const appControls = useAppControls() as any;
     const { t, handleSelectApp, settings, language, modelVersion, handleModelVersionChange, guestCredits, userCredits, isLoggedIn } = appControls;
-    // Calculate credits display
+    const [featuredPrompts, setFeaturedPrompts] = React.useState<FeaturedPrompt[]>([]);
+    const [loadingPrompts, setLoadingPrompts] = React.useState(true);
+    const [copiedId, setCopiedId] = React.useState<number | null>(null);
+
+
+
+    const handleCopyPrompt = async (prompt: FeaturedPrompt) => {
+        try {
+            await navigator.clipboard.writeText(prompt.description);
+            setCopiedId(prompt.id);
+            setTimeout(() => setCopiedId(null), 2000);
+
+            // Increment usage count in background
+            incrementPromptUsage(prompt.id);
+        } catch (err) {
+            console.error('Failed to copy:', err);
+        }
+    };
+
+
+
     const currentCredits = isLoggedIn ? userCredits : guestCredits;
     const isMobile = useIsMobile();
     const promptsScrollRef = useRef<HTMLDivElement>(null);
 
-    // Get tools for grid (9 for Mobile, 15 for Desktop)
-    const toolGridCount = isMobile ? 9 : 15;
-    const popularTools = settings?.apps.slice(0, toolGridCount) || [];
 
+
+
+    const [dbTools, setDbTools] = React.useState<any[]>([]);
+
+    React.useEffect(() => {
+        const fetchData = async () => {
+            try {
+                // Fetch Prompts
+                const dbPrompts = await getAllPrompts('usage');
+                const mappedPrompts = (dbPrompts || []).slice(0, 10).map((p: any) => ({
+                    id: p.id,
+                    image: p.avt_url || 'https://via.placeholder.com/400x300',
+                    title: p.name,
+                    description: p.content,
+                    style: 'Creative',
+                    author: {
+                        name: 'Duky AI',
+                        avatar: 'https://ui-avatars.com/api/?name=Duky+AI&background=random'
+                    },
+                    stats: { views: '1K+', likes: '100+' }
+                }));
+                const existingSetFeatured = setFeaturedPrompts;
+                if (existingSetFeatured) existingSetFeatured(mappedPrompts);
+
+                const existingSetLoading = setLoadingPrompts;
+                if (existingSetLoading) existingSetLoading(false);
+
+                // Fetch Tools
+                const tools = await getAllTools();
+                console.log("[Overview] tools:", tools);
+                const mappedTools = (tools || []).map((t: any) => ({
+                    id: t.tool_key || t.tool_id?.toString() || '',
+                    titleKey: t.name, // User specified 'name', assuming it's the display text or key
+                    description: t.description,
+                    previewImageUrl: t.preview_image_url,
+                    ...t
+                }));
+                // Filter out inactive if not already done by DB
+                const activeTools = mappedTools.filter((t: any) => t.status == 'active'); // Assumption
+
+                setDbTools(activeTools);
+            } catch (error) {
+                console.error("Error fetching data", error);
+                const existingSetLoading = setLoadingPrompts;
+                if (existingSetLoading) existingSetLoading(false);
+            }
+        };
+        fetchData();
+    }, []);
+
+    // Fallback if DB tools empty check
+    const toolsToDisplay = dbTools.length > 0 ? dbTools : []
+    console.log("[Overview] toolsToDisplay:", toolsToDisplay);
+    const toolGridCount = isMobile ? 9 : 15;
+    const popularTools = toolsToDisplay.slice(0, toolGridCount); // Use display list instead of settings directly
+    console.log(popularTools);
     return (
-        <div className="overview-v2">
+        <div className="overview-v2" suppressHydrationWarning>
             {/* ===== MOBILE HOME HEADER ===== */}
             {isMobile && (
                 <MobileHomeHeader
@@ -271,7 +239,7 @@ const Overview: React.FC = () => {
                     <div className="flex items-center justify-center flex-wrap gap-5 p-4">
                         {popularTools.slice(0, 17).map((tool: any) => {
                             // Use previewImageUrl from tool settings if available
-                            const imageUrl = tool.previewImageUrl || DEFAULT_TOOL_IMAGE;
+                            const imageUrl = tool.previewImageUrl || 'https://res.cloudinary.com/dmxmzannb/image/upload/v1765978950/pqotah7yias7jtpnwnca.jpg';
                             return (
                                 <Link
                                     key={tool.id}
@@ -314,37 +282,44 @@ const Overview: React.FC = () => {
                 )}
             </motion.section>
 
+            {/* ===== FEATURED PROMPTS ===== */}
             <motion.section
-                className="inspiration-feed-section"
+                className="featured-prompts-section px-4 pb-20"
                 initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
             >
-                {/* Tabs Header */}
-                <div className="flex items-center gap-6 mb-6 px-4 border-b border-neutral-800 pb-2">
-                    <button className="text-white font-bold text-sm border-b-2 border-orange-500 pb-2 -mb-2.5">
-                        {language === 'vi' ? 'Tất cả' : 'All'}
-                    </button>
-                    <button className="text-neutral-400 font-medium text-sm hover:text-white transition-colors pb-2 relative group">
-                        {language === 'vi' ? 'Sự kiện' : 'Events'}
-                        <span className="absolute -top-2 -right-3 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">HOT</span>
-                    </button>
-                    <button className="text-neutral-400 font-medium text-sm hover:text-white transition-colors pb-2">
-                        {language === 'vi' ? 'Hướng dẫn' : 'Tutorials'}
-                    </button>
+                <div className="section-header-inline mb-6">
+                    <div className="flex items-center gap-2">
+                        <span className="text-orange-500 font-bold bg-orange-500/10 px-2 py-0.5 rounded text-xs tracking-wider">HOT</span>
+                        <h2 className="section-title-v2 !mb-0">Ý tưởng Prompt</h2>
+                    </div>
                 </div>
 
-                {/* Scrollable Masonry Grid Content */}
-                <div className="px-4 pb-20">
+                {loadingPrompts ? (
+                    <div className="flex justify-center py-10">
+                        <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                ) : (
                     <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4 space-y-4">
-                        {FEATURED_PROMPTS.map((prompt) => (
+                        {featuredPrompts.map((prompt) => (
                             <motion.div
                                 key={prompt.id}
-                                className="break-inside-avoid bg-neutral-900 rounded-xl overflow-hidden group cursor-pointer border border-neutral-800 hover:border-orange-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/10 mb-4"
+                                className="break-inside-avoid bg-neutral-900 rounded-xl overflow-hidden group cursor-pointer border border-neutral-800 hover:border-orange-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/10 mb-4 relative"
                                 whileHover={{ y: -5 }}
-                                onClick={() => handleSelectApp('free-generation')}
+                                onClick={() => handleCopyPrompt(prompt)}
                             >
-                                {/* Image Container - Natural Aspect Ratio */}
+                                {/* Copied Overlay */}
+                                {copiedId === prompt.id && (
+                                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                                        <div className="bg-orange-500 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow-lg flex items-center gap-2">
+                                            <span>✓ Copied!</span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Image Container */}
                                 <div className="relative overflow-hidden bg-neutral-800">
                                     <img
                                         src={prompt.image}
@@ -353,26 +328,25 @@ const Overview: React.FC = () => {
                                         loading="lazy"
                                     />
                                     <div className="absolute top-2 left-2">
-                                        {prompt.style && (
-                                            <span className="bg-black/60 backdrop-blur-md text-white/90 text-[10px] px-2 py-1 rounded-md font-medium border border-white/10">
-                                                {prompt.style.toUpperCase()}
-                                            </span>
-                                        )}
+                                        <span className="bg-black/60 backdrop-blur-md text-white/90 text-[10px] px-2 py-1 rounded-md font-medium border border-white/10">
+                                            CREATIVE
+                                        </span>
                                     </div>
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
                                 </div>
 
                                 {/* Card Body */}
                                 <div className="p-3">
-                                    {/* Title & Desc */}
                                     <h3 className="text-white font-semibold text-sm truncate mb-1" title={prompt.title}>{prompt.title}</h3>
                                     <p className="text-neutral-400 text-xs truncate">{prompt.description || prompt.title}</p>
                                 </div>
                             </motion.div>
                         ))}
                     </div>
-                </div>
+                )}
             </motion.section>
+
+
 
             {/* ===== ZALO CTA SECTION ===== */}
             <ZaloCTA />
@@ -386,8 +360,6 @@ const Overview: React.FC = () => {
             >
                 <PersonalGallery />
             </motion.section>
-
-
         </div>
     );
 };

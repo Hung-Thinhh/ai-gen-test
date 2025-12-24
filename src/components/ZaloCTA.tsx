@@ -31,7 +31,7 @@ export const ZaloCTA: React.FC = () => {
                     </div>
 
                     <motion.a
-                        href="https://zalo.me/g/your-group-link" // Replace with actual link
+                        href="https://zalo.me/g/xgsabp123" // Replace with actual link
                         target="_blank"
                         rel="noopener noreferrer"
                         whileHover={{ scale: 1.05 }}

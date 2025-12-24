@@ -38,7 +38,8 @@ import {
     Info as InfoIcon,
     KeyboardArrowDown,
     CreditCard as BillingIcon,
-    BarChart as AnalyticsIcon
+    BarChart as AnalyticsIcon,
+    Description as DescriptionIcon
 } from '@mui/icons-material';
 
 // ... (code omitted)
@@ -143,7 +144,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     // Redirect logic
     useEffect(() => {
         if (!authLoading && role !== 'admin') {
-            // router.push('/');
+            router.push('/');
         }
     }, [authLoading, role, router]);
 
@@ -180,7 +181,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         );
     }
 
-    // if (role !== 'admin') return null;
+    if (role !== 'admin') return null;
 
     const menuItems = [
         { text: 'Tổng quan', icon: <HomeIcon />, path: '/admin' },
@@ -189,6 +190,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { text: 'Công cụ', icon: <BuildIcon />, path: '/admin/tools' },
         { text: 'Thể loại', icon: <CategoryIcon />, path: '/admin/categories' },
         { text: 'Studio', icon: <BrushIcon />, path: '/admin/studios' },
+        { text: 'Prompts', icon: <DescriptionIcon />, path: '/admin/prompts' },
         { text: 'Gói cước', icon: <BillingIcon />, path: '/admin/pricing' },
     ];
 

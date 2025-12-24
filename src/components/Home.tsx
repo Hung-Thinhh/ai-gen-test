@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useAppControls, useImageEditor, extractJsonFromPng, type AppConfig } from './uiUtils';
 import * as db from '../lib/db';
+import { getAllTools } from '../services/storageService'; // Import getAllTools
 import { CloudUploadIcon, LayerComposerIcon, EditorIcon, StoryboardIcon } from './icons';
 import {
   Box,
@@ -39,11 +40,50 @@ interface HomeProps {
   apps: ProcessedAppConfig[];
 }
 
-const Home: React.FC<HomeProps> = ({ onSelectApp, title, subtitle, apps }) => {
+const Home: React.FC<HomeProps> = ({ onSelectApp, title, subtitle, apps: initialApps }) => { // Rename prop to initialApps
   const { t, importSettingsAndNavigate, openLayerComposer, addImagesToGallery, openStoryboardingModal } = useAppControls();
   const { openEmptyImageEditor } = useImageEditor();
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  const [dbTools, setDbTools] = useState<ProcessedAppConfig[]>([]);
+  const [loadingTools, setLoadingTools] = useState(true);
+
+  // Fetch Tools from DB
+  useEffect(() => {
+    const fetchTools = async () => {
+      try {
+        const tools = await getAllTools();
+        console.log("[Home] tools from DB:", tools);
+
+        const mappedTools = (tools || []).map((t: any) => ({
+          // Base AppConfig fields (some might be placeholders)
+          id: t.tool_key || t.tool_id?.toString() || '',
+          titleKey: t.title_key || t.name,
+          descriptionKey: t.description, // using description as key placeholder
+
+          // Processed fields
+          title: t.name,
+          description: t.description,
+          previewImageUrl: t.preview_image_url || 'https://res.cloudinary.com/dmxmzannb/image/upload/v1765978950/pqotah7yias7jtpnwnca.jpg',
+
+          // Original
+          ...t
+        }));
+
+        const activeTools = mappedTools.filter((t: any) => t.status == 'active');
+        setDbTools(activeTools);
+      } catch (error) {
+        console.error("Error fetching tools in Home:", error);
+      } finally {
+        setLoadingTools(false);
+      }
+    };
+    fetchTools();
+  }, []);
+
+  // Use DB tools if available, else fallback to initialApps
+  const apps = dbTools.length > 0 ? dbTools : initialApps;
 
   // Get page from URL or default to 1
   const pageFromUrl = parseInt(searchParams.get('page') || '1', 10);
@@ -58,10 +98,17 @@ const Home: React.FC<HomeProps> = ({ onSelectApp, title, subtitle, apps }) => {
   // Sync current page with URL on mount and when URL changes
   useEffect(() => {
     const urlPage = parseInt(searchParams.get('page') || '1', 10);
-    if (urlPage !== currentPage && urlPage >= 1 && urlPage <= totalPages) {
-      setCurrentPage(urlPage);
+    // Adjust logic to reset to 1 if urlPage > totalPages (e.g. data changed)
+    const effectiveTotalPages = Math.ceil(apps.length / APPS_PER_PAGE) || 1;
+
+    if (urlPage !== currentPage) {
+      if (urlPage >= 1 && urlPage <= effectiveTotalPages) {
+        setCurrentPage(urlPage);
+      } else if (urlPage > effectiveTotalPages) {
+        setCurrentPage(1);
+      }
     }
-  }, [searchParams, totalPages]);
+  }, [searchParams, apps.length]); // Add apps.length dependency
 
   // Update URL when page changes
   const updatePageUrl = (newPage: number) => {

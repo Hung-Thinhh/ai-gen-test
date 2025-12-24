@@ -207,11 +207,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {isMobile && (
                 <BottomNavigation
                     items={[
-                        { id: 'overview', label: 'Home', icon: HomeIcon, onClick: handleGoHome },
-                        { id: 'prompt-library', label: 'Prompt', icon: GridSquaresIcon, onClick: () => handleSelectApp('prompt-library') },
-                        { id: 'generators', label: 'Tools', icon: SparklesIcon, onClick: () => handleSelectApp('generators') },
-                        { id: 'gallery', label: 'Gallery', icon: GalleryIcon, onClick: () => handleSelectApp('gallery') },
-                        { id: 'profile', label: 'Profile', icon: PlaceholderPersonIcon, onClick: () => handleSelectApp('profile') },
+                        { id: 'overview', label: 'Home', icon: HomeIcon, onClick: handleGoHome, href: '/' },
+                        { id: 'prompt-library', label: 'Prompt', icon: GridSquaresIcon, onClick: () => handleSelectApp('prompt-library'), href: '/prompt-library' },
+                        { id: 'generators', label: 'Tools', icon: SparklesIcon, onClick: () => handleSelectApp('generators'), href: '/tool' },
+                        { id: 'gallery', label: 'Gallery', icon: GalleryIcon, onClick: () => handleSelectApp('gallery'), href: '/gallery' },
+                        { id: 'profile', label: 'Profile', icon: PlaceholderPersonIcon, onClick: () => handleSelectApp('profile'), href: '/profile' },
                     ]}
                     activeId={currentView?.viewId}
                 />
