@@ -80,6 +80,7 @@ const PoseAnimator = lazy(() => import('./PoseAnimator'));
 const PosterCreator = lazy(() => import('./PosterCreator'));
 const UserProfile = lazy(() => import('./UserProfile'));
 const Settings = lazy(() => import('./Settings'));
+const Pricing = lazy(() => import('./Pricing'));
 const IDPhotoCreator = lazy(() => import('./IDPhotoCreator'));
 const KhmerPhotoMerge = lazy(() => import('./KhmerPhotoMerge'));
 const NotFound = lazy(() => import('./NotFound'));
@@ -285,6 +286,15 @@ function MainApp() {
                         onBack={handleGoHome}
                     />
                 </Suspense>
+            );
+        }
+
+        // Pricing Page
+        if (currentView.viewId === 'pricing') {
+            return (
+                <div className="container mx-auto py-8 px-4 max-w-7xl">
+                    <Pricing />
+                </div>
             );
         }
 

@@ -137,46 +137,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     setToken(null);
                 }
 
+                // Prioritize cache for speed
+                let cacheHit = false;
                 if (session?.user) {
-                    // Prioritize cache for speed
-                    let cacheHit = false;
-                    if (session?.user) {
-                        const cachedRole = getCachedRole(session.user.id);
-                        if (cachedRole) {
-                            setUserRole(cachedRole);
-                            setIsLoading(false); // Unblock UI immediately
-                            cacheHit = true;
-                        }
-
-                        // Background fetch to ensure freshness (revalidate)
-                        const fetchRole = async () => {
-                            try {
-                                const { data, error } = await supabase
-                                    .from('users')
-                                    .select('role')
-                                    .eq('user_id', session.user.id)
-                                    .single();
-
-                                if (data && data.role) {
-                                    if (data.role !== cachedRole) {
-                                        console.log('👑 Role updated from DB:', data.role);
-                                        setUserRole(data.role);
-                                        setCachedRole(session.user.id, data.role);
-                                    }
-                                } else if (error) {
-                                    console.error('Error fetching role:', error);
-                                }
-                            } catch (e) {
-                                console.error('Exception fetching role:', e);
-                            }
-                        };
-
-                        if (cacheHit) {
-                            fetchRole(); // Run in background
-                        } else {
-                            await fetchRole(); // Block if no cache
-                        }
+                    const cachedRole = getCachedRole(session.user.id);
+                    if (cachedRole) {
+                        setUserRole(cachedRole);
+                        setIsLoading(false); // Unblock UI immediately
+                        cacheHit = true;
                     }
+
+                    // Background fetch to ensure freshness (revalidate)
+                    const fetchRole = async () => {
+                        try {
+                            const { data, error } = await supabase
+                                .from('users')
+                                .select('role')
+                                .eq('user_id', session.user.id)
+                                .single();
+
+                            if (data && data.role) {
+                                if (data.role !== cachedRole) {
+                                    console.log('👑 Role updated from DB:', data.role);
+                                    setUserRole(data.role);
+                                    setCachedRole(session.user.id, data.role);
+                                }
+                            } else if (error) {
+                                console.error('Error fetching role:', error);
+                            }
+                        } catch (e) {
+                            console.error('Exception fetching role:', e);
+                        }
+                    };
+
+                    if (cacheHit) {
+                        fetchRole(); // Run in background
+                    } else {
+                        await fetchRole(); // Block if no cache
+                    }
+
 
                     if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
                         // Background user ensure
@@ -184,11 +183,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             ensureUserExists(session.user).catch(err => console.error("Ensure user failed", err));
                         }
                     }
-
-                    // Ensure loading is false essentially
-                    if (!cacheHit) setIsLoading(false);
                 }
-        );
+
+                // Ensure loading is false essentially if not hit cache (or no user)
+                if (!cacheHit) setIsLoading(false);
+            });
 
         return () => {
             subscription.unsubscribe();

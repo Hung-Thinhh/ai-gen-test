@@ -66,18 +66,16 @@ export const GalleryToolbar: React.FC<GalleryToolbarProps> = ({
 
     return (
         <div className="flex justify-between items-center mt-4 mb-4 flex-shrink-0">
-            <h3 className="base-font font-bold text-2xl text-yellow-400">{title}</h3>
+            <h3 className="base-font font-bold text-2xl text-yellow-400 pb-5">{title}</h3>
             <div className="flex items-center gap-2">
                 {onUploadClick && (
-                    <button onClick={onUploadClick} className="btn btn-secondary btn-sm" title={t('galleryToolbar_uploadTooltip')}>
+                    <button onClick={onUploadClick} className="btn btn-secondary btn-sm text-sm" title={t('galleryToolbar_uploadTooltip')}>
                         {t('galleryToolbar_upload')}
                     </button>
                 )}
-                {onDownloadAll && <button onClick={onDownloadAll} className="btn btn-secondary btn-sm" disabled={imageCount === 0}>{t('common_downloadAll')}</button>}
-                <button onClick={onToggleSelectionMode} className="btn btn-secondary btn-sm" disabled={imageCount === 0}>{t('common_select')}</button>
-                <button onClick={onClose} className="p-2 rounded-full hover:bg-white/10 transition-colors" aria-label={t('galleryToolbar_close')}>
-                    <CloseIcon className="h-6 w-6" strokeWidth={2} />
-                </button>
+                {onDownloadAll && <button onClick={onDownloadAll} className="btn btn-secondary btn-sm text-sm" disabled={imageCount === 0}>{t('common_downloadAll')}</button>}
+                <button onClick={onToggleSelectionMode} className="btn btn-secondary btn-sm text-sm" disabled={imageCount === 0}>{t('common_select')}</button>
+
             </div>
         </div>
     );

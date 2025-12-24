@@ -122,11 +122,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                                     currentView.viewId === 'profile' ? (language === 'vi' ? 'Hồ sơ' : 'Profile') :
                                         currentView.viewId;
                     const isProfilePage = currentView.viewId === 'profile';
+                    const isTool = settings?.apps.some((app: AppConfig) => app.id === currentView.viewId);
+                    // Determine if we should show the model selector (only in tools, not in lists/libraries)
+                    // The user explicitly requested to hide it in: gallery, prompt-library, tool list (generators), studio list.
+                    // 'generators' is the tool list. 'studio' might be the studio list view ID (if it exists).
+                    // Safer logic: Show ONLY if it matches an app ID.
+                    const showModelSelector = isTool;
+
                     return <MobilePageHeader
                         title={pageTitle}
                         showSettings={isProfilePage}
                         showSearch={!isProfilePage}
                         onSettings={() => handleSelectApp('settings' as any)}
+                        apps={settings ? settings.apps.map((app: AppConfig) => ({ ...app, title: t(app.titleKey), description: t(app.descriptionKey) })) : []}
+                        onSelectApp={handleSelectApp}
+                        modelVersion={showModelSelector ? modelVersion : undefined}
+                        onModelChange={showModelSelector ? handleModelVersionChange : undefined}
                     />;
                 })()}
 
@@ -185,7 +196,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     "relative z-10 w-full flex-1 flex flex-col md:pt-16",
                     currentView?.viewId !== 'overview' && currentView?.viewId !== 'home' && "pt-16"
                 )}>
-                    <div className="flex-1 w-full flex flex-col">
+                    <div className="flex-1 w-full flex flex-col pb-[100px]">
                         {children}
                     </div>
                     {!isMobile && <Footer />}

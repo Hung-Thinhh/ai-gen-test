@@ -639,7 +639,8 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         }
 
         // System views
-        const systemViews = ['overview', 'home', 'generators', 'gallery', 'prompt-library', 'storyboarding', 'profile', 'settings', 'studio'];
+        // System views
+        const systemViews = ['overview', 'home', 'generators', 'gallery', 'prompt-library', 'storyboarding', 'profile', 'settings', 'studio', 'pricing'];
         if (systemViews.includes(targetView)) {
             navigateTo(targetView);
             return;
@@ -768,7 +769,8 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         // }
 
         // Special system views that are not in settings.apps
-        const systemViews = ['overview', 'home', 'generators', 'gallery', 'prompt-library', 'storyboarding', 'profile', 'settings', 'studio'];
+        // Special system views that are not in settings.apps
+        const systemViews = ['overview', 'home', 'generators', 'gallery', 'prompt-library', 'storyboarding', 'profile', 'settings', 'studio', 'pricing'];
 
         if (systemViews.includes(appId)) {
             // Update state

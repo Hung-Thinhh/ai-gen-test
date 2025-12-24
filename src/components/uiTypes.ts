@@ -597,6 +597,7 @@ export type IDPhotoCreatorView = { viewId: 'id-photo-creator'; state: IDPhotoCre
 export type KhmerPhotoMergeView = { viewId: 'khmer-photo-merge'; state: KhmerPhotoMergeState };
 export type ProfileView = { viewId: 'profile'; state: HomeState };
 export type SettingsView = { viewId: 'settings'; state: HomeState };
+export type PricingView = { viewId: 'pricing'; state: HomeState };
 
 
 export type ViewState =
@@ -626,7 +627,8 @@ export type ViewState =
     | IDPhotoCreatorView
     | KhmerPhotoMergeView
     | ProfileView
-    | SettingsView;
+    | SettingsView
+    | PricingView;
 
 // Helper function to get initial state for an app
 export const getInitialStateForApp = (viewId: string): AnyAppState => {
@@ -637,6 +639,7 @@ export const getInitialStateForApp = (viewId: string): AnyAppState => {
         case 'layer-composer':
         case 'storyboarding':
         case 'gallery':
+        case 'pricing':
 
             return { stage: 'home' };
         case 'architecture-ideator':

@@ -173,8 +173,9 @@ const Overview: React.FC = () => {
             {/* ===== MOBILE HOME HEADER ===== */}
             {isMobile && (
                 <MobileHomeHeader
-                    modelVersion={modelVersion}
-                    onModelChange={handleModelVersionChange}
+                    title="Home"
+                    apps={settings ? settings.apps.map((app: any) => ({ ...app, title: t(app.titleKey), description: t(app.descriptionKey) })) : []}
+                    onSelectApp={handleSelectApp}
                     credits={currentCredits}
                 />
             )}

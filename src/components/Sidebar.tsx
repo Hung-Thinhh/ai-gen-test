@@ -29,7 +29,8 @@ import {
     LayoutIcon,
     AppCoverIcon,
     PlaceholderPersonIcon,
-    BrushIcon
+    BrushIcon,
+    CreditCardIcon
 } from './icons';
 
 interface NavItem {
@@ -181,6 +182,7 @@ const Sidebar: React.FC = () => {
         },
 
 
+
     ];
 
     const handleNavClick = (item: NavItem) => {
@@ -328,6 +330,24 @@ const Sidebar: React.FC = () => {
                     </div>
                 ))}
             </nav>
+
+            {/* Pricing Button (Prominent) */}
+            <div className="p-0 pb-0">
+                <Link
+                    href="/pricing"
+                    onClick={(e) => {
+                        e.preventDefault();
+                        setActivePage('pricing');
+                        navigateTo('pricing');
+                        router.push('/pricing');
+                    }}
+                    className="w-full relative group overflow-hidden bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white p-3  flex items-center justify-center gap-2 font-bold shadow-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                >
+                    <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 transform skew-y-12"></div>
+                    <CreditCardIcon className="w-5 h-5 relative z-10" />
+                    <span className="relative z-10 text-sm">{t('sidebar_pricing') || 'Nâng cấp tài khoản'}</span>
+                </Link>
+            </div>
 
             {/* User Section */}
             <div className="border-t p-4" style={{ borderColor: 'var(--border-primary)' }}>
