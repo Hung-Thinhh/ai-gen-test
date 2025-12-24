@@ -138,35 +138,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
 
                 if (session?.user) {
-                    try {
-                        const { data, error } = await supabase
-                            .from('users')
-                            .select('role')
-                            .eq('user_id', session.user.id)
-                            .single();
-
-                        if (data && data.role) {
-                            console.log('👑 Fetched role from DB:', data.role);
-                            setUserRole(data.role);
-                            setCachedRole(session.user.id, data.role);
-                        } else if (error) {
-                            console.error('Error fetching role:', error);
-                        }
-                    } catch (e) {
-                        console.error('Exception fetching role:', e);
-                    }
-                }
-
-                if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-                    // Background user ensure
+                    // Prioritize cache for speed
+                    let cacheHit = false;
                     if (session?.user) {
-                        ensureUserExists(session.user).catch(err => console.error("Ensure user failed", err));
-                    }
-                }
+                        const cachedRole = getCachedRole(session.user.id);
+                        if (cachedRole) {
+                            setUserRole(cachedRole);
+                            setIsLoading(false); // Unblock UI immediately
+                            cacheHit = true;
+                        }
 
-                // Always update loading state
-                setIsLoading(false);
-            }
+                        // Background fetch to ensure freshness (revalidate)
+                        const fetchRole = async () => {
+                            try {
+                                const { data, error } = await supabase
+                                    .from('users')
+                                    .select('role')
+                                    .eq('user_id', session.user.id)
+                                    .single();
+
+                                if (data && data.role) {
+                                    if (data.role !== cachedRole) {
+                                        console.log('👑 Role updated from DB:', data.role);
+                                        setUserRole(data.role);
+                                        setCachedRole(session.user.id, data.role);
+                                    }
+                                } else if (error) {
+                                    console.error('Error fetching role:', error);
+                                }
+                            } catch (e) {
+                                console.error('Exception fetching role:', e);
+                            }
+                        };
+
+                        if (cacheHit) {
+                            fetchRole(); // Run in background
+                        } else {
+                            await fetchRole(); // Block if no cache
+                        }
+                    }
+
+                    if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+                        // Background user ensure
+                        if (session?.user) {
+                            ensureUserExists(session.user).catch(err => console.error("Ensure user failed", err));
+                        }
+                    }
+
+                    // Ensure loading is false essentially
+                    if (!cacheHit) setIsLoading(false);
+                }
         );
 
         return () => {

@@ -143,11 +143,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     // Redirect logic
     useEffect(() => {
-        if (!authLoading && role !== 'admin') {
-            router.push('/');
+        if (!authLoading) {
+            if (role !== 'admin' && role !== 'editor') {
+                router.push('/');
+            } else if (role === 'editor') {
+                // Restrict editor access paths
+                const allowedPaths = ['/admin/tools', '/admin/prompts', '/admin/categories', '/admin/studios'];
+                const isAllowed = allowedPaths.some(path => pathname?.startsWith(path));
+                // If on /admin (dashboard) or restricted page, redirect to first allowed page
+                if (!isAllowed) {
+                    router.push('/admin/tools');
+                }
+            }
         }
-    }, [authLoading, role, router]);
-
+    }, [authLoading, role, router, pathname]);
 
     const toggleDrawer = () => {
         setOpen(!open);
@@ -166,6 +175,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         if (path.includes('tools')) return 'Công cụ';
         if (path.includes('pricing')) return 'Gói cước';
         if (path.includes('settings')) return 'Cài đặt';
+        if (path.includes('prompts')) return 'Prompts';
+        if (path.includes('categories')) return 'Danh mục';
+        if (path.includes('studios')) return 'Studio';
         return 'Tổng quan';
     };
 
@@ -181,18 +193,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         );
     }
 
-    if (role !== 'admin') return null;
+    if (role !== 'admin' && role !== 'editor') return null;
 
-    const menuItems = [
-        { text: 'Tổng quan', icon: <HomeIcon />, path: '/admin' },
-        { text: 'Thống kê', icon: <AnalyticsIcon />, path: '/admin/analytics' },
-        { text: 'Người dùng', icon: <PeopleIcon />, path: '/admin/users' },
-        { text: 'Công cụ', icon: <BuildIcon />, path: '/admin/tools' },
-        { text: 'Thể loại', icon: <CategoryIcon />, path: '/admin/categories' },
-        { text: 'Studio', icon: <BrushIcon />, path: '/admin/studios' },
-        { text: 'Prompts', icon: <DescriptionIcon />, path: '/admin/prompts' },
-        { text: 'Gói cước', icon: <BillingIcon />, path: '/admin/pricing' },
+    const allMenuItems = [
+        { text: 'Tổng quan', icon: <HomeIcon />, path: '/admin', roles: ['admin'] },
+        { text: 'Thống kê', icon: <AnalyticsIcon />, path: '/admin/analytics', roles: ['admin'] },
+        { text: 'Người dùng', icon: <PeopleIcon />, path: '/admin/users', roles: ['admin'] },
+        { text: 'Công cụ', icon: <BuildIcon />, path: '/admin/tools', roles: ['admin', 'editor'] },
+        { text: 'Thể loại', icon: <CategoryIcon />, path: '/admin/categories', roles: ['admin', 'editor'] },
+        { text: 'Studio', icon: <BrushIcon />, path: '/admin/studios', roles: ['admin', 'editor'] },
+        { text: 'Prompts', icon: <DescriptionIcon />, path: '/admin/prompts', roles: ['admin', 'editor'] },
+        { text: 'Gói cước', icon: <BillingIcon />, path: '/admin/pricing', roles: ['admin'] },
     ];
+
+    const menuItems = allMenuItems.filter(item => item.roles.includes(role || ''));
 
     const bottomItems = [
         { text: 'Cài đặt', icon: <SettingsIcon />, path: '/admin/settings' },
