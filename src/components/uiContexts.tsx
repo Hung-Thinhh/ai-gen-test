@@ -114,6 +114,7 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const [isLayerComposerMounted, setIsLayerComposerMounted] = useState(false);
     const [isLayerComposerVisible, setIsLayerComposerVisible] = useState(false);
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false); // NEW
+    const [isOutOfCreditsModalOpen, setIsOutOfCreditsModalOpen] = useState(false); // NEW
     const [imageGallery, setImageGallery] = useState<string[]>([]);
     const [generationHistory, setGenerationHistory] = useState<GenerationHistoryEntry[]>([]);
     const [isDbLoaded, setIsDbLoaded] = useState(false);
@@ -132,21 +133,42 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     // Guest Identity
     const [guestId, setGuestId] = useState<string>('');
-    const [guestCredits, setGuestCredits] = useState<number>(10); // Default to 10
+    const [guestCredits, setGuestCredits] = useState<number>(0); // Default to 0
     const [userCredits, setUserCredits] = useState<number>(0); // New user credits
     const [userIp, setUserIp] = useState<string>('');
 
     // Initialize Guest ID and IP
     useEffect(() => {
-        // 1. Get or Create Guest ID
-        let storedGuestId = localStorage.getItem('guest_device_id');
-        if (!storedGuestId) {
-            storedGuestId = `guest_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-            localStorage.setItem('guest_device_id', storedGuestId);
-        }
-        setGuestId(storedGuestId);
+        // 1. Initialize stable Guest ID using FingerprintJS
+        const initGuestId = async () => {
+            try {
+                // Dynamic import to avoid SSR issues and reduce initial bundle size
+                const FingerprintJS = await import('@fingerprintjs/fingerprintjs');
+                const fp = await FingerprintJS.load();
+                const result = await fp.get();
 
-        // 2. Fetch IP (Fire and forget)
+                // Use visitorId as the core of our guestId
+                const stableGuestId = `guest_${result.visitorId}`;
+                console.log('🆔 Fingerprint Generated:', stableGuestId);
+
+                setGuestId(stableGuestId);
+                localStorage.setItem('guest_device_id', stableGuestId);
+            } catch (error) {
+                console.warn('⚠️ Fingerprint failed, falling back to localStorage/Random:', error);
+
+                // Fallback: Use existing local storage or create new random
+                let storedGuestId = localStorage.getItem('guest_device_id');
+                if (!storedGuestId) {
+                    storedGuestId = `guest_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+                    localStorage.setItem('guest_device_id', storedGuestId);
+                }
+                setGuestId(storedGuestId);
+            }
+        };
+
+        initGuestId();
+
+        // 2. Fetch IP (Fire and forget) - Keep for logs if needed, but not for credit checks
         fetch('https://api.ipify.org?format=json')
             .then(res => res.json())
             .then(data => setUserIp(data.ip))
@@ -241,6 +263,8 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                     try {
                         const { getGuestCredits } = await import('../services/storageService');
                         const credits = await getGuestCredits(guestId);
+                        // DEBUG: Toast to verify
+                        // import('react-hot-toast').then(t => t.default.success(`Guest: ${guestId.slice(0,6)}... Credits: ${credits}`));
                         setGuestCredits(credits);
 
                         const guestCloudImages = await storageService.getGuestCloudGallery(guestId);
@@ -296,7 +320,8 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             // Pass token to deductUserCredit
             const newBalance = await deductUserCredit(user.id, amount, token || undefined);
             if (newBalance === -1) {
-                toast.error(t('common_outOfCredits'));
+                // toast.error(t('common_outOfCredits'));
+                setIsOutOfCreditsModalOpen(true);
                 console.log("User credit deduction failed (balance -1)");
                 return false;
             }
@@ -319,8 +344,8 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             console.log("Deduct result:", newBalance);
 
             if (newBalance === -1) {
-                console.log("[Guest Check] Limit reached! Opening Login Modal.");
-                setIsLoginModalOpen(true);
+                console.log("[Guest Check] Limit reached! Opening OutOfCredits Modal.");
+                setIsOutOfCreditsModalOpen(true);
                 return false;
             }
 
@@ -920,6 +945,7 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         isLayerComposerMounted,
         isLayerComposerVisible,
         isLoginModalOpen,
+        isOutOfCreditsModalOpen, // NEW
         language,
         generationHistory,
         modelVersion,
@@ -933,6 +959,8 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         refreshGallery, // NEW
         openLoginModal: () => setIsLoginModalOpen(true),
         closeLoginModal: () => setIsLoginModalOpen(false),
+        openOutOfCreditsModal: () => setIsOutOfCreditsModalOpen(true),
+        closeOutOfCreditsModal: () => setIsOutOfCreditsModalOpen(false),
         addGenerationToHistory,
         logGeneration, // NEW
         addImagesToGallery,
@@ -984,6 +1012,7 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         isImageLayoutModalOpen, isBeforeAfterModalOpen, isAppCoverCreatorModalOpen,
         isStoryboardingModalMounted, isStoryboardingModalVisible,
         isLayerComposerMounted, isLayerComposerVisible, isLoginModalOpen,
+        isOutOfCreditsModalOpen, // NEW DEP
         language, generationHistory, modelVersion, imageResolution,
         guestCredits, userCredits, v2UsageCount, v3UsageCount,
         refreshUsageCounts, checkCredits, refreshGallery,

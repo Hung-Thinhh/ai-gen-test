@@ -67,7 +67,7 @@ const PhotoBooth: React.FC<PhotoBoothProps> = (props) => {
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
 
-        const creditCostPerImage = modelVersion === 'v3' ? 3 : 1;
+        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
         const totalCost = appState.options.photoCount * creditCostPerImage;
 
         if (!await checkCredits(totalCost)) {

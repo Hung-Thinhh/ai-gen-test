@@ -70,7 +70,6 @@ export default function PromptManagement() {
             setCurrentPrompt(prompt);
         } else {
             setCurrentPrompt({
-                name: '',
                 content: '',
                 avt_url: '',
                 category_ids: []
@@ -107,15 +106,14 @@ export default function PromptManagement() {
     };
 
     const handleSave = async () => {
-        if (!currentPrompt.name || !currentPrompt.content) {
-            toast.error("Vui lòng nhập Tên và Nội dung");
+        if (!currentPrompt.content) {
+            toast.error("Vui lòng nhập Nội dung");
             return;
         }
 
         try {
-            // Sanitize payload to avoid sending invalid columns (like 'category' if it was removed)
+            // Sanitize payload
             const payload = {
-                name: currentPrompt.name,
                 content: currentPrompt.content,
                 avt_url: currentPrompt.avt_url,
                 category_ids: currentPrompt.category_ids || []
@@ -142,8 +140,8 @@ export default function PromptManagement() {
         }
     };
 
-    const handleDelete = async (id: string, name: string) => {
-        if (window.confirm(`Bạn có chắc muốn xóa prompt "${name}"?`)) {
+    const handleDelete = async (id: string) => {
+        if (window.confirm(`Bạn có chắc muốn xóa prompt này?`)) {
             try {
                 const success = await deletePrompt(id);
                 if (success) {
@@ -186,7 +184,6 @@ export default function PromptManagement() {
                     <TableHead sx={{ bgcolor: '#F9FAFB' }}>
                         <TableRow>
                             <TableCell>Avatar</TableCell>
-                            <TableCell>Tên Prompt</TableCell>
                             <TableCell>Thể loại</TableCell>
                             <TableCell>Nội dung</TableCell>
                             <TableCell align="right">Hành động</TableCell>
@@ -222,9 +219,7 @@ export default function PromptManagement() {
                                                 <Box sx={{ width: 40, height: 40, bgcolor: '#eee', borderRadius: 1 }} />
                                             )}
                                         </TableCell>
-                                        <TableCell>
-                                            <Typography variant="subtitle2" fontWeight="bold">{prompt.name}</Typography>
-                                        </TableCell>
+                                        {/* Name column removed */}
                                         <TableCell>
                                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                                                 {prompt.category_ids && Array.isArray(prompt.category_ids) && prompt.category_ids.map((catId: string) => {
@@ -250,7 +245,7 @@ export default function PromptManagement() {
                                                 <IconButton size="small" onClick={() => handleOpenEdit(prompt)}>
                                                     <EditIcon fontSize="small" />
                                                 </IconButton>
-                                                <IconButton size="small" color="error" onClick={() => handleDelete(prompt.id, prompt.name)}>
+                                                <IconButton size="small" color="error" onClick={() => handleDelete(prompt.id)}>
                                                     <DeleteIcon fontSize="small" />
                                                 </IconButton>
                                             </Stack>
@@ -277,12 +272,7 @@ export default function PromptManagement() {
                 <DialogContent dividers>
                     {currentPrompt && (
                         <Stack spacing={3} sx={{ pt: 1 }}>
-                            <TextField
-                                label="Tên Prompt"
-                                fullWidth
-                                value={currentPrompt.name}
-                                onChange={(e) => setCurrentPrompt({ ...currentPrompt, name: e.target.value })}
-                            />
+                            {/* Name field removed */}
 
                             <FormControl fullWidth>
                                 <InputLabel id="category-select-label">Thể loại</InputLabel>

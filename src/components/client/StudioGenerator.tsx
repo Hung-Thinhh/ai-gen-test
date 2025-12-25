@@ -173,7 +173,7 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
         const preGenState = { ...appState };
         setAppState(prev => ({ ...prev, stage: 'generating', error: null }));
 
-        const creditCost = modelVersion === 'v3' ? 3 : 1;
+        const creditCost = modelVersion === 'v3' ? 2 : 1;
 
         if (!await checkCredits(creditCost)) {
             setAppState(prev => ({ ...prev, stage: 'configuring' }));

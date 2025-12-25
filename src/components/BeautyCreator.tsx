@@ -152,7 +152,7 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
 
         // Removed early checkCredits()
 
-        const creditCostPerImage = modelVersion === 'v3' ? 3 : 1;
+        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
         hasLoggedGeneration.current = false;
 
         if (appState.styleReferenceImage) {
@@ -261,7 +261,7 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
 
         // Double check credits if needed
         if (randomCount === 0) {
-            const creditCost = modelVersion === 'v3' ? 3 : 1;
+            const creditCost = modelVersion === 'v3' ? 2 : 1;
             if (!await checkCredits(creditCost)) {
                 onStateChange({ ...appState, stage: 'configuring' });
                 return;

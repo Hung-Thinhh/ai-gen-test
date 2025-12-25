@@ -165,7 +165,7 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
             // Immediate feedback for normal generation
             onStateChange({ ...appState, stage: 'generating', error: null, generatedImages: [] });
 
-            const creditCostPerImage = modelVersion === 'v3' ? 3 * appState.options.numberOfImages : 1 * appState.options.numberOfImages;
+            const creditCostPerImage = modelVersion === 'v3' ? 2 * appState.options.numberOfImages : 1 * appState.options.numberOfImages;
             if (!await checkCredits(creditCostPerImage)) {
                 onStateChange({ ...appState, stage: 'configuring' });
                 return;
@@ -197,7 +197,7 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
             );
 
             if (urlsWithMetadata.length > 0) {
-                const creditCost = modelVersion === 'v3' ? 3 * urlsWithMetadata.length : 1 * urlsWithMetadata.length;
+                const creditCost = modelVersion === 'v3' ? 2 * urlsWithMetadata.length : 1 * urlsWithMetadata.length;
                 logGeneration('free-generation', preGenState, urlsWithMetadata[0], {
                     credits_used: creditCost,
                     api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image',
@@ -242,7 +242,7 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
                 state: { ...appState, stage: 'configuring', generatedImages: [], historicalImages: [], error: null },
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            const creditCost = modelVersion === 'v3' ? 3 : 1;
+            const creditCost = modelVersion === 'v3' ? 2 : 1;
             logGeneration('free-generation', preGenState, urlWithMetadata, {
                 credits_used: creditCost,
                 api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image',

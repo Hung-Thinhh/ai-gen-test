@@ -184,7 +184,7 @@ const ToyModelCreator: React.FC<ToyModelCreatorProps> = (props) => {
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
 
-        const creditCostPerImage = modelVersion === 'v3' ? 3 : 1;
+        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
         if (!await checkCredits(creditCostPerImage)) {
             onStateChange({ ...appState, stage: 'configuring' });
             return;
@@ -224,7 +224,7 @@ const ToyModelCreator: React.FC<ToyModelCreatorProps> = (props) => {
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });
 
-        const creditCostPerImage = modelVersion === 'v3' ? 3 : 1;
+        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
         if (!await checkCredits(creditCostPerImage)) {
             onStateChange({ ...appState, stage: 'results' }); // Revert to results
             return;

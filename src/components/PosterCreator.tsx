@@ -740,7 +740,7 @@ ${aspectRatioPrompt}
         }, 100);
 
         // Check credits for TOTAL images
-        const creditCostPerImage = modelVersion === 'v3' ? 3 : 1;
+        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
         const totalCost = imageCount * creditCostPerImage;
         if (!await checkCredits(totalCost)) {
             setPendingImageSlots(0); // Revert

@@ -23,7 +23,7 @@ const TypographicIllustrator: React.FC<TypographicIllustratorProps> = (props) =>
         onStateChange({ ...appState, stage: 'generating', error: null });
 
         // Async checks
-        const creditCostPerImage = modelVersion === 'v3' ? 3 : 1;
+        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
         const hasCredits = await checkCredits(creditCostPerImage);
         if (!hasCredits) {
             onStateChange({ ...appState, stage: 'configuring' });

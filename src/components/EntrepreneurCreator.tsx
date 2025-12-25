@@ -146,7 +146,7 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
 
         // Removed early checkCredits()
 
-        const creditCostPerImage = modelVersion === 'v3' ? 3 : 1;
+        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
         hasLoggedGeneration.current = false;
 
         if (appState.styleReferenceImage) {

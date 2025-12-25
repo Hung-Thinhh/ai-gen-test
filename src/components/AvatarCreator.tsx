@@ -146,7 +146,7 @@ const AvatarCreator: React.FC<AvatarCreatorProps> = (props) => {
 
         // Removed early checkCredits() to allow immediate UI feedback
 
-        const creditCostPerImage = modelVersion === 'v3' ? 3 : 1;
+        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
         hasLoggedGeneration.current = false;
 
         // --- Branch 1: Generation from Style Reference Image ---

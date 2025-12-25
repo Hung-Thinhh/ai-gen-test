@@ -350,16 +350,16 @@ export const getGuestCredits = async (guestId: string): Promise<number> => {
             .maybeSingle();
 
         if (error) {
-            if (error.code === '42703') return 10; // Ignore missing column
+            if (error.code === '42703') return 3; // Ignore missing column
             console.warn("Error fetching guest credits:", error);
             // Fallback to local storage logic essentially, or default
-            return 10;
+            return 3;
         }
 
-        return data?.credits ?? 10;
+        return data?.credits ?? 3;
     } catch (error) {
         console.error("Error in getGuestCredits:", error);
-        return 10;
+        return 3;
     }
 };
 
@@ -386,9 +386,10 @@ export const deductGuestCredit = async (guestId: string, amount: number = 1): Pr
             .single();
 
         if (error) {
-            console.warn("Soft failing guest credit deduction (allowing proceed):", JSON.stringify(error));
-            // Return new balance as if it succeeded, to not block the user
-            return current - amount;
+            console.error("Guest credit deduction FAILED (DB Error):", JSON.stringify(error));
+            // Do NOT soft fail. Return -1 to block generation if we can't save.
+            // This prevents "Infinite Credits" glitch on reload.
+            return -1;
         }
 
         return data?.credits ?? (current - amount);

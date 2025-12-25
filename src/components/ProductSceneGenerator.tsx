@@ -17,7 +17,7 @@ const ProductSceneGenerator: React.FC<ProductSceneProps> = (props) => {
 
     const handleGenerate = async () => {
         if (!appState.productImage) return;
-        const creditCostPerImage = modelVersion === 'v3' ? 3 : 1;
+        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
         if (!await checkCredits(creditCostPerImage)) return;
         const preGenState = { ...appState };
         onStateChange({ ...appState, stage: 'generating', error: null });

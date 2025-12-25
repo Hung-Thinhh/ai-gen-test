@@ -1325,7 +1325,7 @@ export const useImageEditorState = (
         if (!aiEditPrompt.trim() || !internalImageUrl) return;
 
         // Credit check
-        const creditCost = modelVersion === 'v3' ? 3 : 1;
+        const creditCost = modelVersion === 'v3' ? 2 : 1;
         if (!await checkCredits(creditCost)) return;
 
         setIsLoading(true);
@@ -1639,7 +1639,7 @@ export const useImageEditorState = (
             if (!internalImageUrl) return;
 
             // Credit check
-            const creditCost = modelVersion === 'v3' ? 3 : 1;
+            const creditCost = modelVersion === 'v3' ? 2 : 1;
             if (!await checkCredits(creditCost)) return;
 
             setIsLoading(true);

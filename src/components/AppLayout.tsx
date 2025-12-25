@@ -18,6 +18,7 @@ import {
     AppCoverCreatorModal,
     type AppConfig
 } from './uiUtils';
+import { OutOfCreditsModal } from './OutOfCreditsModal';
 import { BottomNavigation } from './BottomNavigation';
 import {
     HomeIcon, SparklesIcon, GalleryIcon, GridSquaresIcon, PlaceholderPersonIcon, LoadingSpinnerIcon, LayerComposerIcon,
@@ -215,6 +216,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <ImageLayoutModal isOpen={isImageLayoutModalOpen} onClose={closeImageLayoutModal} />
                 <BeforeAfterModal isOpen={isBeforeAfterModalOpen} onClose={closeBeforeAfterModal} />
                 <AppCoverCreatorModal isOpen={isAppCoverCreatorModalOpen} onClose={closeAppCoverCreatorModal} />
+                <OutOfCreditsModal />
                 {isLoginModalOpen && <LoginScreen onClose={closeLoginModal} />}
             </div>
 

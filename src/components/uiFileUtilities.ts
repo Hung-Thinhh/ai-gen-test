@@ -21,10 +21,34 @@ export const handleFileUpload = (
 ) => {
     if (e.target.files && e.target.files[0]) {
         const file = e.target.files[0];
+
+        // 1. Check size (Max 3MB)
+        const MAX_SIZE_MB = 3;
+        if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+            toast.error(`File quá lớn. Vui lòng upload ảnh dưới ${MAX_SIZE_MB}MB.`);
+            e.target.value = ''; // Reset input
+            return;
+        }
+
         const reader = new FileReader();
         reader.onloadend = () => {
             if (typeof reader.result === 'string') {
-                callback(reader.result);
+                // 2. Check resolution
+                const img = new Image();
+                img.onload = () => {
+                    const MAX_DIMENSION = 2600; // Limit below 4K (3840px)
+                    if (img.width > MAX_DIMENSION || img.height > MAX_DIMENSION) {
+                        toast.error(`Độ phân giải quá cao (>${MAX_DIMENSION}px). Vui lòng giảm kích thước ảnh.`);
+                        if (e.target) e.target.value = ''; // Reset
+                        return;
+                    }
+                    // Valid
+                    callback(reader.result as string);
+                };
+                img.onerror = () => {
+                    toast.error('File ảnh lỗi, không thể đọc.');
+                };
+                img.src = reader.result;
             }
         };
         reader.readAsDataURL(file);

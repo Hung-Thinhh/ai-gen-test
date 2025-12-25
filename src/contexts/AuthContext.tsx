@@ -120,16 +120,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             async (event, session) => {
                 console.log('🔐 Supabase auth event:', event);
 
-                // Clear safety timer immediately on any auth event
-                if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current);
-
                 if (event === 'SIGNED_IN') {
                     console.log('✅ SIGNED_IN event received - OAuth login successful!');
                 }
 
                 if (session?.user) {
                     setUser(session.user);
-                    console.log('� [AuthContext] Set User from AuthChange:', session.user.id);
+                    console.log('👤 [AuthContext] Set User from AuthChange:', session.user.id);
                     setToken(session.access_token);
                 } else if (event === 'SIGNED_OUT') {
                     setUser(null);
@@ -144,11 +141,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     if (cachedRole) {
                         setUserRole(cachedRole);
                         setIsLoading(false); // Unblock UI immediately
+                        if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current);
                         cacheHit = true;
                     }
 
                     // Background fetch to ensure freshness (revalidate)
                     const fetchRole = async () => {
+                        console.log('🔍 [Auth] Fetching role from DB...');
                         try {
                             const { data, error } = await supabase
                                 .from('users')
@@ -161,6 +160,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                     console.log('👑 Role updated from DB:', data.role);
                                     setUserRole(data.role);
                                     setCachedRole(session.user.id, data.role);
+                                } else {
+                                    console.log('👑 Role confirmed from DB');
                                 }
                             } else if (error) {
                                 console.error('Error fetching role:', error);
@@ -173,20 +174,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     if (cacheHit) {
                         fetchRole(); // Run in background
                     } else {
-                        await fetchRole(); // Block if no cache
+                        // Block if no cache (first load)
+                        try {
+                            await fetchRole();
+                        } catch (err) {
+                            console.error("Critical error awaiting fetchRole:", err);
+                        } finally {
+                            console.log("🔓 [Auth] Unblocking UI after role check");
+                            setIsLoading(false);
+                            if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current);
+                        }
                     }
-
 
                     if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
                         // Background user ensure
                         if (session?.user) {
-                            ensureUserExists(session.user).catch(err => console.error("Ensure user failed", err));
+                            // Ensure user exists in DB
+                            // Ensure user exists in DB
+                            ensureUserExists(session.user).catch((err: any) => console.error("Ensure user failed", err));
                         }
                     }
+                } else {
+                    // No user
+                    console.log("🔓 [Auth] No user session, unblocking UI");
+                    setIsLoading(false);
+                    if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current);
                 }
-
-                // Ensure loading is false essentially if not hit cache (or no user)
-                if (!cacheHit) setIsLoading(false);
             });
 
         return () => {
@@ -294,37 +307,8 @@ async function ensureUserExists(user: User) {
             .single();
 
         if (!existingUser) {
-            // Check for potential guest credits to transfer
-            let initialCredits = 20; // Default welcome bonus
-            let guestIdToLink = null;
-
-            if (typeof window !== 'undefined') {
-                const storedGuestId = localStorage.getItem('guest_device_id');
-                if (storedGuestId) {
-                    guestIdToLink = storedGuestId;
-                    // Attempt to fetch guest credits
-                    // We need to import this dynamically or move the helper outside if circular dep risks exist,
-                    // but they are in different files so it should be fine.
-                    try {
-                        // Assuming storageService is imported as `storageService` at top of file, 
-                        // but currently it is NOT imported. I need to add import or update caller.
-                        // Since I can't see imports here, I will rely on the `storageService` import being added or existing.
-                        // Wait, I confirmed previous file view had `import { supabase } ...` but NO `storageService`.
-                        // I MUST add the import first. I will do this in a separate edit or assume I can add it here if I replace enough lines.
-                        // I'm replacing the bottom function, I can't easily add top-level import.
-                        // I will assume I need to do a multi-replace or just inline the import? No, inline import is better for safety here.
-                        const { transferGuestCreditsToUser } = await import('../services/storageService');
-                        const guestCredits = await transferGuestCreditsToUser(storedGuestId);
-
-                        if (guestCredits !== null) {
-                            console.log(`🔄 Transferring ${guestCredits} credits from guest session...`);
-                            initialCredits = guestCredits;
-                        }
-                    } catch (e) {
-                        console.warn("Failed to transfer guest credits", e);
-                    }
-                }
-            }
+            // Check for potential guest credits to transfer - DISABLED per new requirement
+            let initialCredits = 10; // Fixed 10 credits for new users (No accumulation)
 
             // Create new user with 9-char ID
             const { error } = await supabase
@@ -335,7 +319,7 @@ async function ensureUserExists(user: User) {
                     email: user.email,
                     display_name: user.user_metadata?.full_name || user.email?.split('@')[0],
                     avatar_url: user.user_metadata?.avatar_url,
-                    current_credits: initialCredits, // Initial or Transferred
+                    current_credits: initialCredits,
                     role: 'user',
                     created_at: new Date().toISOString()
                 });
@@ -344,11 +328,7 @@ async function ensureUserExists(user: User) {
                 console.error('Failed to create user:', error);
             } else {
                 console.log(`New user created with ${initialCredits} credits`);
-                if (initialCredits !== 20) {
-                    toast.success(`Đã đồng bộ ${initialCredits} credits từ phiên khách!`);
-                } else {
-                    toast.success('Chào mừng! Bạn nhận được 20 credits miễn phí! 🎉');
-                }
+                toast.success('Chào mừng! Bạn nhận được 10 credits miễn phí! 🎉');
             }
         }
     } catch (error) {

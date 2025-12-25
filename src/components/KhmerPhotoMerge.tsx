@@ -319,7 +319,7 @@ const KhmerPhotoMerge: React.FC<KhmerPhotoMergeProps> = (props) => {
         console.log("State updated to generating (immediate feedback)");
 
         // Calculate credit cost based on model version (v3 = 3, v2 = 1)
-        const creditCost = modelVersion === 'v3' ? 3 : 1;
+        const creditCost = modelVersion === 'v3' ? 2 : 1;
 
         if (!await checkCredits(creditCost)) {
             console.warn(`checkCredits failed for cost ${creditCost}`);

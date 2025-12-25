@@ -15,7 +15,7 @@ interface PricingProps {
 }
 
 export const PricingCard: React.FC<{ plan: PricingPackage }> = ({ plan }) => {
-    const { language } = useAppControls();
+    const { language, openLoginModal } = useAppControls();
     const [isProcessing, setIsProcessing] = useState(false);
 
     const handlePurchase = async () => {
@@ -41,8 +41,9 @@ export const PricingCard: React.FC<{ plan: PricingPackage }> = ({ plan }) => {
             const isDev = process.env.NODE_ENV === 'development';
             const testUserId = 'test-user-' + Date.now().toString().slice(-8);
 
-            if (!session && !isDev) {
-                toast.error('Vui lòng đăng nhập để mua credits');
+            if (!session) {
+                // toast.error('Vui lòng đăng nhập để mua credits');
+                openLoginModal();
                 setIsProcessing(false);
                 return;
             }

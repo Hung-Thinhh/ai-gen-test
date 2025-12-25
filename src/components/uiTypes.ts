@@ -849,10 +849,13 @@ export interface AppControlContextType {
     isLayerComposerMounted: boolean;
     isLayerComposerVisible: boolean;
     isLoginModalOpen: boolean;
+    isOutOfCreditsModalOpen: boolean; // NEW
 
     checkCredits: (amount?: number) => Promise<boolean>; // Updated to accept amount
     openLoginModal: () => void;
     closeLoginModal: () => void;
+    openOutOfCreditsModal: () => void; // NEW
+    closeOutOfCreditsModal: () => void; // NEW
     language: 'vi' | 'en';
     guestId: string; // NEW
     guestCredits: number; // NEW
