@@ -18,3 +18,23 @@ FOR ALL
 TO public 
 USING (true) 
 WITH CHECK (true);
+
+-- ==========================================
+-- FIX FOR CATEGORIES TABLE (If applicable)
+-- ==========================================
+
+-- Disable/Enable RLS for reset
+ALTER TABLE categories DISABLE ROW LEVEL SECURITY;
+ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+
+-- Drop potential conflicting policies on categories
+DROP POLICY IF EXISTS "Enable read access for all users" ON categories;
+DROP POLICY IF EXISTS "Allow Full Access" ON categories;
+
+-- Create Permissive Policy for Categories
+CREATE POLICY "Allow Full Access Categories" 
+ON categories
+FOR ALL 
+TO public 
+USING (true) 
+WITH CHECK (true);

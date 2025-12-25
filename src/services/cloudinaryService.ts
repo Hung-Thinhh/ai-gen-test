@@ -43,9 +43,24 @@ export const uploadToCloudinary = async (fileOrBase64: string | Blob, folder: st
             throw new Error(data.error?.message || 'Failed to upload to Cloudinary');
         }
 
-        return data.secure_url;
+        // Optimize the URL for best delivery (WebP/AVIF, Auto Quality)
+        return optimizeCloudinaryUrl(data.secure_url);
     } catch (error) {
         console.error('Error uploading to Cloudinary:', error);
         throw error;
     }
+};
+
+/**
+ * Optimizes a Cloudinary URL by adding f_auto,q_auto transformations.
+ * This ensures the image is delivered in the efficient format (WebP/AVIF) and quality.
+ * @param url The original Cloudinary URL
+ * @returns The optimized URL
+ */
+export const optimizeCloudinaryUrl = (url: string): string => {
+    if (!url || !url.includes('/upload/')) return url;
+    // Avoid double optimization if already present
+    if (url.includes('f_auto') && url.includes('q_auto')) return url;
+
+    return url.replace('/upload/', '/upload/f_auto,q_auto/');
 };

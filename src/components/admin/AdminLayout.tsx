@@ -145,7 +145,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     useEffect(() => {
         if (!authLoading) {
             if (role !== 'admin' && role !== 'editor') {
-                // router.push('/');
+                router.push('/');
             } else if (role === 'editor') {
                 // Restrict editor access paths
                 const allowedPaths = ['/admin/tools', '/admin/prompts', '/admin/categories', '/admin/studios'];
@@ -193,7 +193,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         );
     }
 
-    // if (role !== 'admin' && role !== 'editor') return null;
+    if (role !== 'admin' && role !== 'editor') return null;
 
     const allMenuItems = [
         { text: 'Tổng quan', icon: <HomeIcon />, path: '/admin', roles: ['admin'] },

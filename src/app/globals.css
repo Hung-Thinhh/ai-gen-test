@@ -2390,7 +2390,7 @@ input:checked+.switch-slider:before {
     /* Bottom Navigation with Orange Accent */
     .bottom-navigation {
         position: fixed;
-        bottom: 20px;
+        bottom: 0px;
         left: 0;
         right: 0;
         display: flex;

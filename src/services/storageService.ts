@@ -748,6 +748,8 @@ export const createTool = async (tool: any) => {
  */
 export const getAllTools = async () => {
     try {
+        console.log("[Storage] Fetching all tools (fresh)...");
+        // Force a fresh request by not using any potential Service Worker cache (though unlikely with Supabase client)
         const { data, error } = await supabase
             .from('tools')
             .select('*')
@@ -1203,8 +1205,14 @@ export const getStudioBySlug = async (slug: string) => {
 /**
  * Fetches all prompts.
  */
+/**
+ * Fetches all prompts.
+ */
 export const getAllPrompts = async (sortBy: 'created_at' | 'usage' = 'created_at') => {
     try {
+        // Add a random filter or just rely on standard fetch. 
+        // Supabase-js requests are usually fresh. 
+        console.log("[Storage] Fetching prompts (fresh)...");
         const { data, error } = await supabase
             .from('prompts')
             .select('*')
