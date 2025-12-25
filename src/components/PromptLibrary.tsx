@@ -86,12 +86,42 @@ export const PromptLibrary: React.FC<PromptLibraryProps> = ({ onClose }) => {
         return prompts.filter(p => p.category_ids && p.category_ids.includes(activeCategory));
     }, [activeCategory, prompts]);
 
-    // Pagination
-    const totalPages = Math.ceil(filteredPrompts.length / ITEMS_PER_PAGE);
-    const paginatedPrompts = useMemo(() => {
-        const start = (currentPage - 1) * ITEMS_PER_PAGE;
-        return filteredPrompts.slice(start, start + ITEMS_PER_PAGE);
-    }, [filteredPrompts, currentPage]);
+    const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
+    const observerTarget = React.useRef<HTMLDivElement>(null);
+
+    // Reset visible count when category changes
+    useEffect(() => {
+        setVisibleCount(ITEMS_PER_PAGE);
+        const grid = document.querySelector('.prompt-library-container');
+        if (grid) grid.scrollTop = 0;
+    }, [activeCategory]);
+
+    // Derived state for visible prompts
+    const visiblePrompts = useMemo(() => {
+        return filteredPrompts.slice(0, visibleCount);
+    }, [filteredPrompts, visibleCount]);
+
+    // Intersection Observer for infinite scroll
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            entries => {
+                if (entries[0].isIntersecting && visibleCount < filteredPrompts.length) {
+                    setVisibleCount(prev => Math.min(prev + ITEMS_PER_PAGE, filteredPrompts.length));
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (observerTarget.current) {
+            observer.observe(observerTarget.current);
+        }
+
+        return () => {
+            if (observerTarget.current) {
+                observer.unobserve(observerTarget.current);
+            }
+        };
+    }, [observerTarget, visibleCount, filteredPrompts.length]);
 
     const handleCopyPrompt = async (prompt: Prompt) => {
         try {
@@ -105,7 +135,6 @@ export const PromptLibrary: React.FC<PromptLibraryProps> = ({ onClose }) => {
 
     const handleCategoryChange = (categoryId: string) => {
         setActiveCategory(categoryId);
-        handlePageChange(1); // Reset to first page
     };
 
     return (
@@ -114,7 +143,6 @@ export const PromptLibrary: React.FC<PromptLibraryProps> = ({ onClose }) => {
             <div className="flex-shrink-0 border-b border-white/10">
                 <div className="flex justify-center items-center pt-10">
                     <h2 className="text-4xl font-bold  text-orange-600 text-center ">{t('promptLibrary_title')}</h2>
-
                 </div>
                 <p className="themed-text-secondary text-center pt-2 mb-4">{t('promptLibrary_subtitle')}</p>
 
@@ -154,7 +182,7 @@ export const PromptLibrary: React.FC<PromptLibraryProps> = ({ onClose }) => {
                     <>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 prompt-library-grid">
                             <AnimatePresence mode="wait">
-                                {paginatedPrompts.map((prompt, index) => (
+                                {visiblePrompts.map((prompt, index) => (
                                     <motion.div
                                         key={prompt.id}
                                         initial={{ opacity: 0, y: 20 }}
@@ -168,6 +196,7 @@ export const PromptLibrary: React.FC<PromptLibraryProps> = ({ onClose }) => {
                                             <img
                                                 src={prompt.imageUrl}
                                                 alt={prompt.text}
+                                                loading="lazy"
                                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                             />
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
@@ -203,6 +232,13 @@ export const PromptLibrary: React.FC<PromptLibraryProps> = ({ onClose }) => {
                             </AnimatePresence>
                         </div>
 
+                        {/* Intersection Observer Target */}
+                        {visibleCount < filteredPrompts.length && (
+                            <div ref={observerTarget} className="h-20 flex items-center justify-center mt-4">
+                                <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                            </div>
+                        )}
+
                         {/* Empty State */}
                         {filteredPrompts.length === 0 && (
                             <div className="flex flex-col items-center justify-center py-20 themed-text-tertiary">
@@ -212,47 +248,6 @@ export const PromptLibrary: React.FC<PromptLibraryProps> = ({ onClose }) => {
                     </>
                 )}
             </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-                <div className="flex-shrink-0 p-6 border-t border-white/10">
-                    <div className="flex justify-center items-center gap-2">
-                        <button
-                            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                            disabled={currentPage === 1}
-                            className="btn btn-secondary btn-sm"
-                        >
-                            {language === 'vi' ? 'Trước' : 'Previous'}
-                        </button>
-
-                        <div className="flex gap-2">
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                                <button
-                                    key={page}
-                                    onClick={() => handlePageChange(page)}
-                                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-all font-medium text-sm ${currentPage === page
-                                        ? 'text-white shadow-lg'
-                                        : 'themed-text-secondary hover:themed-text hover:bg-white/5'
-                                        }`}
-                                    style={currentPage === page ? {
-                                        backgroundColor: '#ff6b35',
-                                    } : {}}
-                                >
-                                    {page}
-                                </button>
-                            ))}
-                        </div>
-
-                        <button
-                            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                            disabled={currentPage === totalPages}
-                            className="btn btn-secondary btn-sm"
-                        >
-                            {language === 'vi' ? 'Sau' : 'Next'}
-                        </button>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
