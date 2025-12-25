@@ -1210,21 +1210,20 @@ export const getStudioBySlug = async (slug: string) => {
  */
 export const getAllPrompts = async (sortBy: 'created_at' | 'usage' = 'created_at') => {
     try {
-        // Add a random filter or just rely on standard fetch. 
-        // Supabase-js requests are usually fresh. 
-        console.log("[Storage] Fetching prompts (fresh)...");
+        console.log("[Storage] getAllPrompts called. Sort:", sortBy);
         const { data, error } = await supabase
             .from('prompts')
             .select('*')
             .order(sortBy, { ascending: false });
 
         if (error) {
-            console.error("Error fetching prompts:", error);
+            console.error("[Storage] Error fetching prompts:", error);
             return [];
         }
+        console.log(`[Storage] Got ${data?.length} prompts from DB.`);
         return data || [];
     } catch (error) {
-        console.error("Error fetching prompts:", error);
+        console.error("[Storage] Fatal error fetching prompts:", error);
         return [];
     }
 };

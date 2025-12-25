@@ -57,11 +57,11 @@ export const PromptLibrary: React.FC<PromptLibraryProps> = ({ onClose }) => {
                     getAllCategories()
                 ]);
 
-                if (dbCategories) {
+                if (Array.isArray(dbCategories)) {
                     setCategories(dbCategories);
                 }
 
-                if (dbPrompts) {
+                if (Array.isArray(dbPrompts)) {
                     const mappedPrompts = dbPrompts.map((p: any) => ({
                         id: p.id,
                         category_ids: p.category_ids || [], // Map category_ids
