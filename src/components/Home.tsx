@@ -41,10 +41,18 @@ interface HomeProps {
 }
 
 const Home: React.FC<HomeProps> = ({ onSelectApp, title, subtitle, apps: initialApps }) => { // Rename prop to initialApps
-  const { t, importSettingsAndNavigate, openLayerComposer, addImagesToGallery, openStoryboardingModal } = useAppControls();
+  const { t, language, importSettingsAndNavigate, openLayerComposer, addImagesToGallery, openStoryboardingModal } = useAppControls();
   const { openEmptyImageEditor } = useImageEditor();
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  const getLocalizedText = (content: any, lang: string) => {
+    if (typeof content === 'string') return content;
+    if (typeof content === 'object' && content !== null) {
+      return content[lang] || content['en'] || content['vi'] || '';
+    }
+    return '';
+  };
 
   const [dbTools, setDbTools] = useState<ProcessedAppConfig[]>([]);
   const [loadingTools, setLoadingTools] = useState(true);
@@ -232,7 +240,7 @@ const Home: React.FC<HomeProps> = ({ onSelectApp, title, subtitle, apps: initial
               {app.previewImageUrl && (
                 <CardMedia
                   component="img"
-                  height="140"
+                  sx={{ aspectRatio: '1/1', objectFit: 'cover' }}
                   image={app.previewImageUrl}
                   alt={`Preview for ${app.title}`}
                 />
@@ -244,7 +252,7 @@ const Home: React.FC<HomeProps> = ({ onSelectApp, title, subtitle, apps: initial
                   className="themed-text"
                   sx={{ marginBottom: 1 }}
                 >
-                  {app.title}
+                  {getLocalizedText(app.title, language)}
                 </Typography>
                 <Typography
                   variant="body2"
@@ -257,7 +265,7 @@ const Home: React.FC<HomeProps> = ({ onSelectApp, title, subtitle, apps: initial
                     textOverflow: 'ellipsis',
                   }}
                 >
-                  {app.description}
+                  {getLocalizedText(app.description, language)}
                 </Typography>
               </CardContent>
             </Card>

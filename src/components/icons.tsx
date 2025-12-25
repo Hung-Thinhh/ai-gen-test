@@ -69,7 +69,20 @@ export const SwapIcon: React.FC<IconProps> = (props) => (
 
 export const GalleryIcon: React.FC<IconProps> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" {...props}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        <g transform="translate(0, 3) scale(0.85)">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </g>
+        <g fill="currentColor" stroke="none" transform="translate(1, -1)">
+            <g transform="translate(17.6, 12)">
+                <path d="M0,-0.8 Q0.16,-0.16 0.8,0 Q0.16,0.16 0,0.8 Q-0.16,0.16 -0.8,0 Q-0.16,-0.16 0,-0.8 Z" />
+            </g>
+            <g transform="translate(22.4, 9.6)">
+                <path d="M0,-1.2 Q0.24,-0.24 1.2,0 Q0.24,0.24 0,1.2 Q-0.24,0.24 -1.2,0 Q-0.24,-0.24 0,-1.2 Z" />
+            </g>
+            <g transform="translate(20, 4)">
+                <path d="M0,-2 Q0.4,-0.4 2,0 Q0.4,0.4 0,2 Q-0.4,0.4 -2,0 Q-0.4,-0.4 0,-2 Z" />
+            </g>
+        </g>
     </svg>
 );
 
@@ -708,12 +721,54 @@ export const DocumentIcon: React.FC<IconProps> = (props) => (
 // Grid icon with 4 squares for menu
 export const GridSquaresIcon: React.FC<IconProps> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" {...props}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+        <g transform="translate(0, 3) scale(0.85)">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+        </g>
+        <g fill="currentColor" stroke="none" transform="translate(1, -1)">
+            <g transform="translate(17.6, 12)">
+                <path d="M0,-0.8 Q0.16,-0.16 0.8,0 Q0.16,0.16 0,0.8 Q-0.16,0.16 -0.8,0 Q-0.16,-0.16 0,-0.8 Z" />
+            </g>
+            <g transform="translate(22.4, 9.6)">
+                <path d="M0,-1.2 Q0.24,-0.24 1.2,0 Q0.24,0.24 0,1.2 Q-0.24,0.24 -1.2,0 Q-0.24,-0.24 0,-1.2 Z" />
+            </g>
+            <g transform="translate(20, 4)">
+                <path d="M0,-2 Q0.4,-0.4 2,0 Q0.4,0.4 0,2 Q-0.4,0.4 -2,0 Q-0.4,-0.4 0,-2 Z" />
+            </g>
+        </g>
     </svg>
 );
 // Credit Card Icon for Pricing/Billing
 export const CreditCardIcon: React.FC<IconProps> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+    </svg>
+);
+
+export const CameraSparklesIcon: React.FC<IconProps> = (props) => (
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+        <mask id="camera-sparkles-mask" maskUnits="userSpaceOnUse">
+            <rect width="24" height="24" fill="white" />
+            <circle cx="12" cy="14" r="3.6" fill="black" />
+            <circle cx="12" cy="14" r="1.6" fill="black" />
+            <rect x="5.6" y="9.6" width="1.6" height="0.64" rx="0.32" stroke="black" strokeWidth="0.24" fill="white" />
+        </mask>
+        <g mask="url(#camera-sparkles-mask)" fill="currentColor">
+            <rect x="1.6" y="8" width="17.6" height="12" rx="1.2" ry="1.2" />
+            <path d="M 6.4 8 L 8 5.6 L 14.4 5.6 L 16 8 Z" />
+            <rect x="5.2" y="7.2" width="2" height="1.2" rx="0.24" />
+            <circle cx="12" cy="14" r="2.8" />
+            <circle cx="12" cy="14" r="1.2" />
+        </g>
+        <g fill="currentColor">
+            <g transform="translate(17.6, 12)">
+                <path d="M0,-0.8 Q0.16,-0.16 0.8,0 Q0.16,0.16 0,0.8 Q-0.16,0.16 -0.8,0 Q-0.16,-0.16 0,-0.8 Z" />
+            </g>
+            <g transform="translate(22.4, 9.6)">
+                <path d="M0,-1.2 Q0.24,-0.24 1.2,0 Q0.24,0.24 0,1.2 Q-0.24,0.24 -1.2,0 Q-0.24,-0.24 0,-1.2 Z" />
+            </g>
+            <g transform="translate(20, 4)">
+                <path d="M0,-2 Q0.4,-0.4 2,0 Q0.4,0.4 0,2 Q-0.4,0.4 -2,0 Q-0.4,-0.4 0,-2 Z" />
+            </g>
+        </g>
     </svg>
 );

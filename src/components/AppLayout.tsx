@@ -19,7 +19,10 @@ import {
     type AppConfig
 } from './uiUtils';
 import { BottomNavigation } from './BottomNavigation';
-import { HomeIcon, SparklesIcon, GalleryIcon, GridSquaresIcon, PlaceholderPersonIcon, LoadingSpinnerIcon } from './icons';
+import {
+    HomeIcon, SparklesIcon, GalleryIcon, GridSquaresIcon, PlaceholderPersonIcon, LoadingSpinnerIcon, LayerComposerIcon,
+    CameraSparklesIcon
+} from './icons';
 import { useIsMobile } from '../utils/mobileUtils';
 import { MobilePageHeader } from './MobileHeader';
 
@@ -220,7 +223,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     items={[
                         { id: 'overview', label: 'Home', icon: HomeIcon, onClick: handleGoHome, href: '/' },
                         { id: 'prompt-library', label: 'Prompt', icon: GridSquaresIcon, onClick: () => handleSelectApp('prompt-library'), href: '/prompt-library' },
-                        { id: 'generators', label: 'Tools', icon: SparklesIcon, onClick: () => handleSelectApp('generators'), href: '/tool' },
+                        { id: 'generators', label: 'Tools', icon: CameraSparklesIcon, onClick: () => handleSelectApp('generators'), href: '/tool' },
                         { id: 'gallery', label: 'Gallery', icon: GalleryIcon, onClick: () => handleSelectApp('gallery'), href: '/gallery' },
                         { id: 'profile', label: 'Profile', icon: PlaceholderPersonIcon, onClick: () => handleSelectApp('profile'), href: '/profile' },
                     ]}

@@ -8,7 +8,7 @@ import { Pricing } from './Pricing';
 import { HeroSlider } from './HeroSlider';
 import { PersonalGallery } from './PersonalGallery';
 import { ZaloCTA } from './ZaloCTA';
-import { getAllPrompts, incrementPromptUsage, getAllTools } from '../services/storageService';
+import { getAllPrompts, incrementPromptUsage, getAllTools, getAllCategories } from '../services/storageService';
 
 // ... inside component ...
 
@@ -81,6 +81,7 @@ interface FeaturedPrompt {
         avatar: string;
     };
     stats: { views: string; likes: string; };
+    category_ids?: string[];
 }
 
 const Overview: React.FC = () => {
@@ -115,17 +116,33 @@ const Overview: React.FC = () => {
 
 
     const [dbTools, setDbTools] = React.useState<any[]>([]);
+    const [categories, setCategories] = React.useState<any[]>([]);
+    const [activeCategory, setActiveCategory] = React.useState('all');
 
     React.useEffect(() => {
         const fetchData = async () => {
             try {
-                // Fetch Prompts
-                const dbPrompts = await getAllPrompts('usage');
-                const mappedPrompts = (dbPrompts || []).slice(0, 10).map((p: any) => ({
+                // Fetch Prompts & Categories
+                const [dbPrompts, dbCategories] = await Promise.all([
+                    getAllPrompts('usage'),
+                    getAllCategories()
+                ]);
+
+                if (dbCategories) {
+                    // Filter only specific categories for Homepage
+                    const targetCategories = ['nam', 'nữ', 'cặp đôi'];
+                    const filteredCats = dbCategories.filter((c: any) =>
+                        targetCategories.includes(c.name.toLowerCase().trim())
+                    );
+                    setCategories(filteredCats);
+                }
+
+                const mappedPrompts = (dbPrompts || []).map((p: any) => ({
                     id: p.id,
                     image: p.avt_url || 'https://via.placeholder.com/400x300',
                     title: p.name,
                     description: p.content,
+                    category_ids: p.category_ids || [],
                     style: 'Creative',
                     author: {
                         name: 'Duky AI',
@@ -283,19 +300,44 @@ const Overview: React.FC = () => {
                 )}
             </motion.section>
 
+
             {/* ===== FEATURED PROMPTS ===== */}
             <motion.section
                 className="featured-prompts-section px-4 pb-20"
                 initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
             >
                 <div className="section-header-inline mb-6">
-                    <div className="flex items-center gap-2">
-                        <span className="text-orange-500 font-bold bg-orange-500/10 px-2 py-0.5 rounded text-xs tracking-wider">HOT</span>
-                        <h2 className="section-title-v2 !mb-0">Ý tưởng Prompt</h2>
-                    </div>
+                    <h2 className="section-title-v2">
+                        🎨 Featured Prompts / Gợi ý
+                    </h2>
+                    <Link href="/prompt-library" className="see-all-link">See All</Link>
+                </div>
+
+                {/* Category Filter Tabs */}
+                <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+                    <button
+                        onClick={() => setActiveCategory('all')}
+                        className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${activeCategory === 'all'
+                            ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
+                            : 'bg-white/5 text-white/70 hover:bg-white/10'
+                            }`}
+                    >
+                        Tất cả
+                    </button>
+                    {categories.map((cat) => (
+                        <button
+                            key={cat.id}
+                            onClick={() => setActiveCategory(cat.id)}
+                            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${activeCategory === cat.id
+                                ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
+                                : 'bg-white/5 text-white/70 hover:bg-white/10'
+                                }`}
+                        >
+                            {cat.name}
+                        </button>
+                    ))}
                 </div>
 
                 {loadingPrompts ? (
@@ -304,45 +346,43 @@ const Overview: React.FC = () => {
                     </div>
                 ) : (
                     <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4 space-y-4">
-                        {featuredPrompts.map((prompt) => (
-                            <motion.div
-                                key={prompt.id}
-                                className="break-inside-avoid bg-neutral-900 rounded-xl overflow-hidden group cursor-pointer border border-neutral-800 hover:border-orange-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/10 mb-4 relative"
-                                whileHover={{ y: -5 }}
-                                onClick={() => handleCopyPrompt(prompt)}
-                            >
-                                {/* Copied Overlay */}
-                                {copiedId === prompt.id && (
-                                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                                        <div className="bg-orange-500 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow-lg flex items-center gap-2">
-                                            <span>✓ Copied!</span>
+                        {featuredPrompts
+                            .filter(p => activeCategory === 'all' || (p.category_ids && p.category_ids.includes(activeCategory)))
+                            .slice(0, 10) // Display limit
+                            .map((prompt) => (
+                                <motion.div
+                                    key={prompt.id}
+                                    className="break-inside-avoid bg-neutral-900 rounded-xl overflow-hidden group cursor-pointer border border-neutral-800 hover:border-orange-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/10 mb-4 relative"
+                                    whileHover={{ y: -5 }}
+                                    onClick={() => handleCopyPrompt(prompt)}
+                                >
+                                    {/* Copied Overlay */}
+                                    {copiedId === prompt.id && (
+                                        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                                            <div className="bg-orange-500 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow-lg flex items-center gap-2">
+                                                <span>✓ Copied!</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
+                                    )}
 
-                                {/* Image Container */}
-                                <div className="relative overflow-hidden bg-neutral-800">
-                                    <img
-                                        src={prompt.image}
-                                        alt={prompt.title}
-                                        className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-110"
-                                        loading="lazy"
-                                    />
-                                    <div className="absolute top-2 left-2">
-                                        <span className="bg-black/60 backdrop-blur-md text-white/90 text-[10px] px-2 py-1 rounded-md font-medium border border-white/10">
-                                            CREATIVE
-                                        </span>
+                                    {/* Image Container */}
+                                    <div className="relative overflow-hidden bg-neutral-800 aspect-[9/16]">
+                                        <img
+                                            src={prompt.image}
+                                            alt={prompt.title}
+                                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                            loading="lazy"
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
                                     </div>
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
-                                </div>
 
-                                {/* Card Body */}
-                                <div className="p-3">
-                                    <h3 className="text-white font-semibold text-sm truncate mb-1" title={prompt.title}>{prompt.title}</h3>
-                                    <p className="text-neutral-400 text-xs truncate">{prompt.description || prompt.title}</p>
-                                </div>
-                            </motion.div>
-                        ))}
+                                    {/* Card Body */}
+                                    <div className="p-3">
+                                        <h3 className="text-white font-semibold text-sm truncate mb-1" title={prompt.title}>{prompt.title}</h3>
+                                        <p className="text-neutral-400 text-xs truncate">{prompt.description || prompt.title}</p>
+                                    </div>
+                                </motion.div>
+                            ))}
                     </div>
                 )}
             </motion.section>

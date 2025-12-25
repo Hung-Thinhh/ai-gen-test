@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import React, { useEffect, useState, useRef, ChangeEvent } from 'react';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Masonry from 'react-masonry-css';
 import { downloadAllImagesAsZip, ImageForZip, useLightbox, useAppControls, useImageEditor, combineImages } from './uiUtils';
@@ -38,6 +39,10 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images })
     const { t, addImagesToGallery, removeImageFromGallery, replaceImageInGallery, refreshGallery } = useAppControls();
     const { openImageEditor } = useImageEditor();
     const isMobile = useIsMobile();
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const pathname = usePathname();
+
     const [isDraggingOver, setIsDraggingOver] = useState(false);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
@@ -51,29 +56,41 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images })
     }, [refreshGallery]);
 
     // Pagination state (simpler than infinite scroll)
-    const [currentPage, setCurrentPage] = useState(1);
+    const initialPage = searchParams ? Number(searchParams.get('page')) : 1;
+    const [currentPage, setCurrentPage] = useState(initialPage > 0 ? initialPage : 1);
+
     const ITEMS_PER_PAGE = 15;
     const totalPages = Math.ceil(images.length / ITEMS_PER_PAGE);
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
     const displayedImages = images.slice(startIndex, endIndex);
 
-    // Reset to page 1 when images change
+    // Update URL when page changes
+    const handlePageChange = (newPage: number) => {
+        setCurrentPage(newPage);
+        const params = new URLSearchParams(searchParams as any);
+        params.set('page', newPage.toString());
+        router.push(`${pathname}?${params.toString()}`);
+        scrollContainerRef.current?.scrollTo(0, 0);
+    };
+
+    // Reset to page 1 when images change IF not already on valid page
+    // Or simpler: just ensure current page is valid. 
     useEffect(() => {
-        setCurrentPage(1);
-    }, [images.length]);
+        if (currentPage > totalPages && totalPages > 0) {
+            handlePageChange(totalPages);
+        }
+    }, [images.length, totalPages]);
 
     const handleNextPage = () => {
         if (currentPage < totalPages) {
-            setCurrentPage(prev => prev + 1);
-            scrollContainerRef.current?.scrollTo(0, 0);
+            handlePageChange(currentPage + 1);
         }
     };
 
     const handlePrevPage = () => {
         if (currentPage > 1) {
-            setCurrentPage(prev => prev - 1);
-            scrollContainerRef.current?.scrollTo(0, 0);
+            handlePageChange(currentPage - 1);
         }
     };
 
