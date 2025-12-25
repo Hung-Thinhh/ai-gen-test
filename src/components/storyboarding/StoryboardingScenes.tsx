@@ -8,7 +8,7 @@ import ScenePanel from './ScenePanel';
 import TransitionPanel from './TransitionPanel';
 import type { SceneState } from '../uiTypes';
 import { AddIcon, DeleteIcon, UpArrowIcon, DownArrowIcon } from '../icons';
-import { useAppControls } from '../uiUtils';
+import { useAppControls } from '../uiContexts';
 import { cn } from '../../lib/utils';
 
 interface StoryboardingScenesProps {
@@ -59,7 +59,7 @@ const StoryboardingScenes: React.FC<StoryboardingScenesProps> = (props) => {
         referenceImages
     } = props;
     const { t } = useAppControls();
-    
+
     const toolbarButtonClasses = "p-1.5 bg-neutral-700/50 rounded-md text-neutral-400 hover:bg-neutral-600 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-neutral-700/50 disabled:hover:text-neutral-400";
 
     return (
@@ -75,7 +75,7 @@ const StoryboardingScenes: React.FC<StoryboardingScenesProps> = (props) => {
                             <button onClick={() => onMoveScene(index, 'down')} disabled={index === scenes.length - 1} className={toolbarButtonClasses} title="Di chuyển xuống">
                                 <DownArrowIcon className="h-4 w-4" />
                             </button>
-                             <button onClick={() => onDeleteScene(index)} className={cn(toolbarButtonClasses, "hover:!bg-red-500/80")} title="Xóa cảnh">
+                            <button onClick={() => onDeleteScene(index)} className={cn(toolbarButtonClasses, "hover:!bg-red-500/80")} title="Xóa cảnh">
                                 <DeleteIcon className="h-4 w-4" />
                             </button>
                         </div>

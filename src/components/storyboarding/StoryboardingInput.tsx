@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React from 'react';
-import { useAppControls } from '../uiUtils';
+import { useAppControls } from '../uiContexts';
 import { cn } from '../../lib/utils';
 import { PencilIcon, DocumentTextIcon, SpeakerWaveIcon, CloudUploadIcon, CloseIcon } from '../icons';
 import StoryboardingOptions from './StoryboardingOptions';

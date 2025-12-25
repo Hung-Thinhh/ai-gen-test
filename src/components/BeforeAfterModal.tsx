@@ -5,7 +5,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAppControls, useImageEditor, useLightbox } from './uiUtils';
+import { useAppControls, useImageEditor } from './uiContexts';
+import { useLightbox } from './uiHooks';
 import { cn } from '../lib/utils';
 import Lightbox from './Lightbox';
 import { ImageThumbnailActions } from './ImageThumbnailActions';

@@ -4,7 +4,8 @@
 */
 import React, { useState, useRef, useEffect, useCallback, useMemo, ChangeEvent } from 'react';
 import { useMotionValue, useMotionValueEvent } from 'framer-motion';
-import { useAppControls, downloadImage, downloadJson, useImageEditor, extractJsonFromPng } from "../uiUtils";
+import { useAppControls, useImageEditor } from "../uiContexts";
+import { downloadImage, downloadJson, extractJsonFromPng } from "../uiFileUtilities";
 import {
     generateFromPreset,
     editImageWithPrompt,

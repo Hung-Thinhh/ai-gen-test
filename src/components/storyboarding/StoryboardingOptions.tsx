@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React from 'react';
-import { useAppControls } from '../uiUtils';
+import { useAppControls } from '../uiContexts';
 import SearchableSelect from '../SearchableSelect';
 
 interface StoryboardingOptionsProps {
@@ -43,14 +43,14 @@ const StoryboardingOptions: React.FC<StoryboardingOptionsProps> = (props) => {
                         title="0 = Tự động"
                     />
                 </div>
-                 <div>
+                <div>
                     <label className="text-sm font-medium text-neutral-300">{t('storyboarding_aspectRatio')}</label>
                     <select value={aspectRatio} onChange={e => setAspectRatio(e.target.value)} className="form-input !text-xs w-full mt-1">
                         {aspectRatioOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                     </select>
                 </div>
             </div>
-             <div>
+            <div>
                 <label className="text-sm font-medium text-neutral-300">{t('storyboarding_style')}</label>
                 <div className="mt-1">
                     <SearchableSelect

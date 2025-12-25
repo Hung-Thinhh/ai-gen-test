@@ -5,7 +5,10 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAppControls, useImageEditor, type ImageForZip, downloadAllImagesAsZip, downloadJson, useDebounce } from './uiUtils';
+import { useAppControls, useImageEditor } from './uiContexts';
+import { type ImageForZip } from './uiTypes';
+import { downloadAllImagesAsZip, downloadJson } from './uiFileUtilities';
+import { useDebounce } from './uiHooks';
 import { GalleryPicker } from './uiComponents';
 import { useLightbox } from './uiHooks';
 import { downloadImage } from './uiFileUtilities';

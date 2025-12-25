@@ -5,7 +5,8 @@
 */
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { useAppControls, PromptRegenerationModal } from '../uiUtils';
+import { useAppControls } from '../uiContexts';
+import { PromptRegenerationModal } from '../uiComponents';
 import { PencilIcon, DuplicateIcon, LoadingSpinnerIcon, RegenerateIcon, AnimationLineIcon, ErrorIcon } from '../icons';
 import toast from 'react-hot-toast';
 import type { SceneState } from '../uiTypes';
@@ -36,7 +37,7 @@ const TransitionPanel: React.FC<TransitionPanelProps> = ({ scene, index, onEditA
     useEffect(() => {
         setEditedText(scene.animationDescription || '');
     }, [scene.animationDescription]);
-    
+
     useEffect(() => {
         setEditedVideoPrompt(scene.videoPrompt || '');
     }, [scene.videoPrompt]);
@@ -60,13 +61,13 @@ const TransitionPanel: React.FC<TransitionPanelProps> = ({ scene, index, onEditA
         }
         setIsEditing(false);
     };
-    
+
     const handleCopyVideoPrompt = () => {
         if (!scene.videoPrompt) return;
         navigator.clipboard.writeText(scene.videoPrompt);
         toast.success(t('common_promptCopied'));
     };
-    
+
     const handleCopyAnimationDescription = () => {
         if (!scene.animationDescription) return;
         navigator.clipboard.writeText(scene.animationDescription);
@@ -103,16 +104,16 @@ const TransitionPanel: React.FC<TransitionPanelProps> = ({ scene, index, onEditA
                 style={{ aspectRatio: formattedAspectRatio }}
             >
                 <div className="absolute top-2 right-2 z-20 flex items-center gap-1">
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); handleCopyVideoPrompt(); }} 
-                        className="p-1 rounded-full hover:bg-neutral-600 transition-colors" 
+                    <button
+                        onClick={(e) => { e.stopPropagation(); handleCopyVideoPrompt(); }}
+                        className="p-1 rounded-full hover:bg-neutral-600 transition-colors"
                         title={t('storyboarding_copyPrompt')}
                         disabled={!scene.videoPrompt}
                     >
                         <DuplicateIcon className="h-4 w-4" strokeWidth="1.5" />
                     </button>
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); setIsEditingVideoPrompt(true); }} 
+                    <button
+                        onClick={(e) => { e.stopPropagation(); setIsEditingVideoPrompt(true); }}
                         className="p-1 rounded-full hover:bg-neutral-600 transition-colors"
                         title={t('storyboarding_editPrompt')}
                     >
@@ -126,7 +127,7 @@ const TransitionPanel: React.FC<TransitionPanelProps> = ({ scene, index, onEditA
                     </div>
                 )}
                 {scene.videoStatus === 'error' && scene.videoError && (
-                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-900/50 p-2">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-900/50 p-2">
                         <ErrorIcon className="h-8 w-8 text-red-400 mb-2" />
                         <p className="text-xs text-red-300 text-center">{scene.videoError}</p>
                     </div>
@@ -134,17 +135,17 @@ const TransitionPanel: React.FC<TransitionPanelProps> = ({ scene, index, onEditA
                 {scene.videoStatus === 'done' && scene.videoUrl ? (
                     <video src={scene.videoUrl} controls autoPlay loop className="w-full h-full object-contain" />
                 ) : isEditingVideoPrompt ? (
-                    <textarea 
-                        value={editedVideoPrompt} 
-                        onChange={(e) => setEditedVideoPrompt(e.target.value)} 
+                    <textarea
+                        value={editedVideoPrompt}
+                        onChange={(e) => setEditedVideoPrompt(e.target.value)}
                         onBlur={handleSaveVideoPrompt}
                         className="absolute inset-0 storyboard-panel-textarea w-full h-full font-mono"
                         autoFocus
                     />
                 ) : scene.videoPrompt ? (
-                    <div 
+                    <div
                         onClick={() => setIsEditingVideoPrompt(true)}
-                        className="absolute inset-0 w-full h-full p-3 overflow-y-auto text-xs text-neutral-300 whitespace-pre-wrap storyboard-panel-description cursor-text font-mono" 
+                        className="absolute inset-0 w-full h-full p-3 overflow-y-auto text-xs text-neutral-300 whitespace-pre-wrap storyboard-panel-description cursor-text font-mono"
                     >
                         {scene.videoPrompt}
                     </div>
@@ -190,9 +191,9 @@ const TransitionPanel: React.FC<TransitionPanelProps> = ({ scene, index, onEditA
                             <option value="json">{t('storyboarding_promptMode_json')}</option>
                         </select>
                     </div>
-                     <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                         <button onClick={handleGenerateVideoPrompt} className="btn btn-secondary !text-xs !py-1.5 !px-4 w-full flex items-center justify-center" disabled={isGenerating}>
-                            {isGenerating ? <LoadingSpinnerIcon className="h-4 w-4 animate-spin"/> : 'Tạo prompt video'}
+                            {isGenerating ? <LoadingSpinnerIcon className="h-4 w-4 animate-spin" /> : 'Tạo prompt video'}
                         </button>
                         <button
                             onClick={onGenerateVideo}
@@ -202,7 +203,7 @@ const TransitionPanel: React.FC<TransitionPanelProps> = ({ scene, index, onEditA
                             )}
                             disabled={isGenerating || scene.videoStatus === 'pending'}
                         >
-                            {scene.videoStatus === 'pending' && <LoadingSpinnerIcon className="h-4 w-4 animate-spin"/>}
+                            {scene.videoStatus === 'pending' && <LoadingSpinnerIcon className="h-4 w-4 animate-spin" />}
                             {scene.videoStatus === 'pending' ? 'Đang tạo...' : 'Tạo Video'}
                         </button>
                     </div>

@@ -5,7 +5,8 @@
 */
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { useAppControls, PromptRegenerationModal } from '../uiUtils';
+import { useAppControls } from '../uiContexts';
+import { PromptRegenerationModal } from '../uiComponents';
 import type { SceneState } from '../uiTypes';
 import SceneImageToolbar from './SceneImageToolbar';
 import { PencilIcon, LoadingSpinnerIcon, ErrorIcon, StoryboardPlaceholderIcon, DuplicateIcon, RegenerateIcon, CloudUploadIcon } from '../icons';
@@ -40,7 +41,7 @@ const ScenePanel: React.FC<ScenePanelProps> = (props) => {
     } = props;
 
     const { t } = useAppControls();
-    
+
     const frame = frameType === 'start' ? scene.startFrame : scene.endFrame;
     const title = frameType === 'start' ? t('storyboarding_startFrame') : t('storyboarding_endFrame');
 
@@ -99,7 +100,7 @@ const ScenePanel: React.FC<ScenePanelProps> = (props) => {
         navigator.clipboard.writeText(frame.description);
         toast.success(t('common_promptCopied'));
     };
-    
+
     const handleConfirmRegeneration = (modificationPrompt: string) => {
         onRegeneratePrompt(index, frameType, modificationPrompt);
         setIsRegenModalOpen(false);
@@ -161,7 +162,7 @@ const ScenePanel: React.FC<ScenePanelProps> = (props) => {
                 {frame.imageUrl ? (
                     <>
                         <img src={frame.imageUrl} className="absolute inset-0 w-full h-full object-contain" alt={title} />
-                        <SceneImageToolbar 
+                        <SceneImageToolbar
                             onEdit={() => onEditImage(index, frameType)}
                             onDownload={() => onDownloadImage(index, frameType)}
                             onSelectFromGallery={() => onSelectCustomImage(index, frameType)}
@@ -174,7 +175,7 @@ const ScenePanel: React.FC<ScenePanelProps> = (props) => {
                         <StoryboardPlaceholderIcon className="h-20 w-20 text-neutral-700 opacity-60" />
                     </div>
                 )}
-                 {isDraggingOver && !frame.imageUrl && (
+                {isDraggingOver && !frame.imageUrl && (
                     <div className="absolute inset-0 z-10 bg-black/70 border-2 border-dashed border-yellow-400 rounded-lg flex flex-col items-center justify-center pointer-events-none">
                         <CloudUploadIcon className="h-10 w-10 text-yellow-400 mb-2" strokeWidth={1} />
                         <p className="text-sm font-bold text-yellow-400">{t('polaroid_dropPrompt')}</p>
@@ -219,8 +220,8 @@ const ScenePanel: React.FC<ScenePanelProps> = (props) => {
                                 <option value="reference">{t('storyboarding_sync_reference')}</option>
                                 {allScenes.flatMap((s, i) => {
                                     const options = [];
-                                    if (s.startFrame.imageUrl) options.push({ value: `${i}-start`, label: `Start Frame ${s.scene}`});
-                                    if (s.endFrame.imageUrl) options.push({ value: `${i}-end`, label: `End Frame ${s.scene}`});
+                                    if (s.startFrame.imageUrl) options.push({ value: `${i}-start`, label: `Start Frame ${s.scene}` });
+                                    if (s.endFrame.imageUrl) options.push({ value: `${i}-end`, label: `End Frame ${s.scene}` });
                                     return options;
                                 }).map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                                 <option value="custom">{t('storyboarding_sync_custom')}</option>

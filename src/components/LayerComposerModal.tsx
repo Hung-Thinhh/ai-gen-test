@@ -6,7 +6,8 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLayerComposerState } from './LayerComposer/useLayerComposerState';
-import { GalleryPicker, WebcamCaptureModal, useAppControls } from './uiUtils';
+import { useAppControls } from './uiContexts';
+import { GalleryPicker, WebcamCaptureModal } from './uiComponents';
 import { LayerComposerSidebar } from './LayerComposer/LayerComposerSidebar';
 import { LayerComposerCanvas } from './LayerComposer/LayerComposerCanvas';
 import { AIProcessLogger } from './LayerComposer/AIProcessLogger';
@@ -99,7 +100,7 @@ export const LayerComposerModal: React.FC<LayerComposerModalProps> = ({ isOpen, 
                         </>
                     )}
                 </motion.div>
-                 <AnimatePresence>
+                <AnimatePresence>
                     {isOpen && state.isLogVisible && state.aiProcessLog.length > 0 && (
                         <AIProcessLogger log={state.aiProcessLog} onClose={() => state.setIsLogVisible(false)} t={state.t} />
                     )}
@@ -111,20 +112,20 @@ export const LayerComposerModal: React.FC<LayerComposerModalProps> = ({ isOpen, 
                     captureLayer={state.captureLayer}
                 />
             </motion.div>
-            
+
             <GalleryPicker
                 isOpen={state.isGalleryOpen}
                 onClose={() => state.setIsGalleryOpen(false)}
                 onSelect={state.handleAddImage}
                 images={state.imageGallery}
             />
-             <WebcamCaptureModal
+            <WebcamCaptureModal
                 isOpen={state.isWebcamOpen}
                 onClose={() => state.setIsWebcamOpen(false)}
                 onCapture={state.handleAddImage}
             />
             <AnimatePresence>
-                 {isOpen && state.isConfirmingClose && (
+                {isOpen && state.isConfirmingClose && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -149,8 +150,8 @@ export const LayerComposerModal: React.FC<LayerComposerModalProps> = ({ isOpen, 
                     </motion.div>
                 )}
             </AnimatePresence>
-             <AnimatePresence>
-                 {isOpen && state.isConfirmingNew && (
+            <AnimatePresence>
+                {isOpen && state.isConfirmingNew && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -176,5 +177,5 @@ export const LayerComposerModal: React.FC<LayerComposerModalProps> = ({ isOpen, 
                 )}
             </AnimatePresence>
         </>
-    , document.body);
+        , document.body);
 };

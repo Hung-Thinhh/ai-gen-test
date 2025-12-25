@@ -4,7 +4,7 @@
 */
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAppControls } from './uiUtils';
+import { useAppControls } from './uiContexts';
 import { LayoutIcon, BeforeAfterIcon, AppCoverIcon } from './icons';
 
 const ExtraTools: React.FC<{ isOpen: boolean }> = ({ isOpen }) => {

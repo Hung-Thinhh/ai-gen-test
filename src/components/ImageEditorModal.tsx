@@ -5,7 +5,10 @@
 */
 import React, { useState, useCallback, ChangeEvent, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { type ImageToEdit, useAppControls, handleFileUpload, GalleryPicker, WebcamCaptureModal } from './uiUtils';
+import { type ImageToEdit } from './uiTypes';
+import { useAppControls } from './uiContexts';
+import { handleFileUpload } from './uiFileUtilities';
+import { GalleryPicker, WebcamCaptureModal } from './uiComponents';
 import { ImageEditorToolbar } from './ImageEditor/ImageEditorToolbar';
 import { ImageEditorControls } from './ImageEditor/ImageEditorControls';
 import { ImageEditorCanvas } from './ImageEditor/ImageEditorCanvas';
