@@ -4,7 +4,7 @@
 */
 import { Modality } from "@google/genai";
 import type { GenerateContentResponse } from "@google/genai";
-import ai, { hasApiKey } from './client'; // Import the shared client instance
+import { supabase } from '@/lib/supabase/client';
 
 // --- Global Configuration Store ---
 interface GlobalConfig {
@@ -131,6 +131,7 @@ export function processGeminiResponse(response: GenerateContentResponse): string
 /**
  * A wrapper for the Gemini API call that includes a retry mechanism for internal server errors
  * and for responses that don't contain an image.
+ * Uses Server-Side API for credit checking and key protection.
  * @param parts An array of parts for the request payload (e.g., image parts, text parts).
  * @param config Optional configuration object for the generateContent call.
  * @returns The GenerateContentResponse from the API.
@@ -139,14 +140,20 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
     const maxRetries = 3;
     const initialDelay = 1000;
     let lastError: Error | null = null;
-
-    // Check usage limits before making API call
-    const { canUseModel, incrementUsage, getRemainingUses } = await import('./usageTracker');
     const currentVersion = globalConfig.modelVersion;
 
-    if (!canUseModel(currentVersion)) {
-        const remaining = getRemainingUses(currentVersion);
-        throw new Error(`Bạn đã hết lượt sử dụng miễn phí cho model ${currentVersion.toUpperCase()}. Còn lại: ${remaining} lượt.`);
+    // 1. Get Auth Token OR Guest ID for Credit Deduction
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+
+    // Fallback to Guest ID if no token
+    const guestId = typeof window !== 'undefined' ? localStorage.getItem('guest_device_id') : null;
+
+    console.log('[baseService DEBUG] token:', token ? 'EXISTS' : 'NULL');
+    console.log('[baseService DEBUG] guestId:', guestId ? guestId : 'NULL');
+
+    if (!token && !guestId) {
+        throw new Error("Vui lòng đăng nhập hoặc tải lại trang để khởi tạo phiên khách (Guest Session).");
     }
 
     const model = getImageModel();
@@ -160,15 +167,26 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
         ...extraConfig
     };
 
+    // Prepare Headers
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'x-credit-cost': currentVersion === 'v3' ? '2' : '1', // Credit cost based on model version
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+        console.log('[baseService DEBUG] Using Authorization header');
+    } else if (guestId) {
+        headers['X-Guest-ID'] = guestId;
+        console.log('[baseService DEBUG] Using X-Guest-ID header:', guestId);
+    }
+    console.log('[baseService DEBUG] Final headers:', headers);
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             console.log(`[Gemini Debug] Attempt ${attempt}: Sending request to Internal API. Model: ${model}`);
 
             const response = await fetch('/api/gemini/generate-image', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: headers, // Use the prepared headers (Auth or Guest-ID)
                 body: JSON.stringify({
                     parts,
                     config: finalConfig,
@@ -178,6 +196,12 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
 
             if (!response.ok) {
                 const errorData = await response.json();
+
+                // Handle specific credit error
+                if (response.status === 402 || errorData.code === 'INSUFFICIENT_CREDITS') {
+                    throw new Error("Bạn đã hết Credit. Vui lòng nạp thêm để tiếp tục.");
+                }
+
                 throw new Error(errorData.error || `Server responded with ${response.status}`);
             }
 
@@ -186,8 +210,15 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
             // Validate that the response contains an image.
             const imagePart = data.candidates?.[0]?.content?.parts?.find((part: any) => part.inlineData);
             if (imagePart?.inlineData) {
-                // Success! Increment usage count
-                incrementUsage(currentVersion);
+                // SUCCESS: Refresh credits in UI
+                try {
+                    if (typeof window !== 'undefined' && (window as any).__refreshCredits) {
+                        await (window as any).__refreshCredits();
+                        console.log('[baseService] Credits refreshed in UI after generation');
+                    }
+                } catch (refreshError) {
+                    console.warn('[baseService] Failed to refresh credits:', refreshError);
+                }
                 return data;
             }
 
@@ -203,18 +234,16 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
             console.error(`Error calling Gemini API (Attempt ${attempt}/${maxRetries}):`, errorMessage);
 
             // Don't retry on critical errors like invalid API key or quota issues.
-            if (errorMessage.includes('API Key không hợp lệ') || errorMessage.includes('Chưa cấu hình') || errorMessage.includes('429') || errorMessage.toLowerCase().includes('quota') || errorMessage.toLowerCase().includes('rate limit') || errorMessage.toLowerCase().includes('resource_exhausted')) {
+            if (errorMessage.includes('hết Credit') || errorMessage.includes('API Key không hợp lệ') || errorMessage.includes('429') || errorMessage.toLowerCase().includes('quota')) {
                 throw processedError;
             }
 
-            // If it's not a retriable server error and we're out of retries, fail.
             const isInternalError = errorMessage.includes('"code":500') || errorMessage.includes('INTERNAL');
             if (!isInternalError && attempt >= maxRetries) {
                 throw processedError;
             }
         }
 
-        // Wait before the next attempt, but not after the last one.
         if (attempt < maxRetries) {
             const delay = initialDelay * Math.pow(2, attempt - 1);
             console.log(`Waiting ${delay}ms before next attempt...`);
@@ -222,16 +251,12 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
         }
     }
 
-    // If the loop completes without returning, all retries have failed. Throw the last error.
-    throw lastError || new Error("Gemini API call failed after all retries without returning a valid image.");
+    throw lastError || new Error("Gemini API call failed after all retries.");
 }
 
 /**
  * A wrapper for Gemini text generation calls with retry mechanism.
- * @param contents The prompt or content to send to the model.
- * @param model Optional model override. Defaults to getTextModel().
- * @param config Optional configuration for generateContent.
- * @returns The response text from the model.
+ * Now uses Server-Side API to hide API Key.
  */
 export async function callGeminiTextWithRetry(
     contents: string,
@@ -244,45 +269,40 @@ export async function callGeminiTextWithRetry(
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            const response = await ai.models.generateContent({
-                model,
-                contents,
-                ...config,
+            // Call Server API instead of client SDK
+            const response = await fetch('/api/gemini/generate-text', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: contents }] }], // Standard Gemini structure
+                    model,
+                    config
+                })
             });
 
-            const text = response.text?.trim();
-            if (text) {
-                return text;
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `Server error ${response.status}`);
             }
+
+            const data = await response.json();
+            const text = data.text?.trim() || data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+
+            if (text) return text;
 
             lastError = new Error('Model returned empty response');
             console.warn(`Attempt ${attempt}/${maxRetries}: Empty response. Retrying...`);
+
         } catch (error) {
             const processedError = processApiError(error);
             lastError = processedError;
-            const errorMessage = processedError.message;
-            console.error(`Error calling Gemini Text API (Attempt ${attempt}/${maxRetries}):`, errorMessage);
-
-            // Don't retry on critical errors
-            if (
-                errorMessage.includes('API Key không hợp lệ') ||
-                errorMessage.includes('429') ||
-                errorMessage.toLowerCase().includes('quota') ||
-                errorMessage.toLowerCase().includes('rate limit') ||
-                errorMessage.toLowerCase().includes('resource_exhausted')
-            ) {
-                throw processedError;
-            }
-
-            const isInternalError = errorMessage.includes('"code":500') || errorMessage.includes('INTERNAL');
-            if (!isInternalError && attempt >= maxRetries) {
-                throw processedError;
-            }
+            if (attempt >= maxRetries) throw processedError;
         }
 
         if (attempt < maxRetries) {
             const delay = initialDelay * Math.pow(2, attempt - 1);
-            console.log(`Waiting ${delay}ms before next attempt...`);
             await new Promise(resolve => setTimeout(resolve, delay));
         }
     }
@@ -298,6 +318,11 @@ export async function callGeminiTextWithRetry(
  * @param config Optional configuration.
  * @returns The full GenerateContentResponse.
  */
+/**
+ * A generic wrapper for Gemini generateContent calls with retry mechanism.
+ * Useful for calls that don't require image output (e.g., text-only or mixed responses).
+ * Now routed through secure server API.
+ */
 export async function callGeminiGenericWithRetry(
     model: string,
     contents: any,
@@ -309,14 +334,29 @@ export async function callGeminiGenericWithRetry(
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            const response = await ai.models.generateContent({
-                model,
-                contents,
-                ...config,
+            // Call Server Text API (it returns full response object structure)
+            const response = await fetch('/api/gemini/generate-text', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: contents, // Pass directly
+                    model,
+                    config
+                })
             });
 
-            if (response.candidates?.[0]?.content) {
-                return response;
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `Server error ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            // Check if candidates exist (checking mocked generic response structure)
+            if (data.candidates?.[0]?.content) {
+                return data as GenerateContentResponse;
             }
 
             lastError = new Error('Model returned no candidates');
@@ -324,23 +364,7 @@ export async function callGeminiGenericWithRetry(
         } catch (error) {
             const processedError = processApiError(error);
             lastError = processedError;
-            const errorMessage = processedError.message;
-            console.error(`Error calling Gemini Generic API (Attempt ${attempt}/${maxRetries}):`, errorMessage);
-
-            if (
-                errorMessage.includes('API Key không hợp lệ') ||
-                errorMessage.includes('429') ||
-                errorMessage.toLowerCase().includes('quota') ||
-                errorMessage.toLowerCase().includes('rate limit') ||
-                errorMessage.toLowerCase().includes('resource_exhausted')
-            ) {
-                throw processedError;
-            }
-
-            const isInternalError = errorMessage.includes('"code":500') || errorMessage.includes('INTERNAL');
-            if (!isInternalError && attempt >= maxRetries) {
-                throw processedError;
-            }
+            if (attempt >= maxRetries) throw processedError;
         }
 
         if (attempt < maxRetries) {

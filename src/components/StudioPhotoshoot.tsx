@@ -18,15 +18,15 @@ const StudioPhotoshoot: React.FC<StudioPhotoshootProps> = (props) => {
     const handleGenerate = async () => {
         if (!appState.subjectImage) return;
 
-        // Immediate Feedback
+        // Check credits FIRST
         const preGenState = { ...appState };
-        onStateChange({ ...appState, stage: 'generating', error: null });
-
         const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
         if (!await checkCredits(creditCostPerImage)) {
-            onStateChange({ ...appState, stage: 'configuring' });
-            return;
+            return; // Stay in configuring
         }
+
+        // Set generating stage AFTER credits confirmed
+        onStateChange({ ...appState, stage: 'generating', error: null });
 
         try {
             const prompt = `Professional studio photoshoot. Style: ${appState.options.style || 'commercial'}. Setup: ${appState.options.setup || 'clean backdrop'}. Mood: ${appState.options.mood || 'professional'}. ${appState.options.notes}`;

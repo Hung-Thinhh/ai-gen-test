@@ -230,10 +230,6 @@ export default function IDPhotoCreator({ appState, onStateChange, onBack }: IDPh
         if (!await checkCredits()) return;
 
         setIsLoading(true);
-        onStateChange({ ...appState, error: null });
-
-        // Don't change stage immediately if we want to show loading
-        // or change to 'generating'
         onStateChange({ ...appState, stage: 'generating', error: null });
 
         let attireDesc = '';

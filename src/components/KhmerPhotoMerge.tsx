@@ -313,20 +313,19 @@ const KhmerPhotoMerge: React.FC<KhmerPhotoMergeProps> = (props) => {
             return;
         }
 
-        // Immediate feedback
+        // Check credits FIRST
         const preGenState = { ...appState };
-        onStateChange({ ...appState, stage: 'generating', error: null });
-        console.log("State updated to generating (immediate feedback)");
-
-        // Calculate credit cost based on model version (v3 = 3, v2 = 1)
+        // Calculate credit cost based on model version (v3 = 2, v2 = 1)
         const creditCost = modelVersion === 'v3' ? 2 : 1;
 
         if (!await checkCredits(creditCost)) {
             console.warn(`checkCredits failed for cost ${creditCost}`);
-            // Revert
-            onStateChange({ ...appState, stage: 'configuring' });
-            return;
+            return; // Stay in configuring
         }
+
+        // Set generating stage AFTER credits confirmed
+        onStateChange({ ...appState, stage: 'generating', error: null });
+        console.log("State updated to generating (after credit check passed)");
         console.log("checkCredits passed");
 
         try {

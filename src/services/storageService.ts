@@ -315,11 +315,12 @@ export const saveGuestSessionBatch = async (guestId: string, ip: string, imageUr
 // --- GUEST CREDITS ---
 
 /**
- * Gets the current credits for a registered user.
+ * Gets the current credits for a registered user (READ-ONLY).
  */
-export const getUserCredits = async (userId: string): Promise<number> => {
+export const getUserCredits = async (userId: string, token?: string): Promise<number> => {
     try {
-        const { data, error } = await supabase
+        const client = token ? getFreshClient(token) : supabase;
+        const { data, error } = await client
             .from(USERS_TABLE)
             .select('current_credits')
             .eq('user_id', userId)
@@ -744,36 +745,32 @@ export const createTool = async (tool: any) => {
 };
 
 /**
- * Fetches all tools from the database.
+ * Fetches all tools from the database via server API.
  */
 export const getAllTools = async () => {
     try {
-        console.log("[Storage] Fetching all tools (fresh)...");
-        // Force a fresh request by not using any potential Service Worker cache (though unlikely with Supabase client)
-        const { data, error } = await supabase
-            .from('tools')
-            .select('*')
-            .order('sort_order', { ascending: true })
-            .range(0, 999);
+        console.log("[Storage] Fetching all tools from API...");
+        const response = await fetch('/api/data/tools');
 
-        if (error) {
-            console.error("Error fetching tools:", error);
+        if (!response.ok) {
+            console.error("Error fetching tools from API:", response.status);
             return [];
         }
 
+        const { data } = await response.json();
         const tools = data || [];
 
         // Custom sort: sort_order 1, 2, 3... first, then 0s (or nulls) at the end
-        tools.sort((a, b) => {
+        tools.sort((a: any, b: any) => {
             const orderA = a.sort_order ? parseInt(a.sort_order) : 0;
             const orderB = b.sort_order ? parseInt(b.sort_order) : 0;
 
-            if (orderA === 0 && orderB !== 0) return 1; // 0 goes after non-zero
-            if (orderA !== 0 && orderB === 0) return -1; // Non-zero goes before 0
-            if (orderA === 0 && orderB === 0) return 0; // Keep relative order
-            return orderA - orderB; // Ascending for non-zeros
+            if (orderA === 0 && orderB !== 0) return 1;
+            if (orderA !== 0 && orderB === 0) return -1;
+            if (orderA === 0 && orderB === 0) return 0;
+            return orderA - orderB;
         });
-        console.log("[Storage] getAllTools returned:", tools);
+        console.log("[Storage] getAllTools returned:", tools.length, "items");
         return tools;
     } catch (error) {
         console.error("Error fetching tools:", error);
@@ -986,24 +983,23 @@ export const updatePackage = async (packageId: string | number, updates: any, to
 // --- CATEGORY MANAGEMENT ---
 
 /**
- * Fetches all categories.
+ * Fetches all categories via server API.
  */
 export const getAllCategories = async () => {
     try {
-        const { data, error } = await supabase
-            .from('categories')
-            .select('*')
-            .order('sort_order', { ascending: true })
-            .range(0, 999);
+        console.log("[Storage] Fetching categories from API...");
+        const response = await fetch('/api/data/categories');
 
-        if (error) {
-            console.error("Error fetching categories:", error);
+        if (!response.ok) {
+            console.error("Error fetching categories from API:", response.status);
             return [];
         }
 
+        const { data } = await response.json();
         let categories = data || [];
-        // Custom sort similar to tools: sort_order 1, 2, 3... first, then 0s at the end
-        categories.sort((a, b) => {
+
+        // Custom sort: sort_order 1, 2, 3... first, then 0s at the end
+        categories.sort((a: any, b: any) => {
             const orderA = a.sort_order || 0;
             const orderB = b.sort_order || 0;
 
@@ -1013,6 +1009,7 @@ export const getAllCategories = async () => {
             return orderA - orderB;
         });
 
+        console.log("[Storage] getAllCategories returned:", categories.length, "items");
         return categories;
     } catch (error) {
         console.error("Error fetching categories:", error);
@@ -1079,6 +1076,104 @@ export const deleteCategory = async (categoryId: string) => {
         return true;
     } catch (error) {
         console.error("Error deleting category:", error);
+        return false;
+    }
+};
+
+// --- SYSTEM CONFIG MANAGEMENT ---
+
+/**
+ * Fetches all system configs.
+ */
+export const getAllSystemConfigs = async () => {
+    try {
+        const { data, error } = await supabase
+            .from('system_configs')
+            .select('*')
+            .order('config_key', { ascending: true });
+
+        if (error) {
+            console.error("Error fetching system configs:", error);
+            return [];
+        }
+
+        return data || [];
+    } catch (error) {
+        console.error("Error fetching system configs:", error);
+        return [];
+    }
+};
+
+/**
+ * Creates a new system config.
+ */
+export const createSystemConfig = async (config: {
+    config_key: string;
+    config_value: string;
+    value_type: 'string' | 'integer' | 'boolean';
+    description?: string;
+    is_public: boolean;
+}) => {
+    try {
+        const { data, error } = await supabase
+            .from('system_configs')
+            .insert([config])
+            .select();
+
+        if (error) {
+            console.error("Error creating system config:", error);
+            return false;
+        }
+        return true;
+    } catch (error) {
+        console.error("Error creating system config:", error);
+        return false;
+    }
+};
+
+/**
+ * Updates a system config.
+ */
+export const updateSystemConfig = async (configKey: string, updates: Partial<{
+    config_value: string;
+    value_type: 'string' | 'integer' | 'boolean';
+    description: string;
+    is_public: boolean;
+}>) => {
+    try {
+        const { error } = await supabase
+            .from('system_configs')
+            .update({ ...updates, updated_at: new Date().toISOString() })
+            .eq('config_key', configKey);
+
+        if (error) {
+            console.error("Error updating system config:", error);
+            return false;
+        }
+        return true;
+    } catch (error) {
+        console.error("Error updating system config:", error);
+        return false;
+    }
+};
+
+/**
+ * Deletes a system config.
+ */
+export const deleteSystemConfig = async (configKey: string) => {
+    try {
+        const { error } = await supabase
+            .from('system_configs')
+            .delete()
+            .eq('config_key', configKey);
+
+        if (error) {
+            console.error("Error deleting system config:", error);
+            return false;
+        }
+        return true;
+    } catch (error) {
+        console.error("Error deleting system config:", error);
         return false;
     }
 };
@@ -1203,25 +1298,30 @@ export const getStudioBySlug = async (slug: string) => {
 // --- PROMPT MANAGEMENT ---
 
 /**
- * Fetches all prompts.
- */
-/**
- * Fetches all prompts.
+ * Fetches all prompts via server API.
  */
 export const getAllPrompts = async (sortBy: 'created_at' | 'usage' = 'created_at') => {
     try {
-        console.log("[Storage] getAllPrompts called. Sort:", sortBy);
-        const { data, error } = await supabase
-            .from('prompts')
-            .select('*')
-            .order(sortBy, { ascending: false });
+        console.log("[Storage] getAllPrompts called from API. Sort:", sortBy);
+        const response = await fetch('/api/data/prompts');
 
-        if (error) {
-            console.error("[Storage] Error fetching prompts:", error);
+        if (!response.ok) {
+            console.error("[Storage] Error fetching prompts from API:", response.status);
             return [];
         }
-        console.log(`[Storage] Got ${data?.length} prompts from DB.`);
-        return data || [];
+
+        const { data } = await response.json();
+        const prompts = data || [];
+
+        // Client-side sort by requested field
+        prompts.sort((a: any, b: any) => {
+            const aVal = a[sortBy] || 0;
+            const bVal = b[sortBy] || 0;
+            return bVal > aVal ? 1 : -1; // Descending
+        });
+
+        console.log(`[Storage] Got ${prompts.length} prompts from API.`);
+        return prompts;
     } catch (error) {
         console.error("[Storage] Fatal error fetching prompts:", error);
         return [];

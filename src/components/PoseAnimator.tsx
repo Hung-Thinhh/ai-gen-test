@@ -20,15 +20,15 @@ const PoseAnimator: React.FC<PoseAnimatorProps> = (props) => {
     const handleGenerate = async () => {
         if (!appState.poseReferenceImage || !appState.targetImage) return;
 
-        // Immediate Feedback
+        // Check credits FIRST
         const preGenState = { ...appState };
-        onStateChange({ ...appState, stage: 'generating', error: null });
-
         const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
         if (!await checkCredits(creditCostPerImage)) {
-            onStateChange({ ...appState, stage: 'configuring' });
-            return;
+            return; // Stay in configuring
         }
+
+        // Set generating stage AFTER credits confirmed
+        onStateChange({ ...appState, stage: 'generating', error: null });
 
         try {
             const prompt = `Transfer the pose from the first image to match the person in the second image. ${appState.options.instructions}`;

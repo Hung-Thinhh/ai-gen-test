@@ -870,6 +870,7 @@ export interface AppControlContextType {
     logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: any) => Promise<void>; // NEW
     addGenerationToHistory: (entryData: Omit<GenerationHistoryEntry, 'id' | 'timestamp'>) => Promise<void>;
     refreshGallery: () => Promise<void>; // NEW
+    refreshCredits: () => Promise<void>; // NEW
     addImagesToGallery: (newImages: string[]) => Promise<string[] | undefined>;
     removeImageFromGallery: (imageIndex: number) => void;
     replaceImageInGallery: (imageIndex: number, newImageUrl: string) => void;

@@ -104,15 +104,15 @@ const ArchitectureIdeator: React.FC<ArchitectureIdeatorProps> = (props) => {
     const executeInitialGeneration = async () => {
         if (!appState.uploadedImage) return;
 
-        // Immediate Feedback
+        // Check credits FIRST
         const preGenState = { ...appState };
-        onStateChange({ ...appState, stage: 'generating', error: null });
-
         const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
         if (!await checkCredits(creditCostPerImage)) {
-            onStateChange({ ...appState, stage: 'configuring' });
-            return;
+            return; // Stay in configuring
         }
+
+        // Set generating stage AFTER credits confirmed
+        onStateChange({ ...appState, stage: 'generating', error: null });
 
         try {
             const resultUrl = await generateArchitecturalImage(appState.uploadedImage, appState.options, appState.styleReferenceImage);
@@ -142,15 +142,15 @@ const ArchitectureIdeator: React.FC<ArchitectureIdeatorProps> = (props) => {
     const handleRegeneration = async (prompt: string) => {
         if (!appState.generatedImage) return;
 
-        // Immediate Feedback
+        // Check credits FIRST
         const preGenState = { ...appState };
-        onStateChange({ ...appState, stage: 'generating', error: null });
-
         const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
         if (!await checkCredits(creditCostPerImage)) {
-            onStateChange({ ...appState, stage: 'results' }); // Revert to results as we are regenerating
-            return;
+            return; // Stay in results
         }
+
+        // Set generating stage AFTER credits confirmed
+        onStateChange({ ...appState, stage: 'generating', error: null });
 
         try {
             const resultUrl = await editImageWithPrompt(appState.generatedImage, prompt);

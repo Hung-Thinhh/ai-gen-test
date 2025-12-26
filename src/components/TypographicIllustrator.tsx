@@ -18,17 +18,16 @@ const TypographicIllustrator: React.FC<TypographicIllustratorProps> = (props) =>
     const handleGenerate = async () => {
         if (!appState.phrase.trim()) return;
 
-        // Immediate UI feedback
+        // Check credits FIRST
         const preGenState = { ...appState };
-        onStateChange({ ...appState, stage: 'generating', error: null });
-
-        // Async checks
         const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
         const hasCredits = await checkCredits(creditCostPerImage);
         if (!hasCredits) {
-            onStateChange({ ...appState, stage: 'configuring' });
-            return;
+            return; // Stay in configuring
         }
+
+        // Set generating stage AFTER credits confirmed
+        onStateChange({ ...appState, stage: 'generating', error: null });
         try {
             const result = await generateTypographicIllustration(appState.phrase);
             onStateChange({ ...appState, stage: 'results', resultImage: result });

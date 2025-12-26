@@ -314,19 +314,20 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }, [translations]);
 
     const checkCredits = useCallback(async (amount: number = 1) => {
-        const { deductGuestCredit, deductUserCredit } = await import('../services/storageService');
+        const { getGuestCredits, getUserCredits } = await import('../services/storageService');
 
         if (isLoggedIn && user) {
-            // Pass token to deductUserCredit
-            const newBalance = await deductUserCredit(user.id, amount, token || undefined);
-            if (newBalance === -1) {
-                // toast.error(t('common_outOfCredits'));
+            // READ-ONLY CHECK (server will deduct after generation)
+            const currentBalance = await getUserCredits(user.id, token || undefined);
+            console.log(`[User Check] Current: ${currentBalance}, Required: ${amount}`);
+
+            if (currentBalance < amount) {
                 setIsOutOfCreditsModalOpen(true);
-                console.log("User credit deduction failed (balance -1)");
+                console.log("User insufficient credits");
                 return false;
             }
-            setUserCredits(newBalance);
-            console.log("User credit deduction success", newBalance);
+
+            console.log("User has enough credits");
             return true;
         }
 
@@ -339,18 +340,17 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
         try {
             console.log("Checking guest credits for", guestId);
-            // Deduct X credits
-            const newBalance = await deductGuestCredit(guestId, amount);
-            console.log("Deduct result:", newBalance);
+            // READ-ONLY CHECK (server will deduct after generation)
+            const currentBalance = await getGuestCredits(guestId);
+            console.log(`[Guest Check] Current: ${currentBalance}, Required: ${amount}`);
 
-            if (newBalance === -1) {
-                console.log("[Guest Check] Limit reached! Opening OutOfCredits Modal.");
+            if (currentBalance < amount) {
+                console.log("[Guest Check] Insufficient credits! Opening OutOfCredits Modal.");
                 setIsOutOfCreditsModalOpen(true);
                 return false;
             }
 
-            console.log(`[Guest Check] Credits remaining: ${newBalance}`);
-            setGuestCredits(newBalance);
+            console.log(`[Guest Check] Has enough credits`);
             return true;
 
 
@@ -612,6 +612,31 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             toast.error("Không thể tải thư viện ảnh.");
         }
     }, [isLoggedIn, user, guestId, token]);
+
+    // NEW: Refresh Credits Function
+    const refreshCredits = useCallback(async () => {
+        try {
+            if (isLoggedIn && user) {
+                const credits = await storageService.getUserCredits(user.id, token || undefined);
+                console.log('[refreshCredits] Updated user credits:', credits);
+                setUserCredits(credits);
+            } else if (guestId) {
+                const { getGuestCredits } = await import('../services/storageService');
+                const credits = await getGuestCredits(guestId);
+                console.log('[refreshCredits] Updated guest credits:', credits);
+                setGuestCredits(credits);
+            }
+        } catch (error) {
+            console.error('Failed to refresh credits:', error);
+        }
+    }, [isLoggedIn, user, guestId, token]);
+
+    // Expose refreshCredits to window for baseService (must be AFTER refreshCredits is defined)
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            (window as any).__refreshCredits = refreshCredits;
+        }
+    }, [refreshCredits]);
 
     useEffect(() => {
         const fetchSettings = async () => {
@@ -957,6 +982,7 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         refreshUsageCounts,
         checkCredits,
         refreshGallery, // NEW
+        refreshCredits, // NEW
         openLoginModal: () => setIsLoginModalOpen(true),
         closeLoginModal: () => setIsLoginModalOpen(false),
         openOutOfCreditsModal: () => setIsOutOfCreditsModalOpen(true),

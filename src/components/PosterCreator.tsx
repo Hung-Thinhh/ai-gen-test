@@ -134,14 +134,46 @@ const ASPECT_RATIO_PROMPTS: Record<string, string> = {
 
 const DOMAIN_PROMPTS: Record<string, string> = {
     'Tự do sáng tạo': 'Creative freedom: Adapt the style to best fit the product.',
-    'F&B (Thực phẩm & Đồ uống)': 'Food & Beverage aesthetics: ANALYZE TEMPERATURE: If product looks HOT (coffee, soup, cooked food) -> add subtle steam, warm lighting. If product looks COLD (ice cream, soda, beer, fresh fruit) -> add condensation droplets, frost, ice cubes, fresh cool lighting. Focus on high appetite appeal, fresh ingredients.',
-    'Mỹ phẩm & Làm đẹp': 'Beauty & Cosmetics aesthetics: Focus on elegance, purity, soft lighting, skin texture details, premium materials (glass, silk, marble), pastel or sophisticated colors.',
-    'Công nghệ': 'Technology aesthetics: Focus on sleek modern lines, metallic surfaces, neon or cool lighting, high-tech atmosphere, futuristic elements, clear distinct reflections.',
-    'Thời trang': 'Fashion aesthetics: Focus on style, fabric textures, trendy composition, dramatic lighting, lifestyle atmosphere, high-end magazine look.',
-    'Bất động sản & Nội thất': 'Real Estate & Interior aesthetics: Focus on spaciousness, natural lighting, architectural details, comfortable atmosphere, luxury living context.',
-    'Giáo dục': 'Education aesthetics: Focus on clarity, bright and friendly colors, inspiring atmosphere, books or learning tools as subtle props, clean composition.',
-    'Du lịch': 'Travel aesthetics: Focus on scenic beauty, adventure, cultural elements, vibrant natural colors, inviting landscapes, holiday atmosphere.',
-    'Sức khỏe & Y tế': 'Health & Medical aesthetics: Focus on cleanliness, trust (blue/white tones), professional atmosphere, scientific credibility, soft comforting lighting.',
+
+    'F&B (Thực phẩm & Đồ uống)': `Food & Beverage aesthetics:
+ALLOWED PROPS: If product is COLD (ice cream, soda, beer, juice) → add condensation droplets, frost, ice cubes, fresh fruit slices. If product is HOT (coffee, soup) → add subtle steam, warm lighting.
+FORBIDDEN: Do NOT add cosmetic items (powder puffs, brushes, flower petals), tech items (circuits, screens), fashion items (fabric swatches), medical equipment.
+Focus on high appetite appeal, fresh ingredients as natural props.`,
+
+    'Mỹ phẩm & Làm đẹp': `Beauty & Cosmetics aesthetics:
+ALLOWED PROPS: Flower petals (rose, orchid), marble surfaces, silk ribbons, soft brushes, powder puffs, golden accents, crystal elements, skincare texture.
+FORBIDDEN: Do NOT add ice cubes, water droplets, condensation, beverage glasses, fruit slices, steam, or any F&B-related props. Do NOT add tech circuits or food items.
+Focus on elegance, purity, soft diffused lighting, premium materials (frosted glass, silk, marble), pastel or rose gold sophisticated colors.`,
+
+    'Công nghệ': `Technology aesthetics:
+ALLOWED PROPS: Circuit patterns (subtle), metallic reflections, neon accent lights (blue/cyan), geometric shapes, glass surfaces, clean modern lines.
+FORBIDDEN: Do NOT add organic props (flowers, leaves, fruit), ice/water/condensation, fabric textures, food items, powder puffs.
+Focus on sleek modern lines, cool lighting, high-tech atmosphere, sharp reflections, futuristic elements.`,
+
+    'Thời trang': `Fashion aesthetics:
+ALLOWED PROPS: Fabric swatches, texture samples, lifestyle elements (magazines, accessories), dramatic shadows, sophisticated surfaces.
+FORBIDDEN: Do NOT add ice/water/condensation, tech circuits, food items, medical equipment, beverage props.
+Focus on style, fabric textures, trendy composition, dramatic lighting, high-end magazine look, lifestyle atmosphere.`,
+
+    'Bất động sản & Nội thất': `Real Estate & Interior aesthetics:
+ALLOWED PROPS: Architectural elements, plants (potted, subtle), soft textiles, wood textures, ambient warm lighting.
+FORBIDDEN: Do NOT add product-specific props (ice, cosmetic items, food, beverages), tech circuits, commercial packaging.
+Focus on spaciousness, natural lighting, architectural details, comfortable atmosphere, luxury living context.`,
+
+    'Giáo dục': `Education aesthetics:
+ALLOWED PROPS: Books, notebooks, pencils (subtle), bright clean surfaces, inspiring elements.
+FORBIDDEN: Do NOT add commercial props (ice, cosmetics, beverages), dark moody lighting, tech gadgets, medical items.
+Focus on clarity, bright friendly colors, inspiring atmosphere, clean composition, learning-focused environment.`,
+
+    'Du lịch': `Travel aesthetics:
+ALLOWED PROPS: Natural landscape elements, cultural artifacts (subtle), scenic backgrounds, adventure elements.
+FORBIDDEN: Do NOT add product packaging props, ice/beverages, tech gadgets, cosmetic items, food props.
+Focus on scenic beauty, adventure, cultural elements, vibrant natural colors, inviting landscapes, holiday atmosphere.`,
+
+    'Sức khỏe & Y tế': `Health & Medical aesthetics:
+ALLOWED PROPS: Clean surfaces (white/blue), subtle medical symbols (cross, plus sign), plants (aloe vera for natural health), scientific elements.
+FORBIDDEN: Do NOT add commercial props (ice, cosmetics, beverages), dark colors, food items, fashion accessories.
+Focus on cleanliness, trust (blue/white tones), professional atmosphere, scientific credibility, soft comforting lighting.`,
 };
 
 const SMART_STYLING_PROMPT = `
@@ -725,6 +757,14 @@ ${aspectRatioPrompt}
 
         const imageCount = appState.options.imageCount || 1;
 
+        // Check credits for TOTAL images FIRST (before UI changes)
+        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
+        const totalCost = imageCount * creditCostPerImage;
+        if (!await checkCredits(totalCost)) {
+            // Credits insufficient - stay in current state, popup will show
+            return;
+        }
+
         // Clear previous images but KEEP placeholders active
         generatedBlobUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
         generatedBlobUrlsRef.current = [];
@@ -738,14 +778,6 @@ ${aspectRatioPrompt}
         setTimeout(() => {
             resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 100);
-
-        // Check credits for TOTAL images
-        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
-        const totalCost = imageCount * creditCostPerImage;
-        if (!await checkCredits(totalCost)) {
-            setPendingImageSlots(0); // Revert
-            return;
-        }
 
         try {
             const prompt = buildPrompt();

@@ -50,15 +50,15 @@ const PortraitGenerator: React.FC<PortraitGeneratorProps> = (props) => {
     const handleGenerate = async () => {
         if (!appState.prompt.trim()) return;
 
-        // Immediate Feedback
+        // Check credits FIRST
         const preGenState = { ...appState };
-        onStateChange({ ...appState, stage: 'generating', error: null });
-
         const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
         if (!await checkCredits(creditCostPerImage)) {
-            onStateChange({ ...appState, stage: 'configuring' });
-            return;
+            return; // Stay in configuring
         }
+
+        // Set generating stage AFTER credits confirmed
+        onStateChange({ ...appState, stage: 'generating', error: null });
 
         try {
             const fullPrompt = `Generate a portrait: ${appState.prompt}. Style: ${appState.options.style || 'photorealistic'}. Lighting: ${appState.options.lighting || 'natural'}. Background: ${appState.options.background || 'neutral'}. ${appState.options.notes}`;

@@ -71,7 +71,7 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, settings, checkCredits, modelVersion } = useAppControls();
+    const { t, settings, checkCredits, modelVersion, isLoggedIn, openLoginModal } = useAppControls();
 
     const { videoTasks, generateVideo } = useVideoGeneration();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
@@ -97,7 +97,7 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
                 historicalImages: [],
                 error: null,
             });
-            addImagesToGallery([imageDataUrl]);
+            // REMOVED: addImagesToGallery([imageDataUrl]); // Don't save input images to Cloudinary
         });
     };
 
@@ -137,6 +137,9 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
     };
 
     const handleGenerate = async () => {
+        // Strict login check removed to allow Guest access with credits
+        // Backend API will validate guest credits via Guest-ID header
+
         if (!localPrompt.trim()) {
             onStateChange({ ...appState, error: "Vui lòng nhập prompt để tạo ảnh." });
             return;
@@ -162,14 +165,15 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
                 setIsEnhancing(false);
             }
         } else {
-            // Immediate feedback for normal generation
-            onStateChange({ ...appState, stage: 'generating', error: null, generatedImages: [] });
-
+            // Check credits FIRST before entering generating stage
             const creditCostPerImage = modelVersion === 'v3' ? 2 * appState.options.numberOfImages : 1 * appState.options.numberOfImages;
             if (!await checkCredits(creditCostPerImage)) {
-                onStateChange({ ...appState, stage: 'configuring' });
+                // Don't change stage - stay in configuring
                 return;
             }
+
+            // Only set generating stage AFTER credits are confirmed
+            onStateChange({ ...appState, stage: 'generating', error: null, generatedImages: [] });
         }
 
         const preGenState = { ...appState, options: { ...appState.options, prompt: finalPrompt } };
@@ -215,7 +219,22 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
             addImagesToGallery(urlsWithMetadata);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
-            onStateChange({ ...preGenState, stage: 'results', error: errorMessage });
+
+            // If out of credits, reset to configuring stage (remove loading)
+            if (errorMessage.includes('hết Credit') || errorMessage.includes('Insufficient credits')) {
+                onStateChange({
+                    ...preGenState,
+                    stage: 'configuring',
+                    error: null
+                });
+            } else {
+                // Other errors: show in results stage
+                onStateChange({
+                    ...preGenState,
+                    stage: 'results',
+                    error: errorMessage
+                });
+            }
         }
     };
 

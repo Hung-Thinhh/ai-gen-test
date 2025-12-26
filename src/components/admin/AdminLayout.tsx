@@ -178,6 +178,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         if (path.includes('prompts')) return 'Prompts';
         if (path.includes('categories')) return 'Danh mục';
         if (path.includes('studios')) return 'Studio';
+        if (path.includes('system-configs')) return 'Cấu hình Hệ thống';
         return 'Tổng quan';
     };
 
@@ -203,6 +204,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { text: 'Thể loại', icon: <CategoryIcon />, path: '/admin/categories', roles: ['admin', 'editor'] },
         { text: 'Studio', icon: <BrushIcon />, path: '/admin/studios', roles: ['admin', 'editor'] },
         { text: 'Prompts', icon: <DescriptionIcon />, path: '/admin/prompts', roles: ['admin', 'editor'] },
+        { text: 'Cấu hình HT', icon: <SettingsIcon />, path: '/admin/system-configs', roles: ['admin'] },
         { text: 'Gói cước', icon: <BillingIcon />, path: '/admin/pricing', roles: ['admin'] },
     ];
 
