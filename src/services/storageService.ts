@@ -1178,6 +1178,109 @@ export const deleteSystemConfig = async (configKey: string) => {
     }
 };
 
+// --- HERO BANNER MANAGEMENT ---
+
+/**
+ * Fetches all hero banners, sorted by sort_order.
+ */
+export const getAllBanners = async () => {
+    try {
+        const { data, error } = await supabase
+            .from('hero_banners')
+            .select('*')
+            .order('sort_order', { ascending: true });
+
+        if (error) {
+            console.error("Error fetching banners:", error);
+            return [];
+        }
+
+        return data || [];
+    } catch (error) {
+        console.error("Error fetching banners:", error);
+        return [];
+    }
+};
+
+/**
+ * Creates a new hero banner.
+ */
+export const createBanner = async (banner: {
+    title: { vi: string; en: string };
+    description?: { vi: string; en: string };
+    image_url: string;
+    button_text?: { vi: string; en: string };
+    button_link?: string;
+    sort_order?: number;
+    is_active?: boolean;
+}) => {
+    try {
+        const { data, error } = await supabase
+            .from('hero_banners')
+            .insert([banner])
+            .select();
+
+        if (error) {
+            console.error("Error creating banner:", error);
+            return false;
+        }
+        return true;
+    } catch (error) {
+        console.error("Error creating banner:", error);
+        return false;
+    }
+};
+
+/**
+ * Updates a hero banner.
+ */
+export const updateBanner = async (bannerId: number, updates: Partial<{
+    title: { vi: string; en: string };
+    description: { vi: string; en: string };
+    image_url: string;
+    button_text: { vi: string; en: string };
+    button_link: string;
+    sort_order: number;
+    is_active: boolean;
+}>) => {
+    try {
+        const { error } = await supabase
+            .from('hero_banners')
+            .update({ ...updates, updated_at: new Date().toISOString() })
+            .eq('id', bannerId);
+
+        if (error) {
+            console.error("Error updating banner:", error);
+            return false;
+        }
+        return true;
+    } catch (error) {
+        console.error("Error updating banner:", error);
+        return false;
+    }
+};
+
+/**
+ * Deletes a hero banner.
+ */
+export const deleteBanner = async (bannerId: number) => {
+    try {
+        const { error } = await supabase
+            .from('hero_banners')
+            .delete()
+            .eq('id', bannerId);
+
+        if (error) {
+            console.error("Error deleting banner:", error);
+            return false;
+        }
+        return true;
+    } catch (error) {
+        console.error("Error deleting banner:", error);
+        return false;
+    }
+};
+
 // --- STUDIO MANAGEMENT ---
 
 /**

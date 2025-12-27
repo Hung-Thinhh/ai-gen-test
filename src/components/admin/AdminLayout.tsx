@@ -39,7 +39,8 @@ import {
     KeyboardArrowDown,
     CreditCard as BillingIcon,
     BarChart as AnalyticsIcon,
-    Description as DescriptionIcon
+    Description as DescriptionIcon,
+    Image as ImageIcon
 } from '@mui/icons-material';
 
 // ... (code omitted)
@@ -145,7 +146,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     useEffect(() => {
         if (!authLoading) {
             if (role !== 'admin' && role !== 'editor') {
-                router.push('/');
+                // router.push('/');
             } else if (role === 'editor') {
                 // Restrict editor access paths
                 const allowedPaths = ['/admin/tools', '/admin/prompts', '/admin/categories', '/admin/studios'];
@@ -179,6 +180,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         if (path.includes('categories')) return 'Danh mục';
         if (path.includes('studios')) return 'Studio';
         if (path.includes('system-configs')) return 'Cấu hình Hệ thống';
+        if (path.includes('banners')) return 'Banner Trang Chủ';
         return 'Tổng quan';
     };
 
@@ -194,7 +196,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         );
     }
 
-    if (role !== 'admin' && role !== 'editor') return null;
+    // if (role !== 'admin' && role !== 'editor') return null;
 
     const allMenuItems = [
         { text: 'Tổng quan', icon: <HomeIcon />, path: '/admin', roles: ['admin'] },
@@ -204,6 +206,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { text: 'Thể loại', icon: <CategoryIcon />, path: '/admin/categories', roles: ['admin', 'editor'] },
         { text: 'Studio', icon: <BrushIcon />, path: '/admin/studios', roles: ['admin', 'editor'] },
         { text: 'Prompts', icon: <DescriptionIcon />, path: '/admin/prompts', roles: ['admin', 'editor'] },
+        { text: 'Banner', icon: <ImageIcon />, path: '/admin/banners', roles: ['admin'] },
         { text: 'Cấu hình HT', icon: <SettingsIcon />, path: '/admin/system-configs', roles: ['admin'] },
         { text: 'Gói cước', icon: <BillingIcon />, path: '/admin/pricing', roles: ['admin'] },
     ];

@@ -1168,8 +1168,8 @@ select.form-input option {
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 0.75rem;
     /* rounded-xl */
-    max-height: 18rem;
-    /* max-h-72 */
+    max-height: 24rem;
+    /* Increased from 18rem to show more options */
     overflow-y: auto;
     list-style: none;
     padding: 0.5rem;

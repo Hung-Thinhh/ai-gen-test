@@ -284,7 +284,12 @@ export async function generateTypographicIllustration(phrase: string): Promise<s
 /**
  * Generates styled image from prompt and reference images
  */
-export async function generateStyledImage(prompt: string, imageUrls: string[], additionalInstructions?: string): Promise<string> {
+export async function generateStyledImage(
+    prompt: string,
+    imageUrls: string[],
+    additionalInstructions?: string,
+    aspectRatio?: string
+): Promise<string> {
     const fullPrompt = additionalInstructions ? `${prompt} \n\nAdditional Instructions: ${additionalInstructions} ` : prompt;
 
     const imageParts = imageUrls.map(url => {
@@ -293,7 +298,8 @@ export async function generateStyledImage(prompt: string, imageUrls: string[], a
     });
 
     const parts = [...imageParts, { text: fullPrompt }];
-    const response = await callGeminiWithRetry(parts);
+    const config = aspectRatio ? { aspectRatio } : {};
+    const response = await callGeminiWithRetry(parts, config);
     return processGeminiResponse(response);
 }
 

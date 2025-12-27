@@ -111,25 +111,27 @@ const COLOR_SCHEME_OPTIONS = [
 const ASPECT_RATIO_OPTIONS = [
     'Giữ nguyên theo ảnh tham khảo',
     '1:1 (Vuông - Instagram)',
-    '4:5 (Dọc - Instagram)',
-    '9:16 (Story/Reels)',
     '16:9 (Ngang - YouTube)',
-    '3:4 (Dọc chuẩn)',
+    '9:16 (Story/Reels)',
+    '4:5 (Dọc - Instagram Post)',
+    '5:4 (Ngang - Instagram)',
     '4:3 (Ngang chuẩn)',
-    '2:3 (Poster dọc)',
+    '3:4 (Dọc chuẩn)',
     '3:2 (Poster ngang)',
+    '2:3 (Poster dọc)',
 ];
 
 const ASPECT_RATIO_PROMPTS: Record<string, string> = {
     'Giữ nguyên theo ảnh tham khảo': 'maintain the same aspect ratio as the reference image',
     '1:1 (Vuông - Instagram)': 'MUST be EXACTLY 1:1 SQUARE aspect ratio (1024x1024 pixels). The image MUST be perfectly square - equal width and height.',
-    '4:5 (Dọc - Instagram)': 'MUST be EXACTLY 4:5 PORTRAIT aspect ratio (e.g., 1024x1280 pixels). Width is 80% of height. Tall vertical format.',
-    '9:16 (Story/Reels)': 'MUST be EXACTLY 9:16 VERTICAL aspect ratio (e.g., 720x1280 pixels or 1080x1920 pixels). This is a TALL NARROW portrait format - the height must be almost TWICE the width. Make the image much TALLER than it is wide.',
-    '16:9 (Ngang - YouTube)': 'MUST be EXACTLY 16:9 LANDSCAPE WIDESCREEN aspect ratio (e.g., 1920x1080 pixels). Wide horizontal format - width almost twice the height.',
-    '3:4 (Dọc chuẩn)': 'MUST be EXACTLY 3:4 PORTRAIT aspect ratio (e.g., 960x1280 pixels). Vertical format, taller than wide.',
-    '4:3 (Ngang chuẩn)': 'MUST be EXACTLY 4:3 LANDSCAPE aspect ratio (e.g., 1280x960 pixels). Horizontal format, wider than tall.',
-    '2:3 (Poster dọc)': 'MUST be EXACTLY 2:3 PORTRAIT poster aspect ratio (e.g., 800x1200 pixels). Tall vertical poster format.',
-    '3:2 (Poster ngang)': 'MUST be EXACTLY 3:2 LANDSCAPE poster aspect ratio (e.g., 1200x800 pixels). Wide horizontal poster format.',
+    '9:16 (Story/Reels)': 'MUST be EXACTLY 9:16 VERTICAL aspect ratio (1080x1920 pixels). This is a TALL NARROW portrait format - the height must be almost TWICE the width. Make the image much TALLER than it is wide.',
+    '16:9 (Ngang - YouTube)': 'MUST be EXACTLY 16:9 LANDSCAPE WIDESCREEN aspect ratio (1920x1080 pixels). Wide horizontal format - width almost twice the height.',
+    '4:5 (Dọc - Instagram Post)': 'MUST be EXACTLY 4:5 PORTRAIT aspect ratio (1024x1280 pixels). Vertical Instagram post format - slightly taller than wide.',
+    '5:4 (Ngang - Instagram)': 'MUST be EXACTLY 5:4 LANDSCAPE aspect ratio (1280x1024 pixels). Horizontal Instagram format - slightly wider than tall.',
+    '3:4 (Dọc chuẩn)': 'MUST be EXACTLY 3:4 PORTRAIT aspect ratio (1152x1536 pixels). Vertical format, taller than wide.',
+    '4:3 (Ngang chuẩn)': 'MUST be EXACTLY 4:3 LANDSCAPE aspect ratio (1536x1152 pixels). Horizontal format, wider than tall.',
+    '2:3 (Poster dọc)': 'MUST be EXACTLY 2:3 PORTRAIT poster aspect ratio (1024x1536 pixels). Tall vertical poster format - height is 1.5x the width.',
+    '3:2 (Poster ngang)': 'MUST be EXACTLY 3:2 LANDSCAPE poster aspect ratio (1536x1024 pixels). Wide horizontal poster format - width is 1.5x the height.',
 };
 
 const DOMAIN_PROMPTS: Record<string, string> = {
@@ -208,7 +210,7 @@ const SMART_STYLING_PROMPT = `
    - The result must be indistinguishable from a real professional photo shoot.
 `;
 
-type StylePresetKey = 'studio_professional' | 'organic_elegant' | 'dynamic_fresh' | 'gourmet_dramatic' | 'conceptual_surreal' | 'narrative_context';
+type StylePresetKey = 'studio_professional' | 'organic_elegant' | 'dynamic_fresh' | 'gourmet_dramatic' | 'conceptual_surreal' | 'narrative_context' | 'tech_futuristic' | 'fashion_editorial' | 'beauty_luxury' | 'lifestyle_minimal' | 'sports_dynamic' | 'automotive_premium' | 'eco_natural' | 'urban_street';
 
 interface StylePreset {
     name: string;
@@ -266,6 +268,70 @@ const STYLE_PRESETS: Record<StylePresetKey, StylePreset> = {
         descriptionEn: 'Artistic liquid swirl wrapping around product',
         buildPrompt: (productDesc, posterTypePrompt, bgPrompt, lightPrompt, anglePrompt, notes) =>
             `CREATE A NEW ARTISTIC ${posterTypePrompt} featuring ${productDesc}. GENERATE dramatic colorful liquid swirls spiraling around the product in circular motion, paint splashes, smoky effects. ${bgPrompt}. ${lightPrompt}. ${anglePrompt}. Abstract artistic advertising style. Full HD quality. ${notes}`,
+    },
+    tech_futuristic: {
+        name: 'Công nghệ Tương lai',
+        nameEn: 'Tech Futuristic',
+        description: 'Hiệu ứng hologram, ánh sáng neon, không gian cyber',
+        descriptionEn: 'Hologram effects, neon lights, cyber space',
+        buildPrompt: (productDesc, posterTypePrompt, bgPrompt, lightPrompt, anglePrompt, notes) =>
+            `CREATE A NEW FUTURISTIC ${posterTypePrompt} featuring ${productDesc}. PLACE product in a high-tech environment with holographic UI elements, neon blue/purple lighting, digital grid patterns, floating particles, sleek reflective surfaces. ${bgPrompt}. ${lightPrompt}. ${anglePrompt}. Sci-fi tech advertising style. Full HD quality. ${notes}`,
+    },
+    fashion_editorial: {
+        name: 'Thời trang Biên tập',
+        nameEn: 'Fashion Editorial',
+        description: 'Phong cách tạp chí thời trang cao cấp',
+        descriptionEn: 'High-end fashion magazine style',
+        buildPrompt: (productDesc, posterTypePrompt, bgPrompt, lightPrompt, anglePrompt, notes) =>
+            `CREATE A NEW EDITORIAL ${posterTypePrompt} featuring ${productDesc}. COMPOSE a sophisticated fashion photography scene with elegant minimalist background, dramatic shadows, artistic composition, premium fabric textures. ${bgPrompt}. ${lightPrompt}. ${anglePrompt}. Vogue-style fashion advertising. Full HD quality. ${notes}`,
+    },
+    beauty_luxury: {
+        name: 'Mỹ phẩm Sang trọng',
+        nameEn: 'Beauty Luxury',
+        description: 'Ánh kim, hoa hồng, giọt nước tinh khiết',
+        descriptionEn: 'Gold accents, roses, pure water droplets',
+        buildPrompt: (productDesc, posterTypePrompt, bgPrompt, lightPrompt, anglePrompt, notes) =>
+            `CREATE A NEW LUXURIOUS ${posterTypePrompt} featuring ${productDesc}. DESIGN an elegant beauty scene with rose gold accents, delicate rose petals, crystal-clear water droplets, soft silk fabric, marble surface, premium cosmetic presentation. ${bgPrompt}. ${lightPrompt}. ${anglePrompt}. High-end beauty advertising. Full HD quality. ${notes}`,
+    },
+    lifestyle_minimal: {
+        name: 'Lifestyle Tối giản',
+        nameEn: 'Lifestyle Minimal',
+        description: 'Phong cách sống tối giản, không gian sạch sẽ',
+        descriptionEn: 'Minimalist lifestyle, clean space',
+        buildPrompt: (productDesc, posterTypePrompt, bgPrompt, lightPrompt, anglePrompt, notes) =>
+            `CREATE A NEW MINIMALIST ${posterTypePrompt} featuring ${productDesc}. COMPOSE a clean lifestyle scene with neutral tones, simple geometric shapes, negative space, natural materials (wood, cotton, ceramics), soft shadows. ${bgPrompt}. ${lightPrompt}. ${anglePrompt}. Scandinavian minimal lifestyle advertising. Full HD quality. ${notes}`,
+    },
+    sports_dynamic: {
+        name: 'Thể thao Năng động',
+        nameEn: 'Sports Dynamic',
+        description: 'Chuyển động mạnh mẽ, năng lượng, tốc độ',
+        descriptionEn: 'Powerful motion, energy, speed',
+        buildPrompt: (productDesc, posterTypePrompt, bgPrompt, lightPrompt, anglePrompt, notes) =>
+            `CREATE A NEW DYNAMIC ${posterTypePrompt} featuring ${productDesc}. GENERATE an energetic sports scene with motion blur, speed lines, sweat droplets flying, athletic energy, bold contrasting colors, dramatic action freeze-frame. ${bgPrompt}. ${lightPrompt}. ${anglePrompt}. Nike-style sports advertising. Full HD quality. ${notes}`,
+    },
+    automotive_premium: {
+        name: 'Ô tô Cao cấp',
+        nameEn: 'Automotive Premium',
+        description: 'Bóng loáng, phản chiếu, kim loại sang trọng',
+        descriptionEn: 'Glossy reflections, luxury metal',
+        buildPrompt: (productDesc, posterTypePrompt, bgPrompt, lightPrompt, anglePrompt, notes) =>
+            `CREATE A NEW PREMIUM ${posterTypePrompt} featuring ${productDesc}. DESIGN a luxury automotive scene with perfect chrome reflections, sleek metallic surfaces, dramatic studio lighting, carbon fiber textures, glossy paint finish. ${bgPrompt}. ${lightPrompt}. ${anglePrompt}. Mercedes-Benz style premium advertising. Full HD quality. ${notes}`,
+    },
+    eco_natural: {
+        name: 'Sinh thái Tự nhiên',
+        nameEn: 'Eco Natural',
+        description: 'Thiên nhiên xanh, bền vững, hữu cơ',
+        descriptionEn: 'Green nature, sustainable, organic',
+        buildPrompt: (productDesc, posterTypePrompt, bgPrompt, lightPrompt, anglePrompt, notes) =>
+            `CREATE A NEW ECO-FRIENDLY ${posterTypePrompt} featuring ${productDesc}. COMPOSE a natural sustainable scene with lush green plants, bamboo, recycled materials, earth tones, natural sunlight, organic textures, eco-conscious presentation. ${bgPrompt}. ${lightPrompt}. ${anglePrompt}. Sustainable eco advertising. Full HD quality. ${notes}`,
+    },
+    urban_street: {
+        name: 'Đường phố Đô thị',
+        nameEn: 'Urban Street',
+        description: 'Graffiti, bê tông, phong cách streetwear',
+        descriptionEn: 'Graffiti, concrete, streetwear style',
+        buildPrompt: (productDesc, posterTypePrompt, bgPrompt, lightPrompt, anglePrompt, notes) =>
+            `CREATE A NEW URBAN ${posterTypePrompt} featuring ${productDesc}. PLACE product in gritty street environment with graffiti wall, concrete textures, urban decay aesthetic, bold typography, street art elements, raw authentic vibe. ${bgPrompt}. ${lightPrompt}. ${anglePrompt}. Supreme-style streetwear advertising. Full HD quality. ${notes}`,
     },
 };
 
@@ -335,7 +401,18 @@ const PosterCreator: React.FC<PosterCreatorProps> = (props) => {
         [...appState.productImages, ...displayImages].filter((img): img is string => !!img),
         [appState.productImages, displayImages]
     );
-    const ASPECT_RATIO_OPTIONS = t('aspectRatioOptions') || ['Giữ nguyên', '1:1', '16:9', '9:16', '4:3', '3:4'];
+    const ASPECT_RATIO_OPTIONS_DISPLAY = t('aspectRatioOptions') || [
+        'Giữ nguyên theo ảnh tham khảo',
+        '1:1 (Vuông - Instagram)',
+        '16:9 (Ngang - YouTube)',
+        '9:16 (Story/Reels)',
+        '4:5 (Dọc - Instagram Post)',
+        '5:4 (Ngang - Instagram)',
+        '4:3 (Ngang chuẩn)',
+        '3:4 (Dọc chuẩn)',
+        '3:2 (Poster ngang)',
+        '2:3 (Poster dọc)',
+    ];
 
     const POSTER_TYPES = useMemo(() => {
         const types = t('posterCreator_posterTypes');
@@ -802,11 +879,34 @@ ${aspectRatioPrompt}
             if (appState.referenceImage) imagesToUse.push(await getBase64(appState.referenceImage));
             if (appState.textEffectImage) imagesToUse.push(await getBase64(appState.textEffectImage));
 
+            // Map aspect ratio to Gemini API format
+            const aspectRatioMap: Record<string, string> = {
+                '1:1 (Vuông - Instagram)': '1:1',
+                '16:9 (Ngang - YouTube)': '16:9',
+                '9:16 (Story/Reels)': '9:16',
+                '4:5 (Dọc - Instagram Post)': '4:5',
+                '5:4 (Ngang - Instagram)': '5:4',
+                '4:3 (Ngang chuẩn)': '4:3',
+                '3:4 (Dọc chuẩn)': '3:4',
+                '3:2 (Poster ngang)': '3:2',
+                '2:3 (Poster dọc)': '2:3',
+            };
+            const selectedAspectRatio = appState.options.aspectRatio || 'Giữ nguyên theo ảnh tham khảo';
+            const geminiAspectRatio = aspectRatioMap[selectedAspectRatio];
+
+            console.log('[PosterCreator] Selected aspect ratio:', selectedAspectRatio);
+            console.log('[PosterCreator] Mapped to Gemini format:', geminiAspectRatio);
+
             // Create an array of promises for parallel execution
             const generationPromises = Array.from({ length: imageCount }).map(async (_, index) => {
                 try {
-                    // Generate
-                    const resultBase64 = await generateStyledImage(prompt, imagesToUse, `Style: ${selectedStyle} - Variation ${index}`);
+                    // Generate with aspect ratio parameter
+                    const resultBase64 = await generateStyledImage(
+                        prompt,
+                        imagesToUse,
+                        `Style: ${selectedStyle} - Variation ${index}`,
+                        geminiAspectRatio // Pass aspect ratio to API
+                    );
 
                     let imageUrlForDisplay = '';
 
@@ -1197,6 +1297,12 @@ ${aspectRatioPrompt}
                                     {/* Aspect Ratio */}
                                     <div className="mb-4">
                                         <SearchableSelect id="aspectRatio" label={t('common_aspectRatio') || 'Tỷ lệ khung ảnh'} options={ASPECT_RATIO_OPTIONS} value={appState.options.aspectRatio || ''} onChange={(val) => handleOptionChange('aspectRatio', val)} placeholder={t('common_select') || 'Chọn...'} />
+                                        {appState.options.aspectRatio && appState.options.aspectRatio !== 'Giữ nguyên theo ảnh tham khảo' && modelVersion !== 'v3' && (
+                                            <p className="text-xs text-yellow-400 mt-1 flex items-center gap-1">
+                                                <span>⚠️</span>
+                                                <span>Tỷ lệ khung ảnh chỉ hoạt động với Model v3. Vui lòng chuyển sang v3 trong Settings.</span>
+                                            </p>
+                                        )}
                                     </div>
 
                                     {/* Image Count Selector */}

@@ -157,15 +157,30 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
     }
 
     const model = getImageModel();
+
+    // Extract aspectRatio from config if present
+    const { aspectRatio, ...restConfig } = config;
+
+    // For v3: use imageConfig with imageSize and aspectRatio
+    // For v2: aspectRatio still goes in config but without imageSize wrapper
     const extraConfig = globalConfig.modelVersion === 'v3'
-        ? { imageConfig: { imageSize: globalConfig.imageResolution, ...config.imageConfig } }
-        : {};
+        ? {
+            imageConfig: {
+                imageSize: globalConfig.imageResolution,
+                ...(aspectRatio && { aspectRatio }),
+                ...config.imageConfig
+            }
+        }
+        : (aspectRatio ? { aspectRatio } : {}); // v2: add aspectRatio at root level
 
     const finalConfig = {
         responseModalities: [Modality.IMAGE, Modality.TEXT],
-        ...config,
+        ...restConfig,
         ...extraConfig
     };
+
+    console.log('[baseService] Model version:', globalConfig.modelVersion);
+    console.log('[baseService] Final config:', JSON.stringify(finalConfig, null, 2));
 
     // Prepare Headers
     const headers: Record<string, string> = {
