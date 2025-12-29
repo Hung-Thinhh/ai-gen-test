@@ -10,57 +10,75 @@ export async function middleware(request: NextRequest) {
     // ADMIN ROUTE PROTECTION
     // ============================================
     if (pathname.startsWith('/admin')) {
+        console.log('[Middleware] Admin route accessed:', pathname);
+
         try {
-            // Get all cookies and find Supabase auth token
-            // Supabase stores tokens in cookies with pattern: sb-<project-ref>-auth-token
             const cookies = request.cookies;
+            const allCookies = cookies.getAll();
+
+            console.log('[Middleware] Total cookies:', allCookies.length);
+            console.log('[Middleware] Cookie names:', allCookies.map(c => c.name).join(', '));
+
             let authToken: string | undefined;
 
-            // Try to find Supabase auth token cookie
-            // Pattern: sb-{project-ref}-auth-token
-            cookies.getAll().forEach(cookie => {
-                if (cookie.name.startsWith('sb-') && cookie.name.endsWith('-auth-token')) {
+            // Try multiple patterns to find auth token
+            for (const cookie of allCookies) {
+                console.log(`[Middleware] Checking cookie: ${cookie.name}`);
+
+                // Pattern 1: sb-*-auth-token (Supabase standard)
+                if (cookie.name.match(/^sb-.*-auth-token$/)) {
+                    console.log('[Middleware] Found Supabase auth cookie:', cookie.name);
                     try {
-                        // Supabase stores JSON in cookie
                         const parsed = JSON.parse(cookie.value);
                         if (parsed.access_token) {
                             authToken = parsed.access_token;
-                            console.log('[Middleware] Found auth token in cookie:', cookie.name);
+                            console.log('[Middleware] Extracted access_token from JSON');
+                            break;
                         }
                     } catch (e) {
-                        // Not JSON, might be direct token
+                        console.log('[Middleware] Cookie is not JSON, using raw value');
                         authToken = cookie.value;
+                        break;
                     }
                 }
-            });
+
+                // Pattern 2: Direct token cookies
+                if (cookie.name === 'sb-access-token' || cookie.name === 'access-token') {
+                    console.log('[Middleware] Found direct access token cookie');
+                    authToken = cookie.value;
+                    break;
+                }
+            }
 
             if (!authToken) {
-                console.log('[Middleware] No auth token found in cookies');
-                console.log('[Middleware] Available cookies:', cookies.getAll().map(c => c.name));
+                console.log('[Middleware] ❌ No auth token found after checking all cookies');
                 const redirectUrl = new URL('/', request.url);
                 redirectUrl.searchParams.set('error', 'login_required');
                 return NextResponse.redirect(redirectUrl);
             }
 
-            console.log('[Middleware] Verifying token...');
+            console.log('[Middleware] ✅ Auth token found, length:', authToken.length);
+            console.log('[Middleware] Token preview:', authToken.substring(0, 20) + '...');
 
             // Create Supabase client to verify token
             const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
             const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
+            console.log('[Middleware] Creating Supabase client...');
             const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
             // Verify token and get user
+            console.log('[Middleware] Verifying token with Supabase...');
             const { data: { user }, error: authError } = await supabase.auth.getUser(authToken);
 
             if (authError || !user) {
-                console.log('[Middleware] Invalid token:', authError?.message);
+                console.log('[Middleware] ❌ Token verification failed:', authError?.message);
                 const redirectUrl = new URL('/', request.url);
                 redirectUrl.searchParams.set('error', 'invalid_session');
                 return NextResponse.redirect(redirectUrl);
             }
 
-            console.log('[Middleware] User verified:', user.id);
+            console.log('[Middleware] ✅ User verified:', user.id);
 
             // Get user role from database
             const { data: userData, error: dbError } = await supabase
