@@ -11,16 +11,38 @@ export async function middleware(request: NextRequest) {
     // ============================================
     if (pathname.startsWith('/admin')) {
         try {
-            // Get session token from cookies
-            const token = request.cookies.get('sb-access-token')?.value ||
-                request.cookies.get('sb-dmxmzannb-auth-token')?.value;
+            // Get all cookies and find Supabase auth token
+            // Supabase stores tokens in cookies with pattern: sb-<project-ref>-auth-token
+            const cookies = request.cookies;
+            let authToken: string | undefined;
 
-            if (!token) {
-                console.log('[Middleware] No auth token found, redirecting to home');
+            // Try to find Supabase auth token cookie
+            // Pattern: sb-{project-ref}-auth-token
+            cookies.getAll().forEach(cookie => {
+                if (cookie.name.startsWith('sb-') && cookie.name.endsWith('-auth-token')) {
+                    try {
+                        // Supabase stores JSON in cookie
+                        const parsed = JSON.parse(cookie.value);
+                        if (parsed.access_token) {
+                            authToken = parsed.access_token;
+                            console.log('[Middleware] Found auth token in cookie:', cookie.name);
+                        }
+                    } catch (e) {
+                        // Not JSON, might be direct token
+                        authToken = cookie.value;
+                    }
+                }
+            });
+
+            if (!authToken) {
+                console.log('[Middleware] No auth token found in cookies');
+                console.log('[Middleware] Available cookies:', cookies.getAll().map(c => c.name));
                 const redirectUrl = new URL('/', request.url);
                 redirectUrl.searchParams.set('error', 'login_required');
                 return NextResponse.redirect(redirectUrl);
             }
+
+            console.log('[Middleware] Verifying token...');
 
             // Create Supabase client to verify token
             const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -29,14 +51,16 @@ export async function middleware(request: NextRequest) {
             const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
             // Verify token and get user
-            const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+            const { data: { user }, error: authError } = await supabase.auth.getUser(authToken);
 
             if (authError || !user) {
-                console.log('[Middleware] Invalid token, redirecting to home');
+                console.log('[Middleware] Invalid token:', authError?.message);
                 const redirectUrl = new URL('/', request.url);
                 redirectUrl.searchParams.set('error', 'invalid_session');
                 return NextResponse.redirect(redirectUrl);
             }
+
+            console.log('[Middleware] User verified:', user.id);
 
             // Get user role from database
             const { data: userData, error: dbError } = await supabase
@@ -46,7 +70,7 @@ export async function middleware(request: NextRequest) {
                 .single();
 
             if (dbError || !userData || userData.role !== 'admin') {
-                console.log('[Middleware] User is not admin, redirecting to home');
+                console.log('[Middleware] User is not admin. Role:', userData?.role || 'none');
                 const redirectUrl = new URL('/', request.url);
                 redirectUrl.searchParams.set('error', 'unauthorized');
                 return NextResponse.redirect(redirectUrl);
