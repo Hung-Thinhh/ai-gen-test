@@ -76,40 +76,70 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const safetyTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
-        // SAFETY FALLBACK: Force loading to false after 5s
+        // SAFETY FALLBACK: Force loading to false after 2s (reduced from 5s for better UX)
         safetyTimerRef.current = setTimeout(() => {
             setIsLoading(prev => {
                 if (prev) {
-                    console.warn('⚠️ [Auth] Safety timer triggered: Forcing isLoading to false after 5s');
+                    console.warn('⚠️ [Auth] Safety timer triggered: Forcing isLoading to false after 2s');
                     return false;
                 }
                 return prev;
             });
-        }, 5000);
+        }, 2000);  // ← Reduced from 5000ms to 2000ms
 
-        // Get initial session
+        // Get initial session and start role fetch in parallel
         supabase.auth.getSession().then(({ data: { session } }) => {
             console.log('🏁 [Auth] getSession completed. User:', session?.user?.id || 'none');
-            // Only update if we have a session, OR if we don't have a user yet.
-            // This prevents getSession (which might fail/return null on error) from overwriting
-            // a valid user set by onAuthStateChange logic running in parallel.
+
             if (session?.user) {
                 setUser(session.user);
                 setToken(session.access_token);
                 if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current);
-            } else {
-                // Only set null if we really intend to (and maybe check if onAuthStateChange handled it)
-                // But for safety, let's rely on onAuthStateChange for the definitive state
-                console.log('ℹ️ [Auth] getSession found no user (awaiting onAuthStateChange)');
-            }
 
-            // Check cache role...
-            if (session?.user) {
+                // Check cache first
                 const cachedRole = getCachedRole(session.user.id);
                 if (cachedRole) {
+                    console.log('⚡ [Auth] Using cached role from getSession:', cachedRole);
                     setUserRole(cachedRole);
                     setIsLoading(false);
+
+                    // Background revalidation
+                    supabase
+                        .from('users')
+                        .select('role')
+                        .eq('user_id', session.user.id)
+                        .single()
+                        .then(({ data }) => {
+                            if (data?.role && data.role !== cachedRole) {
+                                console.log('👑 Role updated from background fetch:', data.role);
+                                setUserRole(data.role);
+                                setCachedRole(session.user.id, data.role);
+                            }
+                        });
+                } else {
+                    // No cache - optimistic render + parallel fetch
+                    console.log('⚡ [Auth] Optimistic render from getSession');
+                    setUserRole('user');
+                    setIsLoading(false);
+
+                    // Fetch real role in parallel (non-blocking)
+                    supabase
+                        .from('users')
+                        .select('role')
+                        .eq('user_id', session.user.id)
+                        .single()
+                        .then(({ data, error }) => {
+                            if (data?.role) {
+                                console.log('👑 Role fetched in parallel:', data.role);
+                                setUserRole(data.role);
+                                setCachedRole(session.user.id, data.role);
+                            } else if (error) {
+                                console.error('Error in parallel role fetch:', error);
+                            }
+                        });
                 }
+            } else {
+                console.log('ℹ️ [Auth] getSession found no user (awaiting onAuthStateChange)');
             }
         }).catch(err => {
             console.warn('⚠️ [Auth] getSession failed:', err);
@@ -134,18 +164,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     setToken(null);
                 }
 
-                // Prioritize cache for speed
+                // Optimistic rendering for better performance
                 let cacheHit = false;
                 if (session?.user) {
                     const cachedRole = getCachedRole(session.user.id);
+
                     if (cachedRole) {
+                        // Cache hit - instant unblock
                         setUserRole(cachedRole);
-                        setIsLoading(false); // Unblock UI immediately
+                        setIsLoading(false);
                         if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current);
                         cacheHit = true;
+                        console.log('⚡ [Auth] Using cached role:', cachedRole);
+                    } else {
+                        // No cache - use optimistic rendering
+                        // Assume 'user' role and unblock UI immediately
+                        setUserRole('user');
+                        setIsLoading(false);
+                        if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current);
+                        console.log('⚡ [Auth] Optimistic render with default "user" role');
                     }
 
-                    // Background fetch to ensure freshness (revalidate)
+                    // Background fetch to ensure freshness (always run)
                     const fetchRole = async () => {
                         console.log('🔍 [Auth] Fetching role from DB...');
                         try {
@@ -156,12 +196,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                 .single();
 
                             if (data && data.role) {
-                                if (data.role !== cachedRole) {
-                                    console.log('👑 Role updated from DB:', data.role);
-                                    setUserRole(data.role);
-                                    setCachedRole(session.user.id, data.role);
+                                const dbRole = data.role;
+                                if (dbRole !== cachedRole) {
+                                    console.log('👑 Role updated from DB:', dbRole);
+                                    setUserRole(dbRole);
+                                    setCachedRole(session.user.id, dbRole);
                                 } else {
-                                    console.log('👑 Role confirmed from DB');
+                                    console.log('👑 Role confirmed from DB:', dbRole);
                                 }
                             } else if (error) {
                                 console.error('Error fetching role:', error);
@@ -171,20 +212,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         }
                     };
 
-                    if (cacheHit) {
-                        fetchRole(); // Run in background
-                    } else {
-                        // Block if no cache (first load)
-                        try {
-                            await fetchRole();
-                        } catch (err) {
-                            console.error("Critical error awaiting fetchRole:", err);
-                        } finally {
-                            console.log("🔓 [Auth] Unblocking UI after role check");
-                            setIsLoading(false);
-                            if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current);
-                        }
-                    }
+                    // Always fetch in background to revalidate
+                    fetchRole();
 
                     if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
                         // Background user ensure
@@ -195,8 +224,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         }
                     }
                 } else {
-                    // No user
-                    console.log("🔓 [Auth] No user session, unblocking UI");
+                    // No user - Guest mode
+                    // Unblock UI immediately for guests (no need to wait)
+                    console.log("⚡ [Auth] Guest user - instant unblock");
                     setIsLoading(false);
                     if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current);
                 }

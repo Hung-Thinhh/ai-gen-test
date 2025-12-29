@@ -7,6 +7,7 @@
 import React, { useEffect, Suspense, lazy, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { cn } from '../lib/utils';
 
 // Sidebar and Contexts are now provided by parent Providers component
@@ -183,6 +184,34 @@ function MainApp() {
     useEffect(() => {
         setGlobalModelConfig({ modelVersion, imageResolution });
     }, [modelVersion, imageResolution]);
+
+    // Handle error parameters from middleware redirects
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const error = params.get('error');
+
+            if (error) {
+                switch (error) {
+                    case 'login_required':
+                        toast.error('Vui lòng đăng nhập để truy cập trang quản trị');
+                        break;
+                    case 'invalid_session':
+                        toast.error('Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại');
+                        break;
+                    case 'unauthorized':
+                        toast.error('Bạn không có quyền truy cập trang này');
+                        break;
+                    case 'server_error':
+                        toast.error('Lỗi hệ thống. Vui lòng thử lại sau');
+                        break;
+                }
+
+                // Clean up URL
+                window.history.replaceState({}, '', window.location.pathname);
+            }
+        }
+    }, []);
 
 
 

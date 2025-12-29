@@ -1,6 +1,7 @@
 import { log } from 'console';
 import { supabase } from '../lib/supabase/client';
 import { uploadToCloudinary } from './cloudinaryService';
+import { cacheService, CACHE_KEYS, CACHE_TTL } from './cacheService';
 const USERS_TABLE = "users";
 const PROFILES_TABLE = "profiles";
 const GUESTS_TABLE = "guest_sessions";
@@ -317,6 +318,10 @@ export const saveGuestSessionBatch = async (guestId: string, ip: string, imageUr
 /**
  * Gets the current credits for a registered user (READ-ONLY).
  */
+/**
+ * Gets the current credits for a user.
+ * @throws Error if unable to fetch credits
+ */
 export const getUserCredits = async (userId: string, token?: string): Promise<number> => {
     try {
         const client = token ? getFreshClient(token) : supabase;
@@ -327,20 +332,28 @@ export const getUserCredits = async (userId: string, token?: string): Promise<nu
             .single();
 
         if (error) {
-            console.warn("Error fetching user credits (getUserCredits):", error);
-            return 0;
+            console.error("Error fetching user credits (getUserCredits):", error);
+            throw new Error(`Failed to fetch user credits: ${error.message}`);
         }
 
-        return data?.current_credits ?? 0;
-    } catch (error) {
+        if (!data) {
+            console.warn("No user data found for userId:", userId);
+            throw new Error('User not found in database');
+        }
+
+        const credits = data.current_credits ?? 0;
+        console.log(`[getUserCredits] User ${userId}: ${credits} credits`);
+        return credits;
+    } catch (error: any) {
         console.error("Error in getUserCredits:", error);
-        return 0;
+        // Re-throw to let caller handle
+        throw error;
     }
 };
 
 /**
  * Gets the current credits for a guest.
- * Returns 10 (default) if not found or error.
+ * @throws Error if unable to fetch credits
  */
 export const getGuestCredits = async (guestId: string): Promise<number> => {
     try {
@@ -351,16 +364,28 @@ export const getGuestCredits = async (guestId: string): Promise<number> => {
             .maybeSingle();
 
         if (error) {
-            if (error.code === '42703') return 3; // Ignore missing column
-            console.warn("Error fetching guest credits:", error);
-            // Fallback to local storage logic essentially, or default
-            return 3;
+            // Ignore missing column error (old schema)
+            if (error.code === '42703') {
+                console.warn('Guest credits column not found, returning default');
+                return 3;
+            }
+            console.error("Error fetching guest credits:", error);
+            throw new Error(`Failed to fetch guest credits: ${error.message}`);
         }
 
-        return data?.credits ?? 3;
-    } catch (error) {
+        // If no record found, guest hasn't been created yet
+        if (!data) {
+            console.log(`[getGuestCredits] No record for ${guestId}, returning default 3`);
+            return 3; // Default for new guests
+        }
+
+        const credits = data.credits ?? 3;
+        console.log(`[getGuestCredits] Guest ${guestId}: ${credits} credits`);
+        return credits;
+    } catch (error: any) {
         console.error("Error in getGuestCredits:", error);
-        return 3;
+        // Re-throw to let caller handle
+        throw error;
     }
 };
 
@@ -745,10 +770,17 @@ export const createTool = async (tool: any) => {
 };
 
 /**
- * Fetches all tools from the database via server API.
+ * Fetches all tools from the database via server API with caching.
  */
 export const getAllTools = async () => {
     try {
+        // Try to get from cache first
+        const cached = cacheService.get<any[]>(CACHE_KEYS.TOOLS);
+        if (cached) {
+            console.log("[Storage] Returning cached tools:", cached.length, "items");
+            return cached;
+        }
+
         console.log("[Storage] Fetching all tools from API...");
         const response = await fetch('/api/data/tools');
 
@@ -770,6 +802,9 @@ export const getAllTools = async () => {
             if (orderA === 0 && orderB === 0) return 0;
             return orderA - orderB;
         });
+
+        // Cache the result
+        cacheService.set(CACHE_KEYS.TOOLS, tools, CACHE_TTL.TOOLS);
         console.log("[Storage] getAllTools returned:", tools.length, "items");
         return tools;
     } catch (error) {
@@ -983,10 +1018,17 @@ export const updatePackage = async (packageId: string | number, updates: any, to
 // --- CATEGORY MANAGEMENT ---
 
 /**
- * Fetches all categories via server API.
+ * Fetches all categories via server API with caching.
  */
 export const getAllCategories = async () => {
     try {
+        // Try to get from cache first
+        const cached = cacheService.get<any[]>(CACHE_KEYS.CATEGORIES);
+        if (cached) {
+            console.log("[Storage] Returning cached categories:", cached.length, "items");
+            return cached;
+        }
+
         console.log("[Storage] Fetching categories from API...");
         const response = await fetch('/api/data/categories');
 
@@ -1009,7 +1051,9 @@ export const getAllCategories = async () => {
             return orderA - orderB;
         });
 
-        console.log("[Storage] getAllCategories returned:", categories.length, "items");
+        // Cache the result
+        cacheService.set(CACHE_KEYS.CATEGORIES, categories, CACHE_TTL.CATEGORIES);
+        console.log("[Storage] Cached", categories.length, "categories");
         return categories;
     } catch (error) {
         console.error("Error fetching categories:", error);
@@ -1031,6 +1075,9 @@ export const createCategory = async (category: any) => {
             console.error("Error creating category:", error);
             return false;
         }
+
+        // Invalidate categories cache
+        cacheService.remove(CACHE_KEYS.CATEGORIES);
         return true;
     } catch (error) {
         console.error("Error creating category:", error);
@@ -1052,6 +1099,9 @@ export const updateCategory = async (categoryId: string, updates: any) => {
             console.error("Error updating category:", error);
             return false;
         }
+
+        // Invalidate categories cache
+        cacheService.remove(CACHE_KEYS.CATEGORIES);
         return true;
     } catch (error) {
         console.error("Error updating category:", error);
@@ -1073,6 +1123,9 @@ export const deleteCategory = async (categoryId: string) => {
             console.error("Error deleting category:", error);
             return false;
         }
+
+        // Invalidate categories cache
+        cacheService.remove(CACHE_KEYS.CATEGORIES);
         return true;
     } catch (error) {
         console.error("Error deleting category:", error);
@@ -1181,10 +1234,18 @@ export const deleteSystemConfig = async (configKey: string) => {
 // --- HERO BANNER MANAGEMENT ---
 
 /**
- * Fetches all hero banners, sorted by sort_order.
+ * Fetches all hero banners, sorted by sort_order with caching.
  */
 export const getAllBanners = async () => {
     try {
+        // Try to get from cache first
+        const cached = cacheService.get<any[]>(CACHE_KEYS.BANNERS);
+        if (cached) {
+            console.log("[Storage] Returning cached banners:", cached.length, "items");
+            return cached;
+        }
+
+        console.log("[Storage] Fetching banners from database...");
         const { data, error } = await supabase
             .from('hero_banners')
             .select('*')
@@ -1195,7 +1256,12 @@ export const getAllBanners = async () => {
             return [];
         }
 
-        return data || [];
+        const banners = data || [];
+
+        // Cache the result
+        cacheService.set(CACHE_KEYS.BANNERS, banners, CACHE_TTL.BANNERS);
+        console.log("[Storage] Cached", banners.length, "banners");
+        return banners;
     } catch (error) {
         console.error("Error fetching banners:", error);
         return [];
@@ -1224,6 +1290,9 @@ export const createBanner = async (banner: {
             console.error("Error creating banner:", error);
             return false;
         }
+
+        // Invalidate cache after creating
+        cacheService.remove(CACHE_KEYS.BANNERS);
         return true;
     } catch (error) {
         console.error("Error creating banner:", error);
@@ -1253,6 +1322,9 @@ export const updateBanner = async (bannerId: number, updates: Partial<{
             console.error("Error updating banner:", error);
             return false;
         }
+
+        // Invalidate cache after updating
+        cacheService.remove(CACHE_KEYS.BANNERS);
         return true;
     } catch (error) {
         console.error("Error updating banner:", error);
@@ -1274,6 +1346,9 @@ export const deleteBanner = async (bannerId: number) => {
             console.error("Error deleting banner:", error);
             return false;
         }
+
+        // Invalidate cache after deleting
+        cacheService.remove(CACHE_KEYS.BANNERS);
         return true;
     } catch (error) {
         console.error("Error deleting banner:", error);
@@ -1401,11 +1476,22 @@ export const getStudioBySlug = async (slug: string) => {
 // --- PROMPT MANAGEMENT ---
 
 /**
- * Fetches all prompts via server API.
+ * Fetches all prompts via server API with caching.
+ * Note: Cache key includes sortBy to cache different sort orders separately
  */
 export const getAllPrompts = async (sortBy: 'created_at' | 'usage' = 'created_at') => {
     try {
-        console.log("[Storage] getAllPrompts called from API. Sort:", sortBy);
+        // Create cache key with sortBy parameter
+        const cacheKey = `${CACHE_KEYS.PROMPTS}_${sortBy}`;
+
+        // Try to get from cache first
+        const cached = cacheService.get<any[]>(cacheKey);
+        if (cached) {
+            console.log(`[Storage] Returning cached prompts (sort: ${sortBy}):`, cached.length, "items");
+            return cached;
+        }
+
+        console.log("[Storage] Fetching prompts from API. Sort:", sortBy);
         const response = await fetch('/api/data/prompts');
 
         if (!response.ok) {
@@ -1423,7 +1509,9 @@ export const getAllPrompts = async (sortBy: 'created_at' | 'usage' = 'created_at
             return bVal > aVal ? 1 : -1; // Descending
         });
 
-        console.log(`[Storage] Got ${prompts.length} prompts from API.`);
+        // Cache the sorted result
+        cacheService.set(cacheKey, prompts, CACHE_TTL.PROMPTS);
+        console.log(`[Storage] Cached ${prompts.length} prompts (sort: ${sortBy})`);
         return prompts;
     } catch (error) {
         console.error("[Storage] Fatal error fetching prompts:", error);
@@ -1445,6 +1533,10 @@ export const createPrompt = async (prompt: any) => {
             console.error("Error creating prompt:", error);
             return false;
         }
+
+        // Invalidate all prompt caches (both sort orders)
+        cacheService.remove(`${CACHE_KEYS.PROMPTS}_created_at`);
+        cacheService.remove(`${CACHE_KEYS.PROMPTS}_usage`);
         return true;
     } catch (error) {
         console.error("Error creating prompt:", error);
@@ -1466,6 +1558,10 @@ export const updatePrompt = async (promptId: string, updates: any) => {
             console.error("Error updating prompt:", error);
             return false;
         }
+
+        // Invalidate all prompt caches
+        cacheService.remove(`${CACHE_KEYS.PROMPTS}_created_at`);
+        cacheService.remove(`${CACHE_KEYS.PROMPTS}_usage`);
         return true;
     } catch (error) {
         console.error("Error updating prompt:", error);
@@ -1487,6 +1583,10 @@ export const deletePrompt = async (promptId: string) => {
             console.error("Error deleting prompt:", error);
             return false;
         }
+
+        // Invalidate all prompt caches
+        cacheService.remove(`${CACHE_KEYS.PROMPTS}_created_at`);
+        cacheService.remove(`${CACHE_KEYS.PROMPTS}_usage`);
         return true;
     } catch (error) {
         console.error("Error deleting prompt:", error);
@@ -1524,6 +1624,10 @@ export const incrementPromptUsage = async (promptId: number) => {
             console.error("Error updating prompt usage:", updateError);
             return false;
         }
+
+        // Invalidate usage-sorted cache (most likely to be affected)
+        // Keep created_at cache as it won't change order
+        cacheService.remove(`${CACHE_KEYS.PROMPTS}_usage`);
         return true;
     } catch (error) {
         console.error("Error incrementing prompt usage:", error);

@@ -49,6 +49,7 @@ import {
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Be_Vietnam_Pro } from 'next/font/google';
+import toast from 'react-hot-toast';
 
 // Define Font
 const beVietnamPro = Be_Vietnam_Pro({
@@ -142,22 +143,36 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         setIsClient(true);
     }, []);
 
-    // Redirect logic
+    // Redirect logic - ADMIN PROTECTION
     useEffect(() => {
         if (!authLoading) {
+            // Check if user is logged in
+            if (!user) {
+                console.log('[AdminLayout] No user, redirecting to home');
+                toast.error('Vui lòng đăng nhập để truy cập trang quản trị');
+                router.push('/');
+                return;
+            }
+
+            // Check if user has admin or editor role
             if (role !== 'admin' && role !== 'editor') {
-                // router.push('/');
-            } else if (role === 'editor') {
-                // Restrict editor access paths
+                console.log('[AdminLayout] User is not admin/editor, redirecting to home');
+                toast.error('Bạn không có quyền truy cập trang này');
+                router.push('/');
+                return;
+            }
+
+            // Editor role restrictions
+            if (role === 'editor') {
                 const allowedPaths = ['/admin/tools', '/admin/prompts', '/admin/categories', '/admin/studios'];
                 const isAllowed = allowedPaths.some(path => pathname?.startsWith(path));
-                // If on /admin (dashboard) or restricted page, redirect to first allowed page
                 if (!isAllowed) {
+                    console.log('[AdminLayout] Editor accessing restricted page, redirecting to tools');
                     router.push('/admin/tools');
                 }
             }
         }
-    }, [authLoading, role, router, pathname]);
+    }, [authLoading, role, user, router, pathname]);
 
     const toggleDrawer = () => {
         setOpen(!open);
@@ -185,6 +200,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     };
 
 
+    // Loading state
     if (!isClient || authLoading) {
         return (
             <Box
@@ -196,7 +212,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         );
     }
 
-    // if (role !== 'admin' && role !== 'editor') return null;
+    // Block rendering if not admin/editor (will redirect via useEffect)
+    if (!user || (role !== 'admin' && role !== 'editor')) {
+        return (
+            <Box
+                suppressHydrationWarning
+                sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: '#F8F9FA' }}
+            >
+                <CircularProgress color="primary" />
+            </Box>
+        );
+    }
 
     const allMenuItems = [
         { text: 'Tổng quan', icon: <HomeIcon />, path: '/admin', roles: ['admin'] },

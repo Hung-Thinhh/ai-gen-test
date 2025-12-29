@@ -27,6 +27,25 @@ const ArrowLeftIcon = ({ className }: { className?: string }) => (
     </svg>
 );
 
+// Helper function to parse JSON fields from database
+const parseJsonField = (field: any, lang: string = 'vi') => {
+    try {
+        // If it's already an object, return the language value
+        if (typeof field === 'object' && field !== null) {
+            return field[lang] || field['en'] || field['vi'] || '';
+        }
+        // If it's a string, try to parse it as JSON
+        if (typeof field === 'string') {
+            const parsed = JSON.parse(field);
+            return parsed[lang] || parsed['en'] || parsed['vi'] || '';
+        }
+        return '';
+    } catch (e) {
+        console.error('Error parsing JSON field:', e, field);
+        return typeof field === 'string' ? field : '';
+    }
+};
+
 export const HeroSlider: React.FC = () => {
     const { handleSelectApp, language } = useAppControls();
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -38,20 +57,23 @@ export const HeroSlider: React.FC = () => {
         const fetchBanners = async () => {
             try {
                 const banners = await getAllBanners();
+                console.log('[HeroSlider] Fetched banners:', banners);
+
                 // Filter active banners and map to SlideData format
                 const activeSlides = banners
                     .filter((b: any) => b.is_active)
                     .map((b: any) => ({
                         id: b.id,
-                        title: language === 'vi' ? b.title.vi : b.title.en,
-                        description: language === 'vi' ? b.description.vi : b.description.en,
+                        title: parseJsonField(b.title, language),
+                        description: parseJsonField(b.description, language),
                         tag: "FEATURED",
-                        buttonText: language === 'vi' ? b.button_text.vi : b.button_text.en,
+                        buttonText: parseJsonField(b.button_text, language),
                         bgClass: "hero-banner-bg",
-                        targetApp: b.button_link.replace('/', ''), // Convert /tool to tool
+                        targetApp: (b.button_link || '/').replace('/', '') || 'tool', // Convert /tool to tool
                         bgImage: b.image_url
                     }));
 
+                console.log('[HeroSlider] Active slides:', activeSlides);
                 setSlides(activeSlides);
             } catch (error) {
                 console.error('Failed to fetch banners:', error);

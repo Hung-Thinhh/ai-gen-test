@@ -245,10 +245,16 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                     setImageGallery(cloudGallery);
                     const history = await db.getAllHistoryEntries();
                     setGenerationHistory(history);
-                } catch (err) {
-                    console.error("Failed to load cloud gallery", err);
+                } catch (err: any) {
+                    console.error("Failed to load user data:", err);
+                    // On error, try to load local data as fallback
                     const gallery = await db.getAllGalleryImages();
                     setImageGallery(gallery);
+                    // Don't reset credits to 0 on error - keep existing value
+                    toast.error('Không thể tải dữ liệu từ server. Sử dụng dữ liệu local.', {
+                        duration: 3000,
+                        position: 'bottom-right'
+                    });
                 }
             } else {
                 await db.migrateFromLocalStorageToIdb();
@@ -276,7 +282,9 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                             });
                         }
                     } catch (e) {
-                        console.warn('Failed to load guest cloud gallery/credits', e);
+                        console.warn('Failed to load guest cloud data:', e);
+                        // Set default credits for new guests on error
+                        setGuestCredits(3);
                     }
                 }
 
@@ -626,8 +634,14 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 console.log('[refreshCredits] Updated guest credits:', credits);
                 setGuestCredits(credits);
             }
-        } catch (error) {
-            console.error('Failed to refresh credits:', error);
+        } catch (error: any) {
+            console.error('[refreshCredits] Failed to refresh credits:', error);
+            // Don't update state on error - preserve existing values
+            // Show subtle warning to user
+            toast.error('Không thể cập nhật số dư credits. Vui lòng thử lại.', {
+                duration: 3000,
+                position: 'bottom-right'
+            });
         }
     }, [isLoggedIn, user, guestId, token]);
 
