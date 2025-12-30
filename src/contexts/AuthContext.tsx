@@ -329,18 +329,27 @@ export const useAuth = (): AuthContextType => {
 // Helper function to ensure user exists in database
 async function ensureUserExists(user: User) {
     try {
-        // Check if user exists
-        const { data: existingUser } = await supabase
+        console.log('[ensureUserExists] Checking if user exists:', user.id);
+
+        // Check if user exists - use maybeSingle() to avoid errors
+        const { data: existingUser, error: checkError } = await supabase
             .from('users')
             .select('user_id')
             .eq('user_id', user.id)
-            .single();
+            .maybeSingle();
+
+        if (checkError) {
+            console.error('[ensureUserExists] Error checking user existence:', checkError);
+            return;
+        }
 
         if (!existingUser) {
+            console.log('[ensureUserExists] User not found, creating new user...');
+
             // Check for potential guest credits to transfer - DISABLED per new requirement
             let initialCredits = 10; // Fixed 10 credits for new users (No accumulation)
 
-            // Create new user with 9-char ID
+            // Create new user
             const { error } = await supabase
                 .from('users')
                 .insert({
@@ -355,13 +364,15 @@ async function ensureUserExists(user: User) {
                 });
 
             if (error) {
-                console.error('Failed to create user:', error);
+                console.error('[ensureUserExists] Failed to create user:', error);
             } else {
-                console.log(`New user created with ${initialCredits} credits`);
+                console.log(`[ensureUserExists] ✅ New user created with ${initialCredits} credits`);
                 toast.success('Chào mừng! Bạn nhận được 10 credits miễn phí! 🎉');
             }
+        } else {
+            console.log('[ensureUserExists] ✅ User already exists, skipping creation');
         }
     } catch (error) {
-        console.error('Error ensuring user exists:', error);
+        console.error('[ensureUserExists] Error ensuring user exists:', error);
     }
 }

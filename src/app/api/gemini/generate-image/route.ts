@@ -56,17 +56,42 @@ export async function POST(req: NextRequest) {
 
         // 3. Check Balance - Don't deduct yet!
         if (isGuest && guestId) {
-            const { data: guestData, error: guestError } = await supabaseAdmin
+            let { data: guestData, error: guestError } = await supabaseAdmin
                 .from('guest_sessions')
                 .select('credits')
                 .eq('guest_id', guestId)
-                .single();
+                .maybeSingle();
 
-            if (guestError || !guestData) {
-                console.error('[API DEBUG] Guest lookup failed:', guestError);
-                return NextResponse.json({ error: 'Không tìm thấy phiên khách. Vui lòng tải lại trang.' }, { status: 403 });
+            // If guest doesn't exist, create them with default credits
+            if (!guestData && !guestError) {
+                console.log('[API DEBUG] New guest detected, creating session:', guestId);
+                const defaultCredits = 3; // Default guest credits
+
+                const { data: newGuest, error: createError } = await supabaseAdmin
+                    .from('guest_sessions')
+                    .insert({ guest_id: guestId, credits: defaultCredits })
+                    .select('credits')
+                    .single();
+
+                if (createError) {
+                    console.error('[API DEBUG] Failed to create guest session:', createError);
+                    return NextResponse.json({
+                        error: 'Không thể tạo phiên khách. Vui lòng thử lại.'
+                    }, { status: 500 });
+                }
+
+                guestData = newGuest;
+                console.log('[API DEBUG] Guest session created successfully with', defaultCredits, 'credits');
             }
-            currentCredits = guestData.credits || 0;
+
+            if (guestError) {
+                console.error('[API DEBUG] Guest lookup failed:', guestError);
+                return NextResponse.json({
+                    error: 'Lỗi khi kiểm tra phiên khách. Vui lòng thử lại.'
+                }, { status: 500 });
+            }
+
+            currentCredits = guestData?.credits || 0;
         } else if (userId) {
             const { data: userData } = await supabaseAdmin.from('users').select('current_credits').eq('user_id', userId).single();
             currentCredits = userData?.current_credits || 0;
