@@ -238,7 +238,9 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         async function loadData() {
             if (isLoggedIn && user) {
                 try {
-                    const credits = await storageService.getUserCredits(user.id);
+                    // Pass token to ensure fresh, authenticated fetch
+                    const credits = await storageService.getUserCredits(user.id, token || undefined);
+                    console.log('[loadData] Fetched user credits:', credits);
                     setUserCredits(credits);
 
                     const cloudGallery = await storageService.getUserCloudGallery(user.id);
