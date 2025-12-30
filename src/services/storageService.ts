@@ -329,25 +329,27 @@ export const getUserCredits = async (userId: string, token?: string): Promise<nu
             .from(USERS_TABLE)
             .select('current_credits')
             .eq('user_id', userId)
-            .single();
+            .maybeSingle(); // Use maybeSingle to handle new users
 
         if (error) {
-            console.error("Error fetching user credits (getUserCredits):", error);
-            throw new Error(`Failed to fetch user credits: ${error.message}`);
+            console.error("[getUserCredits] Error fetching user credits:", error);
+            // Return 0 instead of throwing to prevent UI crashes
+            return 0;
         }
 
         if (!data) {
-            console.warn("No user data found for userId:", userId);
-            throw new Error('User not found in database');
+            console.warn("[getUserCredits] No user data found for userId:", userId, "- User may be newly created");
+            // Return 0 for new users instead of throwing error
+            return 0;
         }
 
         const credits = data.current_credits ?? 0;
         console.log(`[getUserCredits] User ${userId}: ${credits} credits`);
         return credits;
     } catch (error: any) {
-        console.error("Error in getUserCredits:", error);
-        // Re-throw to let caller handle
-        throw error;
+        console.error("[getUserCredits] Exception:", error);
+        // Return 0 instead of throwing to prevent UI crashes
+        return 0;
     }
 };
 

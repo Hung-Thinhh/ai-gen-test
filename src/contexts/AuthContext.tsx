@@ -185,7 +185,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         console.log('⚡ [Auth] Optimistic render with default "user" role');
                     }
 
-                    // Background fetch to ensure freshness (always run)
+                    // Ensure user exists FIRST before fetching role (prevent race condition)
+                    if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+                        if (session?.user) {
+                            console.log('[Auth] Ensuring user exists before fetching role...');
+                            // AWAIT user creation to prevent race condition
+                            await ensureUserExists(session.user).catch((err: any) => {
+                                console.error("[Auth] Ensure user failed:", err);
+                            });
+                            console.log('[Auth] User ensured, now safe to fetch role');
+                        }
+                    }
+
+                    // Background fetch to ensure freshness (always run AFTER user is ensured)
                     const fetchRole = async () => {
                         console.log('🔍 [Auth] Fetching role from DB...');
                         try {
@@ -193,7 +205,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                 .from('users')
                                 .select('role')
                                 .eq('user_id', session.user.id)
-                                .single();
+                                .maybeSingle(); // Use maybeSingle to handle case where user doesn't exist yet
+
+                            if (error) {
+                                console.error('Error fetching role:', error);
+                                return;
+                            }
 
                             if (data && data.role) {
                                 const dbRole = data.role;
@@ -204,25 +221,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                 } else {
                                     console.log('👑 Role confirmed from DB:', dbRole);
                                 }
-                            } else if (error) {
-                                console.error('Error fetching role:', error);
+                            } else {
+                                console.warn('[Auth] No role found for user, using default');
                             }
                         } catch (e) {
                             console.error('Exception fetching role:', e);
                         }
                     };
 
-                    // Always fetch in background to revalidate
+                    // Fetch role after ensuring user exists
                     fetchRole();
-
-                    if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-                        // Background user ensure
-                        if (session?.user) {
-                            // Ensure user exists in DB
-                            // Ensure user exists in DB
-                            ensureUserExists(session.user).catch((err: any) => console.error("Ensure user failed", err));
-                        }
-                    }
                 } else {
                     // No user - Guest mode
                     // Unblock UI immediately for guests (no need to wait)
