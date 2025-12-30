@@ -4,6 +4,7 @@
  */
 import React, { ChangeEvent, useCallback, useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'react-hot-toast';
 import ActionablePolaroidCard from './ActionablePolaroidCard';
 import Lightbox from './Lightbox';
 import {
@@ -947,8 +948,19 @@ ${aspectRatioPrompt}
                     setDisplayImages(prev => [...prev, imageUrlForDisplay]);
 
                 } catch (err) {
-                    console.error(`Error generating image ${index + 1}:`, err);
-                    // Optional: Add a "failed" placeholder or toast
+                    console.error(`❌ [PosterCreator] Error generating image ${index + 1}:`, err);
+                    console.error('[PosterCreator] Error details:', {
+                        message: err instanceof Error ? err.message : String(err),
+                        stack: err instanceof Error ? err.stack : undefined,
+                        imageCount: imagesToUse.length,
+                        promptLength: prompt.length,
+                        aspectRatio: geminiAspectRatio
+                    });
+
+                    // Show error to user
+                    toast.error(`Lỗi khi tạo ảnh ${index + 1}: ${err instanceof Error ? err.message : 'Unknown error'}`, {
+                        duration: 5000
+                    });
                 } finally {
                     // Decrement pending count regardless of success/failure
                     setPendingImageSlots(prev => Math.max(0, prev - 1));

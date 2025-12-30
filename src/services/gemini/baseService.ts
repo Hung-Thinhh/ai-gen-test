@@ -207,32 +207,52 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
                 modelVersion: currentVersion
             });
 
-            const response = await fetch('/api/gemini/generate-image', {
-                method: 'POST',
-                headers: headers, // Use the prepared headers (Auth or Guest-ID)
-                body: JSON.stringify({
-                    parts,
-                    config: finalConfig,
-                    model: model
-                })
-            });
+            // Add timeout to detect hanging requests
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => {
+                console.error('[Gemini Debug] Request timeout after 60s!');
+                controller.abort();
+            }, 60000); // 60 second timeout
 
-            console.log('[Gemini Debug] Response received:', {
-                status: response.status,
-                statusText: response.statusText,
-                ok: response.ok
-            });
+            let response;
+            try {
+                response = await fetch('/api/gemini/generate-image', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        parts,
+                        config: finalConfig,
+                        model: model
+                    }),
+                    signal: controller.signal
+                });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                console.error('[Gemini Debug] API Error Response:', errorData);
+                clearTimeout(timeoutId);
 
-                // Handle specific credit error
-                if (response.status === 402 || errorData.code === 'INSUFFICIENT_CREDITS') {
-                    throw new Error("Bạn đã hết Credit. Vui lòng nạp thêm để tiếp tục.");
+                console.log('[Gemini Debug] Response received:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    ok: response.ok
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('[Gemini Debug] API Error Response:', errorData);
+
+                    // Handle specific credit error
+                    if (response.status === 402 || errorData.code === 'INSUFFICIENT_CREDITS') {
+                        throw new Error("Bạn đã hết Credit. Vui lòng nạp thêm để tiếp tục.");
+                    }
+
+                    throw new Error(errorData.error || `Server responded with ${response.status}`);
                 }
-
-                throw new Error(errorData.error || `Server responded with ${response.status}`);
+            } catch (fetchError: any) {
+                clearTimeout(timeoutId);
+                if (fetchError.name === 'AbortError') {
+                    console.error('[Gemini Debug] Request was aborted due to timeout');
+                    throw new Error('Request timeout - Server không phản hồi sau 60 giây');
+                }
+                throw fetchError;
             }
 
             const data: GenerateContentResponse = await response.json();

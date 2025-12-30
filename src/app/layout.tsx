@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Be_Vietnam_Pro } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import "./globals.css";
+import { DevMockLogin } from "@/components/DevMockLogin";
 
 const beVietnamPro = Be_Vietnam_Pro({
   weight: ['300', '400', '500', '600', '700', '900'],
@@ -31,6 +32,10 @@ export default function RootLayout({
       <body className={`${beVietnamPro.className}`} suppressHydrationWarning>
         <Providers>
           {children}
+          {/* DEV ONLY: Mock login button */}
+          {process.env.NODE_ENV === 'development' && (
+            <DevMockLogin />
+          )}
         </Providers>
         <script
           dangerouslySetInnerHTML={{
