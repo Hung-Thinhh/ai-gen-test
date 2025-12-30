@@ -897,6 +897,7 @@ ${aspectRatioPrompt}
 
             console.log('[PosterCreator] Selected aspect ratio:', selectedAspectRatio);
             console.log('[PosterCreator] Mapped to Gemini format:', geminiAspectRatio);
+            console.log('[PosterCreator] ✅ About to create promises, imageCount:', imageCount);
 
             // Create an array of promises for parallel execution
             const generationPromises = Array.from({ length: imageCount }).map(async (_, index) => {
