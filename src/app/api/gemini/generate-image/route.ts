@@ -52,29 +52,27 @@ export async function POST(req: NextRequest) {
         console.log('[API DEBUG] Credit cost from header:', creditCost);
         console.log('[API DEBUG] Model:', model);
 
-        // 3. Check credits and attempt atomic reservation (with fallback)
-        // Try new atomic reservation first, fallback to old method if function doesn't exist
-        let reservationSuccess = false;
-        let useOldMethod = false;
+        // 3. Check if user has enough credits (don't deduct yet)
+        console.log('[API DEBUG] Checking credits...', { isGuest, userId, guestId, creditCost });
+
+        let currentCredits = 0;
 
         if (isGuest && guestId) {
-            // First, ensure guest session exists
-            let { data: guestData, error: guestError } = await supabaseAdmin
+            // For guests: ensure session exists first
+            let { data: guestData } = await supabaseAdmin
                 .from('guest_sessions')
                 .select('credits')
                 .eq('guest_id', guestId)
                 .maybeSingle();
 
             // Create guest session if doesn't exist
-            if (!guestData && !guestError) {
-                console.log('[API DEBUG] New guest detected, creating session:', guestId);
+            if (!guestData) {
+                console.log('[API DEBUG] Creating new guest session:', guestId);
                 const defaultCredits = 3;
 
-                const { data: newGuest, error: createError } = await supabaseAdmin
+                const { error: createError } = await supabaseAdmin
                     .from('guest_sessions')
-                    .insert({ guest_id: guestId, credits: defaultCredits })
-                    .select('credits')
-                    .single();
+                    .insert({ guest_id: guestId, credits: defaultCredits });
 
                 if (createError) {
                     console.error('[API DEBUG] Failed to create guest session:', createError);
@@ -83,83 +81,35 @@ export async function POST(req: NextRequest) {
                     }, { status: 500 });
                 }
 
-                guestData = newGuest;
-                console.log('[API DEBUG] Guest session created with', defaultCredits, 'credits');
-            }
-
-            // Try atomic reservation
-            const { data, error } = await supabaseAdmin.rpc('reserve_guest_credits', {
-                p_guest_id: guestId,
-                p_amount: creditCost
-            });
-
-            if (error) {
-                // Check if error is because function doesn't exist
-                if (error.message?.includes('function') || error.code === '42883') {
-                    console.warn('[API DEBUG] reserve_guest_credits function not found, using fallback method');
-                    useOldMethod = true;
-                    // Check credits manually
-                    const currentCredits = guestData?.credits || 0;
-                    if (currentCredits >= creditCost) {
-                        reservationSuccess = true; // Will deduct after generation
-                    }
-                } else {
-                    console.error('[API DEBUG] Failed to reserve guest credits:', error);
-                    return NextResponse.json({
-                        error: 'Lỗi khi đặt trước credits. Vui lòng thử lại.'
-                    }, { status: 500 });
-                }
+                currentCredits = defaultCredits;
             } else {
-                reservationSuccess = data;
+                currentCredits = guestData.credits || 0;
             }
 
-            console.log('[API DEBUG] Guest credit reservation:', reservationSuccess ? 'SUCCESS' : 'INSUFFICIENT');
         } else if (userId) {
-            // Try atomic reservation
-            const { data, error } = await supabaseAdmin.rpc('reserve_user_credits', {
-                p_user_id: userId,
-                p_amount: creditCost
-            });
+            // For users: get current credits
+            const { data: userData } = await supabaseAdmin
+                .from('users')
+                .select('current_credits')
+                .eq('user_id', userId)
+                .maybeSingle();
 
-            if (error) {
-                // Check if error is because function doesn't exist
-                if (error.message?.includes('function') || error.code === '42883') {
-                    console.warn('[API DEBUG] reserve_user_credits function not found, using fallback method');
-                    useOldMethod = true;
-                    // Check credits manually
-                    const { data: userData } = await supabaseAdmin
-                        .from('users')
-                        .select('current_credits')
-                        .eq('user_id', userId)
-                        .single();
-                    const currentCredits = userData?.current_credits || 0;
-                    if (currentCredits >= creditCost) {
-                        reservationSuccess = true; // Will deduct after generation
-                    }
-                } else {
-                    console.error('[API DEBUG] Failed to reserve user credits:', error);
-                    return NextResponse.json({
-                        error: 'Lỗi khi đặt trước credits. Vui lòng thử lại.'
-                    }, { status: 500 });
-                }
-            } else {
-                reservationSuccess = data;
-            }
-
-            console.log('[API DEBUG] User credit reservation:', reservationSuccess ? 'SUCCESS' : 'INSUFFICIENT');
+            currentCredits = userData?.current_credits || 0;
         }
 
-        // If reservation failed (insufficient credits), return error
-        if (!reservationSuccess) {
-            console.log('[API DEBUG] INSUFFICIENT_CREDITS - reservation failed');
-            return NextResponse.json(
-                { error: 'Bạn đã hết Credit. Vui lòng nạp thêm để tiếp tục.', code: 'INSUFFICIENT_CREDITS' },
-                { status: 402 }
-            );
+        console.log('[API DEBUG] Current credits:', currentCredits, 'Required:', creditCost);
+
+        // Check if enough credits
+        if (currentCredits < creditCost) {
+            console.log('[API DEBUG] INSUFFICIENT_CREDITS - current:', currentCredits, 'required:', creditCost);
+            return NextResponse.json({
+                error: 'Bạn đã hết Credit. Vui lòng nạp thêm để tiếp tục.',
+                code: 'INSUFFICIENT_CREDITS'
+            }, { status: 402 });
         }
 
-        // 4. Generate Image
-        console.log('[API DEBUG] Credits reserved/checked, proceeding with generation...');
+        // 4. Generate Image (credits NOT deducted yet)
+        console.log('[API DEBUG] Credits sufficient, proceeding with generation...');
         const ai = new GoogleGenAI({ apiKey });
         const response = await ai.models.generateContent({
             model: model || 'gemini-2.5-flash-image',
@@ -167,8 +117,55 @@ export async function POST(req: NextRequest) {
             config: config
         });
 
-        // Credits were already deducted during reservation - no need to deduct again
-        console.log('[API DEBUG] Generation successful, credits already deducted during reservation');
+        // 5. Deduct credits ONLY after successful generation
+        console.log('[API DEBUG] Generation successful, deducting credits...');
+
+        if (isGuest && guestId) {
+            // Try RPC first
+            const { error } = await supabaseAdmin.rpc('decrement_guest_credits', {
+                p_guest_id: guestId,
+                p_amount: creditCost
+            });
+
+            if (error) {
+                // Fallback: manual deduction
+                if (error.message?.includes('function') || error.code === '42883') {
+                    console.warn('[API DEBUG] RPC not found, using manual deduction');
+                    await supabaseAdmin
+                        .from('guest_sessions')
+                        .update({ credits: currentCredits - creditCost })
+                        .eq('guest_id', guestId);
+                } else {
+                    console.error('[API DEBUG] Failed to deduct guest credits:', error);
+                    // Note: Image was generated but credit deduction failed
+                    // User still gets the image
+                }
+            }
+
+        } else if (userId) {
+            // Try RPC first
+            const { error } = await supabaseAdmin.rpc('decrement_user_credits', {
+                p_user_id: userId,
+                p_amount: creditCost
+            });
+
+            if (error) {
+                // Fallback: manual deduction
+                if (error.message?.includes('function') || error.code === '42883') {
+                    console.warn('[API DEBUG] RPC not found, using manual deduction');
+                    await supabaseAdmin
+                        .from('users')
+                        .update({ current_credits: currentCredits - creditCost })
+                        .eq('user_id', userId);
+                } else {
+                    console.error('[API DEBUG] Failed to deduct user credits:', error);
+                    // Note: Image was generated but credit deduction failed
+                    // User still gets the image
+                }
+            }
+        }
+
+        console.log('[API DEBUG] Credits deducted successfully');
 
         return NextResponse.json(response);
 
