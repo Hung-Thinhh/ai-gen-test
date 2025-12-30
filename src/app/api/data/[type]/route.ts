@@ -7,10 +7,11 @@ import { supabaseAdmin } from '@/lib/supabase/client';
  */
 export async function GET(
     req: NextRequest,
-    { params }: { params: { type: string } }
+    { params }: { params: Promise<{ type: string }> }
 ) {
     try {
-        const { type } = params;
+        // Await params in Next.js 15+
+        const { type } = await params;
 
         // Validate type
         const validTypes = ['tools', 'prompts', 'categories'];

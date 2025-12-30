@@ -56,10 +56,12 @@ export async function addImagesToGallery(
             return imageUrls;
         } catch (error) {
             console.error('[API] Error adding to gallery, falling back to legacy:', error);
-            return legacyStorage.addMultipleImagesToCloudGallery(userId, imageUrls, token);
+            await legacyStorage.addMultipleImagesToCloudGallery(userId, imageUrls, token);
+            return imageUrls;
         }
     }
-    return legacyStorage.addMultipleImagesToCloudGallery(userId, imageUrls, token);
+    await legacyStorage.addMultipleImagesToCloudGallery(userId, imageUrls, token);
+    return imageUrls;
 }
 
 /**
