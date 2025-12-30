@@ -296,6 +296,28 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         loadData();
     }, [isLoggedIn, user, guestId]);
 
+    // Listen for logout event to refresh guest credits
+    useEffect(() => {
+        const handleLogout = async () => {
+            console.log('[uiContexts] User logged out, refreshing guest credits...');
+            if (guestId) {
+                try {
+                    const { getGuestCredits } = await import('../services/storageService');
+                    const credits = await getGuestCredits(guestId);
+                    console.log('[uiContexts] Guest credits refreshed after logout:', credits);
+                    setGuestCredits(credits);
+                } catch (e) {
+                    console.error('[uiContexts] Failed to refresh guest credits after logout:', e);
+                    setGuestCredits(3); // Fallback to default
+                }
+            }
+        };
+
+        window.addEventListener('user-logged-out', handleLogout);
+        return () => window.removeEventListener('user-logged-out', handleLogout);
+    }, [guestId]);
+
+
     const t = useCallback((key: string, ...args: any[]) => {
         const keys = key.split('.');
         let translation = keys.reduce((obj, keyPart) => {

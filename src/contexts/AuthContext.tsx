@@ -190,14 +190,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         if (session?.user) {
                             console.log('[Auth] Ensuring user exists before fetching role...');
                             // AWAIT user creation to prevent race condition
-                            await ensureUserExists(session.user).catch((err: any) => {
+                            const userData = await ensureUserExists(session.user).catch((err: any) => {
                                 console.error("[Auth] Ensure user failed:", err);
+                                return null;
                             });
+
+                            // If we got user data back, use it immediately
+                            if (userData) {
+                                console.log('[Auth] ✅ User data received:', userData);
+                                setUserRole(userData.role);
+                                setCachedRole(session.user.id, userData.role);
+
+                                // Trigger a credits refresh in the UI by dispatching a custom event
+                                // This will be picked up by components that display credits
+                                window.dispatchEvent(new CustomEvent('user-credits-updated', {
+                                    detail: { credits: userData.credits }
+                                }));
+                            }
+
                             console.log('[Auth] User ensured, now safe to fetch role');
                         }
                     }
 
                     // Background fetch to ensure freshness (always run AFTER user is ensured)
+                    // This is now redundant if userData was returned, but kept for fallback
                     const fetchRole = async () => {
                         console.log('🔍 [Auth] Fetching role from DB...');
                         try {
@@ -301,6 +317,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const { error } = await supabase.auth.signOut();
             if (error) throw error;
 
+            // Dispatch event to trigger guest credits reload
+            // This will be picked up by uiContexts to refresh guest credits
+            window.dispatchEvent(new CustomEvent('user-logged-out'));
+
             toast.success('Đã đăng xuất.');
         } catch (error: any) {
             console.error("Logout failed:", error);
@@ -335,20 +355,21 @@ export const useAuth = (): AuthContextType => {
 };
 
 // Helper function to ensure user exists in database
-async function ensureUserExists(user: User) {
+// Returns the user's full data including credits
+async function ensureUserExists(user: User): Promise<{ credits: number; role: string } | null> {
     try {
         console.log('[ensureUserExists] Checking if user exists:', user.id);
 
         // Check if user exists - use maybeSingle() to avoid errors
         const { data: existingUser, error: checkError } = await supabase
             .from('users')
-            .select('user_id')
+            .select('user_id, current_credits, role')
             .eq('user_id', user.id)
             .maybeSingle();
 
         if (checkError) {
             console.error('[ensureUserExists] Error checking user existence:', checkError);
-            return;
+            return null;
         }
 
         if (!existingUser) {
@@ -357,8 +378,8 @@ async function ensureUserExists(user: User) {
             // Check for potential guest credits to transfer - DISABLED per new requirement
             let initialCredits = 10; // Fixed 10 credits for new users (No accumulation)
 
-            // Create new user
-            const { error } = await supabase
+            // Create new user and return the created data
+            const { data: newUser, error } = await supabase
                 .from('users')
                 .insert({
                     user_id: user.id,
@@ -369,18 +390,32 @@ async function ensureUserExists(user: User) {
                     current_credits: initialCredits,
                     role: 'user',
                     created_at: new Date().toISOString()
-                });
+                })
+                .select('current_credits, role')
+                .single();
 
             if (error) {
                 console.error('[ensureUserExists] Failed to create user:', error);
+                return null;
             } else {
                 console.log(`[ensureUserExists] ✅ New user created with ${initialCredits} credits`);
                 toast.success('Chào mừng! Bạn nhận được 10 credits miễn phí! 🎉');
+                // Return the newly created user's data
+                return {
+                    credits: newUser?.current_credits ?? initialCredits,
+                    role: newUser?.role ?? 'user'
+                };
             }
         } else {
             console.log('[ensureUserExists] ✅ User already exists, skipping creation');
+            // Return existing user's data
+            return {
+                credits: existingUser.current_credits ?? 0,
+                role: existingUser.role ?? 'user'
+            };
         }
     } catch (error) {
         console.error('[ensureUserExists] Error ensuring user exists:', error);
+        return null;
     }
 }
