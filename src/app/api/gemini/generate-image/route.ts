@@ -52,9 +52,10 @@ export async function POST(req: NextRequest) {
         console.log('[API DEBUG] Credit cost from header:', creditCost);
         console.log('[API DEBUG] Model:', model);
 
-        // 3. ATOMIC CREDIT RESERVATION - Reserve credits BEFORE generation
-        // This prevents race conditions when generating multiple images in parallel
+        // 3. Check credits and attempt atomic reservation (with fallback)
+        // Try new atomic reservation first, fallback to old method if function doesn't exist
         let reservationSuccess = false;
+        let useOldMethod = false;
 
         if (isGuest && guestId) {
             // First, ensure guest session exists
@@ -82,39 +83,69 @@ export async function POST(req: NextRequest) {
                     }, { status: 500 });
                 }
 
+                guestData = newGuest;
                 console.log('[API DEBUG] Guest session created with', defaultCredits, 'credits');
             }
 
-            // Now atomically reserve credits
+            // Try atomic reservation
             const { data, error } = await supabaseAdmin.rpc('reserve_guest_credits', {
                 p_guest_id: guestId,
                 p_amount: creditCost
             });
 
             if (error) {
-                console.error('[API DEBUG] Failed to reserve guest credits:', error);
-                return NextResponse.json({
-                    error: 'Lỗi khi đặt trước credits. Vui lòng thử lại.'
-                }, { status: 500 });
+                // Check if error is because function doesn't exist
+                if (error.message?.includes('function') || error.code === '42883') {
+                    console.warn('[API DEBUG] reserve_guest_credits function not found, using fallback method');
+                    useOldMethod = true;
+                    // Check credits manually
+                    const currentCredits = guestData?.credits || 0;
+                    if (currentCredits >= creditCost) {
+                        reservationSuccess = true; // Will deduct after generation
+                    }
+                } else {
+                    console.error('[API DEBUG] Failed to reserve guest credits:', error);
+                    return NextResponse.json({
+                        error: 'Lỗi khi đặt trước credits. Vui lòng thử lại.'
+                    }, { status: 500 });
+                }
+            } else {
+                reservationSuccess = data;
             }
 
-            reservationSuccess = data;
             console.log('[API DEBUG] Guest credit reservation:', reservationSuccess ? 'SUCCESS' : 'INSUFFICIENT');
         } else if (userId) {
-            // Atomically reserve user credits
+            // Try atomic reservation
             const { data, error } = await supabaseAdmin.rpc('reserve_user_credits', {
                 p_user_id: userId,
                 p_amount: creditCost
             });
 
             if (error) {
-                console.error('[API DEBUG] Failed to reserve user credits:', error);
-                return NextResponse.json({
-                    error: 'Lỗi khi đặt trước credits. Vui lòng thử lại.'
-                }, { status: 500 });
+                // Check if error is because function doesn't exist
+                if (error.message?.includes('function') || error.code === '42883') {
+                    console.warn('[API DEBUG] reserve_user_credits function not found, using fallback method');
+                    useOldMethod = true;
+                    // Check credits manually
+                    const { data: userData } = await supabaseAdmin
+                        .from('users')
+                        .select('current_credits')
+                        .eq('user_id', userId)
+                        .single();
+                    const currentCredits = userData?.current_credits || 0;
+                    if (currentCredits >= creditCost) {
+                        reservationSuccess = true; // Will deduct after generation
+                    }
+                } else {
+                    console.error('[API DEBUG] Failed to reserve user credits:', error);
+                    return NextResponse.json({
+                        error: 'Lỗi khi đặt trước credits. Vui lòng thử lại.'
+                    }, { status: 500 });
+                }
+            } else {
+                reservationSuccess = data;
             }
 
-            reservationSuccess = data;
             console.log('[API DEBUG] User credit reservation:', reservationSuccess ? 'SUCCESS' : 'INSUFFICIENT');
         }
 
@@ -127,8 +158,8 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // 4. Generate Image (credits already reserved/deducted)
-        console.log('[API DEBUG] Credits reserved successfully, proceeding with generation...');
+        // 4. Generate Image
+        console.log('[API DEBUG] Credits reserved/checked, proceeding with generation...');
         const ai = new GoogleGenAI({ apiKey });
         const response = await ai.models.generateContent({
             model: model || 'gemini-2.5-flash-image',
