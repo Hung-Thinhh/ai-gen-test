@@ -647,19 +647,24 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     // NEW: Refresh Credits Function
     const refreshCredits = useCallback(async () => {
+        console.log('[refreshCredits] ⚡ Called! isLoggedIn:', isLoggedIn, 'user:', user?.id, 'guestId:', guestId);
         try {
             if (isLoggedIn && user) {
+                console.log('[refreshCredits] Fetching user credits with token...');
                 const credits = await storageService.getUserCredits(user.id, token || undefined);
-                console.log('[refreshCredits] Updated user credits:', credits);
+                console.log('[refreshCredits] ✅ Updated user credits:', credits);
                 setUserCredits(credits);
             } else if (guestId) {
+                console.log('[refreshCredits] Fetching guest credits...');
                 const { getGuestCredits } = await import('../services/storageService');
                 const credits = await getGuestCredits(guestId);
-                console.log('[refreshCredits] Updated guest credits:', credits);
+                console.log('[refreshCredits] ✅ Updated guest credits:', credits);
                 setGuestCredits(credits);
+            } else {
+                console.warn('[refreshCredits] ⚠️ No user or guestId available');
             }
         } catch (error: any) {
-            console.error('[refreshCredits] Failed to refresh credits:', error);
+            console.error('[refreshCredits] ❌ Failed to refresh credits:', error);
             // Don't update state on error - preserve existing values
             // Show subtle warning to user
             toast.error('Không thể cập nhật số dư credits. Vui lòng thử lại.', {

@@ -892,7 +892,7 @@ ${aspectRatioPrompt}
                 '2:3 (Poster dọc)': '2:3',
             };
             const selectedAspectRatio = appState.options.aspectRatio || 'Giữ nguyên theo ảnh tham khảo';
-            const geminiAspectRatio = aspectRatioMap[selectedAspectRatio];
+            const geminiAspectRatio = aspectRatioMap[selectedAspectRatio] || undefined;
 
             console.log('[PosterCreator] Selected aspect ratio:', selectedAspectRatio);
             console.log('[PosterCreator] Mapped to Gemini format:', geminiAspectRatio);
@@ -900,12 +900,12 @@ ${aspectRatioPrompt}
             // Create an array of promises for parallel execution
             const generationPromises = Array.from({ length: imageCount }).map(async (_, index) => {
                 try {
-                    // Generate with aspect ratio parameter
+                    // Generate with aspect ratio parameter (undefined is OK - means no constraint)
                     const resultBase64 = await generateStyledImage(
                         prompt,
                         imagesToUse,
                         `Style: ${selectedStyle} - Variation ${index}`,
-                        geminiAspectRatio // Pass aspect ratio to API
+                        geminiAspectRatio // Pass aspect ratio to API (undefined = no constraint)
                     );
 
                     let imageUrlForDisplay = '';
