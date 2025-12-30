@@ -322,6 +322,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             window.dispatchEvent(new CustomEvent('user-logged-out'));
 
             toast.success('Đã đăng xuất.');
+
+            // Reload page to clear all state and start fresh
+            window.location.reload();
         } catch (error: any) {
             console.error("Logout failed:", error);
             toast.error('Đăng xuất thất bại.');

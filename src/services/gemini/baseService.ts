@@ -198,6 +198,14 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             console.log(`[Gemini Debug] Attempt ${attempt}: Sending request to Internal API. Model: ${model}`);
+            console.log('[Gemini Debug] Request details:', {
+                url: '/api/gemini/generate-image',
+                method: 'POST',
+                hasToken: !!token,
+                hasGuestId: !!guestId,
+                creditCost: headers['x-credit-cost'],
+                modelVersion: currentVersion
+            });
 
             const response = await fetch('/api/gemini/generate-image', {
                 method: 'POST',
@@ -209,8 +217,15 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
                 })
             });
 
+            console.log('[Gemini Debug] Response received:', {
+                status: response.status,
+                statusText: response.statusText,
+                ok: response.ok
+            });
+
             if (!response.ok) {
                 const errorData = await response.json();
+                console.error('[Gemini Debug] API Error Response:', errorData);
 
                 // Handle specific credit error
                 if (response.status === 402 || errorData.code === 'INSUFFICIENT_CREDITS') {
