@@ -151,6 +151,73 @@ export function processGeminiResponse(response: GenerateContentResponse): string
     throw new Error(`The AI model responded with text instead of an image: "${textResponse || 'No text response received.'}"`);
 }
 
+// --- Session Cache for Parallel Requests ---
+let cachedSession: { token?: string; timestamp: number } | null = null;
+const SESSION_CACHE_DURATION = 30000; // 30 seconds
+
+async function getCachedSession(): Promise<string | undefined> {
+    const now = Date.now();
+
+    // Return cached session if still valid
+    if (cachedSession && (now - cachedSession.timestamp) < SESSION_CACHE_DURATION) {
+        devLog('[baseService] Using cached session');
+        return cachedSession.token;
+    }
+
+    // Fetch new session
+    devLog('[baseService] Fetching fresh session...');
+    try {
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('getSession timeout')), 3000)
+        );
+
+        const { data: { session } } = await Promise.race([
+            sessionPromise,
+            timeoutPromise
+        ]) as any;
+
+        const token = session?.access_token;
+
+        // Cache the result
+        cachedSession = { token, timestamp: now };
+        devLog('[baseService] Session cached successfully');
+
+        return token;
+    } catch (error) {
+        devWarn('[baseService] getSession failed, trying localStorage fallback...', error);
+
+        // Fallback to localStorage
+        if (typeof window !== 'undefined') {
+            try {
+                const allKeys = Object.keys(localStorage);
+                const supabaseKey = allKeys.find(key => key.includes('supabase') || key.includes('sb-'));
+
+                if (supabaseKey) {
+                    const authData = localStorage.getItem(supabaseKey);
+                    if (authData) {
+                        const parsed = JSON.parse(authData);
+                        const token = parsed?.access_token
+                            || parsed?.currentSession?.access_token
+                            || parsed?.session?.access_token;
+
+                        if (token) {
+                            // Cache the fallback result
+                            cachedSession = { token, timestamp: now };
+                            devLog('[baseService] Token from localStorage cached');
+                            return token;
+                        }
+                    }
+                }
+            } catch (e) {
+                devError('[baseService] localStorage fallback failed:', e);
+            }
+        }
+
+        return undefined;
+    }
+}
+
 /**
  * A wrapper for the Gemini API call that includes a retry mechanism for internal server errors
  * and for responses that don't contain an image.
@@ -169,65 +236,9 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
     let lastError: Error | null = null;
     const currentVersion = globalConfig.modelVersion;
 
-    devLog('⏳ [BASESERVICE] Đang lấy session từ Supabase...');
-
     // 1. Get Auth Token OR Guest ID for Credit Deduction
-    // Add timeout to prevent infinite hang
-    let token: string | undefined;
-    try {
-        const sessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('getSession timeout')), 10000) // Tăng lên 10s
-        );
-
-        const { data: { session } } = await Promise.race([
-            sessionPromise,
-            timeoutPromise
-        ]) as any;
-
-        token = session?.access_token;
-        devLog('✅ [BASESERVICE] Đã lấy session xong!');
-    } catch (error) {
-        devWarn('⚠️ [BASESERVICE] getSession failed or timeout, trying fallback...', error);
-        // Fallback: try to get token from localStorage directly
-        if (typeof window !== 'undefined') {
-            try {
-                // Debug: Log all localStorage keys
-                devLog('[BASESERVICE] Checking localStorage keys...');
-                const allKeys = Object.keys(localStorage);
-                devLog('[BASESERVICE] All localStorage keys:', allKeys);
-
-                // Try to find Supabase auth key
-                const supabaseKey = allKeys.find(key => key.includes('supabase') || key.includes('sb-'));
-                devLog('[BASESERVICE] Found Supabase key:', supabaseKey);
-
-                if (supabaseKey) {
-                    const authData = localStorage.getItem(supabaseKey);
-                    devLog('[BASESERVICE] Auth data length:', authData?.length);
-
-                    if (authData) {
-                        const parsed = JSON.parse(authData);
-                        devLog('[BASESERVICE] Parsed auth data keys:', Object.keys(parsed));
-
-                        // Try different possible token locations
-                        token = parsed?.access_token
-                            || parsed?.currentSession?.access_token
-                            || parsed?.session?.access_token;
-
-                        if (token) {
-                            devLog('✅ [BASESERVICE] Lấy token từ localStorage thành công!');
-                        } else {
-                            devWarn('⚠️ [BASESERVICE] Tìm thấy auth data nhưng không có access_token');
-                        }
-                    }
-                } else {
-                    devWarn('⚠️ [BASESERVICE] Không tìm thấy Supabase key trong localStorage');
-                }
-            } catch (e) {
-                devError('❌ [BASESERVICE] Không thể lấy token từ localStorage:', e);
-            }
-        }
-    }
+    // Use cached session to avoid timeout on parallel requests
+    const token = await getCachedSession();
 
     // Fallback to Guest ID if no token
     const guestId = typeof window !== 'undefined' ? localStorage.getItem('guest_device_id') : null;

@@ -378,6 +378,7 @@ const PosterCreator: React.FC<PosterCreatorProps> = (props) => {
     const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
     const [pendingImageSlots, setPendingImageSlots] = useState<number>(0); // Track how many images are still loading
     const [displayImages, setDisplayImages] = useState<string[]>([]); // Images created in current session
+    const [isGenerating, setIsGenerating] = useState<boolean>(false); // Prevent double execution
     const MAX_DISPLAY_IMAGES = 4; // Maximum images to show on screen
     const generatedBlobUrlsRef = React.useRef<string[]>([]);
     const resultsRef = React.useRef<HTMLDivElement>(null);
@@ -834,6 +835,12 @@ ${aspectRatioPrompt}
         console.log('Đang tạoooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo...');
         console.log(appState.productImages);
 
+        // Prevent double execution
+        if (isGenerating) {
+            console.log('⚠️ Already generating, skipping duplicate call');
+            return;
+        }
+
         if (appState.productImages.length === 0) return;
 
         const imageCount = appState.options.imageCount || 1;
@@ -849,6 +856,9 @@ ${aspectRatioPrompt}
 
             return;
         }
+
+        // Set generating flag
+        setIsGenerating(true);
 
         // Clear previous images but KEEP placeholders active
         generatedBlobUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
@@ -979,10 +989,16 @@ ${aspectRatioPrompt}
             await Promise.all(generationPromises);
             console.log("All parallel generations completed.");
 
+            // Reset generating flag
+            setIsGenerating(false);
+
         } catch (error) {
             console.error('Fatal error in generation setup:', error);
             onStateChange({ ...appState, error: 'Failed to start generation.' });
             setPendingImageSlots(0);
+
+            // Reset generating flag on error
+            setIsGenerating(false);
         }
     };
 

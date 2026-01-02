@@ -894,7 +894,7 @@ export const logGenerationHistory = async (userId: string | null, entry: any, to
 
                 if (!toolError && toolData) {
                     baseCreditCost = toolData.base_credit_cost || 0;
-                    console.log(`[Storage] Tool ${resolvedToolId} base_credit_cost: ${baseCreditCost}`);
+                    // console.log(`[Storage] Tool ${resolvedToolId} base_credit_cost: ${baseCreditCost}`);
                 } else {
                     console.warn(`[Storage] Could not fetch base_credit_cost for tool ${resolvedToolId}:`, toolError);
                 }
@@ -912,7 +912,7 @@ export const logGenerationHistory = async (userId: string | null, entry: any, to
             ? entry.credits_used
             : calculatedCreditsUsed;
 
-        console.log(`[Storage] Credits calculation: ${baseCreditCost} (base) * ${generationCount} (count) = ${calculatedCreditsUsed} credits`);
+        // console.log(`[Storage] Credits calculation: ${baseCreditCost} (base) * ${generationCount} (count) = ${calculatedCreditsUsed} credits`);
 
         // Map frontend fields to DB columns
         const dbEntry: any = {
@@ -946,7 +946,7 @@ export const logGenerationHistory = async (userId: string | null, entry: any, to
             return { data: null, error };
         }, token);
 
-        console.log(`[Storage] Generation log saved. Tool ID: ${resolvedToolId}, Credits used: ${finalCreditsUsed}`);
+        // console.log(`[Storage] Generation log saved. Tool ID: ${resolvedToolId}, Credits used: ${finalCreditsUsed}`);
     } catch (error) {
         console.error("Error in logGenerationHistory:", error);
     }

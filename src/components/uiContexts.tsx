@@ -550,7 +550,7 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 // 2. Save all URLs to Supabase DB (Batch)
                 await storageService.addMultipleImagesToCloudGallery(user.id, uploadedUrls, token || undefined);
 
-                toast.success('Đã lưu ảnh vào Cloud!');
+                // toast.success('Đã lưu ảnh vào Cloud!');
                 setImageGallery(prev => {
                     const newUnique = uploadedUrls.filter(u => !prev.includes(u));
                     return [...newUnique, ...prev];

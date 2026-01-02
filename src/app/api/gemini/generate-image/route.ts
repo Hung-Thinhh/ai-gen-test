@@ -128,6 +128,14 @@ export async function POST(req: NextRequest) {
             });
 
             if (error) {
+                // Log full error details for debugging
+                console.error('[API DEBUG] RPC Error Details:', {
+                    message: error.message,
+                    code: error.code,
+                    details: error.details,
+                    hint: error.hint
+                });
+
                 // Fallback: manual deduction
                 if (error.message?.includes('function') || error.code === '42883') {
                     console.warn('[API DEBUG] RPC not found, using manual deduction');
@@ -140,6 +148,8 @@ export async function POST(req: NextRequest) {
                     // Note: Image was generated but credit deduction failed
                     // User still gets the image
                 }
+            } else {
+                console.log('[API DEBUG] ✅ RPC decrement_guest_credits succeeded');
             }
 
         } else if (userId) {
@@ -150,6 +160,14 @@ export async function POST(req: NextRequest) {
             });
 
             if (error) {
+                // Log full error details for debugging
+                console.error('[API DEBUG] RPC Error Details (User):', {
+                    message: error.message,
+                    code: error.code,
+                    details: error.details,
+                    hint: error.hint
+                });
+
                 // Fallback: manual deduction
                 if (error.message?.includes('function') || error.code === '42883') {
                     console.warn('[API DEBUG] RPC not found, using manual deduction');
@@ -162,6 +180,8 @@ export async function POST(req: NextRequest) {
                     // Note: Image was generated but credit deduction failed
                     // User still gets the image
                 }
+            } else {
+                console.log('[API DEBUG] ✅ RPC decrement_user_credits succeeded');
             }
         }
 
