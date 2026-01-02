@@ -831,6 +831,9 @@ ${aspectRatioPrompt}
     };
 
     const executeInitialGeneration = async () => {
+        console.log('Đang tạoooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo...');
+        console.log(appState.productImages);
+
         if (appState.productImages.length === 0) return;
 
         const imageCount = appState.options.imageCount || 1;
@@ -838,8 +841,12 @@ ${aspectRatioPrompt}
         // Check credits for TOTAL images FIRST (before UI changes)
         const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
         const totalCost = imageCount * creditCostPerImage;
+        console.log('CHECK CREDITTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT');
+
         if (!await checkCredits(totalCost)) {
             // Credits insufficient - stay in current state, popup will show
+            console.log('CHECK CREDITTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT loi');
+
             return;
         }
 

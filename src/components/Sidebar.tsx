@@ -363,9 +363,9 @@ const Sidebar: React.FC = () => {
                             <p className="text-sm font-medium themed-text truncate">
                                 {user?.user_metadata?.full_name || user?.email || 'User'}
                             </p>
-                            <p className="text-xs themed-text-tertiary">
+                            {/* <p className="text-xs themed-text-tertiary">
                                 {t('sidebar_generations') || 'Số lần tạo'}: <span className="font-semibold" style={{ color: 'var(--accent-primary)' }}>0</span>
-                            </p>
+                            </p> */}
                         </div>
                     </div>
                 ) : (

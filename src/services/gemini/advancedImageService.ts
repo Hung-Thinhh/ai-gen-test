@@ -299,6 +299,8 @@ export async function generateStyledImage(
 
     const parts = [...imageParts, { text: fullPrompt }];
     const config = aspectRatio ? { aspectRatio } : {};
+    console.log('gọi apiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii');
+
     const response = await callGeminiWithRetry(parts, config);
     return processGeminiResponse(response);
 }

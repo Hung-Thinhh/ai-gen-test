@@ -26,6 +26,29 @@ export const getModelConfig = () => globalConfig;
 export const getTextModel = () => globalConfig.modelVersion === 'v3' ? 'gemini-3-pro-preview' : 'gemini-2.5-flash';
 export const getImageModel = () => globalConfig.modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image';
 
+// --- Development Mode Detection ---
+const isDev = process.env.NODE_ENV === 'development';
+
+// Helper function for conditional logging
+const devLog = (...args: any[]) => {
+    if (isDev) {
+        console.log(...args);
+    }
+};
+
+const devWarn = (...args: any[]) => {
+    if (isDev) {
+        console.warn(...args);
+    }
+};
+
+const devError = (...args: any[]) => {
+    if (isDev) {
+        console.error(...args);
+    }
+};
+
+
 // --- Centralized Error Processor ---
 export function processApiError(error: unknown): Error {
     const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
@@ -137,22 +160,84 @@ export function processGeminiResponse(response: GenerateContentResponse): string
  * @returns The GenerateContentResponse from the API.
  */
 export async function callGeminiWithRetry(parts: object[], config: any = {}): Promise<GenerateContentResponse> {
+    devLog('🚀🚀🚀 [BASESERVICE] callGeminiWithRetry BẮT ĐẦU 🚀🚀🚀');
+    devLog('[BASESERVICE] Parts count:', parts.length);
+    devLog('[BASESERVICE] Config:', config);
+
     const maxRetries = 3;
     const initialDelay = 1000;
     let lastError: Error | null = null;
     const currentVersion = globalConfig.modelVersion;
 
+    devLog('⏳ [BASESERVICE] Đang lấy session từ Supabase...');
+
     // 1. Get Auth Token OR Guest ID for Credit Deduction
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
+    // Add timeout to prevent infinite hang
+    let token: string | undefined;
+    try {
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('getSession timeout')), 10000) // Tăng lên 10s
+        );
+
+        const { data: { session } } = await Promise.race([
+            sessionPromise,
+            timeoutPromise
+        ]) as any;
+
+        token = session?.access_token;
+        devLog('✅ [BASESERVICE] Đã lấy session xong!');
+    } catch (error) {
+        devWarn('⚠️ [BASESERVICE] getSession failed or timeout, trying fallback...', error);
+        // Fallback: try to get token from localStorage directly
+        if (typeof window !== 'undefined') {
+            try {
+                // Debug: Log all localStorage keys
+                devLog('[BASESERVICE] Checking localStorage keys...');
+                const allKeys = Object.keys(localStorage);
+                devLog('[BASESERVICE] All localStorage keys:', allKeys);
+
+                // Try to find Supabase auth key
+                const supabaseKey = allKeys.find(key => key.includes('supabase') || key.includes('sb-'));
+                devLog('[BASESERVICE] Found Supabase key:', supabaseKey);
+
+                if (supabaseKey) {
+                    const authData = localStorage.getItem(supabaseKey);
+                    devLog('[BASESERVICE] Auth data length:', authData?.length);
+
+                    if (authData) {
+                        const parsed = JSON.parse(authData);
+                        devLog('[BASESERVICE] Parsed auth data keys:', Object.keys(parsed));
+
+                        // Try different possible token locations
+                        token = parsed?.access_token
+                            || parsed?.currentSession?.access_token
+                            || parsed?.session?.access_token;
+
+                        if (token) {
+                            devLog('✅ [BASESERVICE] Lấy token từ localStorage thành công!');
+                        } else {
+                            devWarn('⚠️ [BASESERVICE] Tìm thấy auth data nhưng không có access_token');
+                        }
+                    }
+                } else {
+                    devWarn('⚠️ [BASESERVICE] Không tìm thấy Supabase key trong localStorage');
+                }
+            } catch (e) {
+                devError('❌ [BASESERVICE] Không thể lấy token từ localStorage:', e);
+            }
+        }
+    }
 
     // Fallback to Guest ID if no token
     const guestId = typeof window !== 'undefined' ? localStorage.getItem('guest_device_id') : null;
 
-    console.log('[baseService DEBUG] token:', token ? 'EXISTS' : 'NULL');
-    console.log('[baseService DEBUG] guestId:', guestId ? guestId : 'NULL');
+    devLog('[baseService DEBUG] token:', token ? 'EXISTS' : 'NULL');
+    devLog('[baseService DEBUG] guestId:', guestId ? guestId : 'NULL');
 
     if (!token && !guestId) {
+        devLog('Vui lòng đăng nhập hoặc tải lại trang để khởi tạo phiên khách (Guest Session).');
+
         throw new Error("Vui lòng đăng nhập hoặc tải lại trang để khởi tạo phiên khách (Guest Session).");
     }
 
@@ -179,8 +264,8 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
         ...extraConfig
     };
 
-    console.log('[baseService] Model version:', globalConfig.modelVersion);
-    console.log('[baseService] Final config:', JSON.stringify(finalConfig, null, 2));
+    devLog('[baseService] Model version:', globalConfig.modelVersion);
+    devLog('[baseService] Final config:', JSON.stringify(finalConfig, null, 2));
 
     // Prepare Headers
     const headers: Record<string, string> = {
@@ -189,16 +274,16 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
     };
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
-        console.log('[baseService DEBUG] Using Authorization header');
+        devLog('[baseService DEBUG] Using Authorization header');
     } else if (guestId) {
         headers['X-Guest-ID'] = guestId;
-        console.log('[baseService DEBUG] Using X-Guest-ID header:', guestId);
+        devLog('[baseService DEBUG] Using X-Guest-ID header:', guestId);
     }
-    console.log('[baseService DEBUG] Final headers:', headers);
+    devLog('[baseService DEBUG] Final headers:', headers);
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            console.log(`[Gemini Debug] Attempt ${attempt}: Sending request to Internal API. Model: ${model}`);
-            console.log('[Gemini Debug] Request details:', {
+            devLog(`[Gemini Debug] Attempt ${attempt}: Sending request to Internal API. Model: ${model}`);
+            devLog('[Gemini Debug] Request details:', {
                 url: '/api/gemini/generate-image',
                 method: 'POST',
                 hasToken: !!token,
@@ -210,12 +295,15 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
             // Add timeout to detect hanging requests
             const controller = new AbortController();
             const timeoutId = setTimeout(() => {
-                console.error('[Gemini Debug] Request timeout after 60s!');
+                devError('[Gemini Debug] Request timeout after 60s!');
                 controller.abort();
             }, 60000); // 60 second timeout
 
             let response;
             try {
+                devLog('📡📡📡 [BASESERVICE] ĐANG GỌI FETCH /api/gemini/generate-image 📡📡📡');
+                devLog('[BASESERVICE] Request body:', { parts: parts.length, config: finalConfig, model });
+
                 response = await fetch('/api/gemini/generate-image', {
                     method: 'POST',
                     headers: headers,
@@ -229,7 +317,11 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
 
                 clearTimeout(timeoutId);
 
-                console.log('[Gemini Debug] Response received:', {
+                devLog('✅✅✅ [BASESERVICE] NHẬN ĐƯỢC RESPONSE TỪ API ✅✅✅');
+                devLog('[BASESERVICE] Response status:', response.status);
+                devLog('[BASESERVICE] Response ok:', response.ok);
+
+                devLog('[Gemini Debug] Response received:', {
                     status: response.status,
                     statusText: response.statusText,
                     ok: response.ok
@@ -237,7 +329,7 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
 
                 if (!response.ok) {
                     const errorData = await response.json();
-                    console.error('[Gemini Debug] API Error Response:', errorData);
+                    devError('[Gemini Debug] API Error Response:', errorData);
 
                     // Handle specific credit error
                     if (response.status === 402 || errorData.code === 'INSUFFICIENT_CREDITS') {
@@ -249,7 +341,7 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
             } catch (fetchError: any) {
                 clearTimeout(timeoutId);
                 if (fetchError.name === 'AbortError') {
-                    console.error('[Gemini Debug] Request was aborted due to timeout');
+                    devError('[Gemini Debug] Request was aborted due to timeout');
                     throw new Error('Request timeout - Server không phản hồi sau 60 giây');
                 }
                 throw fetchError;
@@ -264,10 +356,10 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
                 try {
                     if (typeof window !== 'undefined' && (window as any).__refreshCredits) {
                         await (window as any).__refreshCredits();
-                        console.log('[baseService] Credits refreshed in UI after generation');
+                        devLog('[baseService] Credits refreshed in UI after generation');
                     }
                 } catch (refreshError) {
-                    console.warn('[baseService] Failed to refresh credits:', refreshError);
+                    devWarn('[baseService] Failed to refresh credits:', refreshError);
                 }
                 return data;
             }
@@ -275,13 +367,13 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
             // If no image is found, treat it as a failure and prepare for retry.
             const textResponse = data.text || "No text response received.";
             lastError = new Error(`The AI model responded with text instead of an image: "${textResponse}"`);
-            console.warn(`Attempt ${attempt}/${maxRetries}: No image returned. Retrying... Response text: ${textResponse}`);
+            devWarn(`Attempt ${attempt}/${maxRetries}: No image returned. Retrying... Response text: ${textResponse}`);
 
         } catch (error) {
             const processedError = processApiError(error);
             lastError = processedError;
             const errorMessage = processedError.message;
-            console.error(`Error calling Gemini API (Attempt ${attempt}/${maxRetries}):`, errorMessage);
+            devError(`Error calling Gemini API (Attempt ${attempt}/${maxRetries}):`, errorMessage);
 
             // Don't retry on critical errors like invalid API key or quota issues.
             if (errorMessage.includes('hết Credit') || errorMessage.includes('API Key không hợp lệ') || errorMessage.includes('429') || errorMessage.toLowerCase().includes('quota')) {
@@ -296,7 +388,7 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
 
         if (attempt < maxRetries) {
             const delay = initialDelay * Math.pow(2, attempt - 1);
-            console.log(`Waiting ${delay}ms before next attempt...`);
+            devLog(`Waiting ${delay}ms before next attempt...`);
             await new Promise(resolve => setTimeout(resolve, delay));
         }
     }
