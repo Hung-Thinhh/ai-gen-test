@@ -137,6 +137,17 @@ export const PromptLibrary: React.FC<PromptLibraryProps> = ({ onClose }) => {
         setActiveCategory(categoryId);
     };
 
+    const handleUsePrompt = (prompt: Prompt) => {
+        // Store prompt in sessionStorage
+        sessionStorage.setItem('selectedPrompt', prompt.text);
+
+        // Close the library
+        onClose();
+
+        // Navigate using router with hash
+        router.push('/tool/free-generation');
+    };
+
     return (
         <div className="w-full h-full flex flex-col themed-bg">
             {/* Header */}
@@ -206,27 +217,44 @@ export const PromptLibrary: React.FC<PromptLibraryProps> = ({ onClose }) => {
                                             </div>
                                         </div>
 
-                                        {/* Copy Button */}
-                                        <button
-                                            onClick={() => handleCopyPrompt(prompt)}
-                                            className="w-full py-2.5 flex items-center justify-center gap-2 transition-colors"
-                                            style={{
-                                                backgroundColor: copiedId === prompt.id ? 'var(--accent-primary)' : 'rgba(249, 115, 22, 0.1)',
-                                                color: copiedId === prompt.id ? '#000' : 'var(--accent-primary)'
-                                            }}
-                                        >
-                                            {copiedId === prompt.id ? (
-                                                <>
-                                                    <DownloadIcon className="w-4 h-4" />
-                                                    <span className="text-sm font-medium">{t('promptLibrary_copied')}</span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <DocumentTextIcon className="w-4 h-4" />
-                                                    <span className="text-sm font-medium">{t('promptLibrary_copy')}</span>
-                                                </>
-                                            )}
-                                        </button>
+                                        {/* Action Buttons - Vertical Stack */}
+                                        <div className="flex flex-col gap-1.5">
+                                            {/* Use Now Button - Primary Action */}
+                                            <button
+                                                onClick={() => handleUsePrompt(prompt)}
+                                                className="w-full cursor-pointer py-3 flex items-center justify-center gap-2 transition-all duration-200 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98]"
+                                            >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                                </svg>
+                                                <span className="text-sm font-semibold">Dùng ngay</span>
+                                            </button>
+
+                                            {/* Copy Button - Secondary Action */}
+                                            <button
+                                                onClick={() => handleCopyPrompt(prompt)}
+                                                className="w-full cursor-pointer py-2.5 flex items-center justify-center gap-2 transition-all duration-200 rounded-lg border"
+                                                style={{
+                                                    backgroundColor: copiedId === prompt.id ? 'rgba(34, 197, 94, 0.15)' : 'rgba(249, 115, 22, 0.08)',
+                                                    color: copiedId === prompt.id ? 'rgb(34, 197, 94)' : 'var(--accent-primary)',
+                                                    borderColor: copiedId === prompt.id ? 'rgba(34, 197, 94, 0.3)' : 'rgba(249, 115, 22, 0.2)'
+                                                }}
+                                            >
+                                                {copiedId === prompt.id ? (
+                                                    <>
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                        </svg>
+                                                        <span className="text-sm font-medium">Đã sao chép</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <DocumentTextIcon className="w-4 h-4" />
+                                                        <span className="text-sm">Sao chép</span>
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
                                     </motion.div>
                                 ))}
                             </AnimatePresence>

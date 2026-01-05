@@ -65,7 +65,7 @@ export const renderSmartlyWrappedTitle = (title: string, enabled: boolean, words
 interface RegenerationModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onConfirmImage: (prompt: string) => void;
+    onConfirmImage?: (prompt: string) => void;
     onConfirmVideo?: (prompt: string) => void;
     itemToModify: string | null;
     title?: string;
@@ -92,10 +92,14 @@ export const RegenerationModal: React.FC<RegenerationModalProps> = ({
     }, [isOpen]);
 
     const handleConfirmImage = () => {
-        onConfirmImage(customPrompt);
+        console.log('[RegenerationModal] handleConfirmImage called with prompt:', customPrompt);
+        if (onConfirmImage) {
+            onConfirmImage(customPrompt);
+        }
     };
 
     const handleConfirmVideo = () => {
+        console.log('[RegenerationModal] handleConfirmVideo called with prompt:', customPrompt);
         if (onConfirmVideo) {
             onConfirmVideo(customPrompt);
         }

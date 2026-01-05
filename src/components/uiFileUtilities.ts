@@ -87,6 +87,39 @@ export const downloadImage = async (url: string, filenameWithoutExtension: strin
             else if (mimeType === 'video/webm') extension = 'webm';
         }
 
+        // Auto-convert WebP to PNG for better compatibility
+        if (extension === 'webp') {
+            try {
+                toast('Đang chuyển đổi sang PNG...', { id: 'converting' });
+                const img = new Image();
+                const objectUrl = URL.createObjectURL(blob);
+
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = reject;
+                    img.src = objectUrl;
+                });
+
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.drawImage(img, 0, 0);
+                    const pngBlob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+                    if (pngBlob) {
+                        blob = pngBlob;
+                        extension = 'png';
+                    }
+                }
+                URL.revokeObjectURL(objectUrl);
+                toast.dismiss('converting');
+            } catch (e) {
+                console.error("Failed to convert WebP to PNG, downloading as WebP", e);
+                toast.error("Không thể chuyển đổi sang PNG, đang tải về dưới dạng gốc.");
+            }
+        }
+
         const filename = `${filenameWithoutExtension}.${extension}`;
         const objectUrl = URL.createObjectURL(blob);
 

@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { cn } from '../lib/utils';
 import Sidebar from './Sidebar';
+import LeonardoHeader from './LeonardoHeader';
 import AppToolbar from './AppToolbar';
 import Footer from './Footer';
 import LoginScreen from './LoginScreen';
@@ -113,9 +114,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 }}
             />
 
-            <Sidebar />
+            {/* Sidebar - Hidden for Leonardo style */}
+            {/* <Sidebar /> */}
 
-            <div className="flex-1 md:ml-64 relative h-full flex flex-col overflow-y-auto overflow-x-hidden">
+            {/* Leonardo Header */}
+            <LeonardoHeader />
+
+            <div id="main-content-scroll" className="flex-1 relative h-full flex flex-col overflow-y-auto overflow-x-hidden">
                 {/* Mobile Page Header */}
                 {isMobile && currentView.viewId !== 'overview' && currentView.viewId !== 'home' && (() => {
                     const appConfig = settings?.apps.find((app: AppConfig) => app.id === currentView.viewId);

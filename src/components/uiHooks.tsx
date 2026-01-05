@@ -83,14 +83,63 @@ export const useVideoGeneration = () => {
 
     const generateVideo = useCallback(async (sourceUrl: string, prompt: string) => {
         const finalPrompt = prompt.trim() || "Animate this image, bringing it to life with subtle, cinematic motion.";
+        console.log('[generateVideo] Starting video generation with prompt:', finalPrompt);
+        console.log('[generateVideo] Source URL:', sourceUrl);
+
         setVideoTasks(prev => ({ ...prev, [sourceUrl]: { status: 'pending' } }));
+
         try {
-            // FIX: Parse the sourceUrl and call startVideoGeneration with the correct arguments.
-            const image = parseDataUrl(sourceUrl);
+            let image: { mimeType: string; data: string };
+
+            // Check if sourceUrl is a data URL or HTTP URL
+            if (sourceUrl.startsWith('data:')) {
+                console.log('[generateVideo] Processing data URL');
+                image = parseDataUrl(sourceUrl);
+            } else if (sourceUrl.startsWith('http://') || sourceUrl.startsWith('https://')) {
+                console.log('[generateVideo] Processing HTTP URL - fetching image');
+                // Fetch the image and convert to base64
+                const response = await fetch(sourceUrl);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch image: ${response.statusText}`);
+                }
+                const blob = await response.blob();
+                const mimeType = blob.type || 'image/jpeg';
+
+                // Convert blob to base64
+                const base64Data = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        const result = reader.result as string;
+                        // Extract base64 data from data URL
+                        const base64 = result.split(',')[1];
+                        resolve(base64);
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
+
+                image = { mimeType, data: base64Data };
+                console.log('[generateVideo] Image converted to base64, mimeType:', mimeType);
+            } else {
+                throw new Error('Invalid image URL format. Expected data URL or HTTP(S) URL.');
+            }
+
+            console.log('[generateVideo] Calling startVideoGeneration');
             const op = await startVideoGeneration(finalPrompt, image);
+            console.log('[generateVideo] Video generation started successfully');
             setVideoTasks(prev => ({ ...prev, [sourceUrl]: { status: 'pending', operation: op } }));
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+            console.error('[generateVideo] Error:', errorMessage);
+
+            // Import toast dynamically to show error to user
+            import('react-hot-toast').then(({ default: toast }) => {
+                toast.error(`Lỗi tạo video: ${errorMessage}`, {
+                    duration: 5000,
+                    position: 'bottom-right'
+                });
+            });
+
             setVideoTasks(prev => ({ ...prev, [sourceUrl]: { status: 'error', error: errorMessage } }));
         }
     }, [addImagesToGallery]);

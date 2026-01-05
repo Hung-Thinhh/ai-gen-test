@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Be_Vietnam_Pro } from "next/font/google";
+import { Be_Vietnam_Pro, Inter } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import "./globals.css";
 import { DevMockLogin } from "@/components/DevMockLogin";
@@ -10,6 +10,13 @@ const beVietnamPro = Be_Vietnam_Pro({
   subsets: ['vietnamese', 'latin'],
   display: 'swap',
   variable: '--font-be-vietnam-pro',
+});
+
+const inter = Inter({
+  weight: ['400', '500', '600', '700', '800'],
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter',
 });
 
 export const metadata: Metadata = {
@@ -29,7 +36,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${beVietnamPro.className}`} suppressHydrationWarning>
+      <body className={`${beVietnamPro.className} ${inter.variable}`} suppressHydrationWarning>
         <Providers>
           {children}
           {/* DEV ONLY: Mock login button */}

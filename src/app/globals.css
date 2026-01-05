@@ -1,4 +1,5 @@
 ﻿@import "tailwindcss";
+/* @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap'); */
 
 @layer base {
     :root {
@@ -3041,11 +3042,6 @@ input:checked+.switch-slider:before {
 }
 
 /* Hide header/toolbar */
-.app-toolbar,
-.header,
-header {
-    display: none !important;
-}
 
 /* Hero section full width - no container */
 .hero-section {
@@ -3830,10 +3826,7 @@ header {
 
 /* === RESPONSIVE === */
 @media (min-width: 768px) {
-    .overview-v2 {
-        max-width: 1200px;
-        padding: 24px;
-    }
+
 
     .hero-banner {
         min-height: 200px;
@@ -4154,4 +4147,55 @@ header {
 .gallery-grid::-webkit-scrollbar-thumb {
     background-color: #404040;
     border-radius: 10px;
+}
+
+/* ========================================================================= */
+/*                    LEONARDO-STYLE ANIMATIONS                              */
+/* ========================================================================= */
+
+/* Float Animation */
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-20px);
+    }
+}
+
+@keyframes float-delayed {
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(20px);
+    }
+}
+
+.animate-float {
+    animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+    animation: float-delayed 8s ease-in-out infinite;
+}
+
+/* Slow Pulse Animation */
+.animate-pulse-slow {
+    animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Gradient Radial Utility */
+.bg-gradient-radial {
+    background-image: radial-gradient(circle, var(--tw-gradient-stops));
+}
+
+.btn_main {
+    background: linear-gradient(to right, #c65c0e, #fc7c0f);
 }

@@ -21,6 +21,8 @@ import * as storageService from '../services/storageService';
 import { SearchableSelect } from './SearchableSelect';
 import type { PosterCreatorState } from './uiTypes';
 import { generateStyledImage } from '../services/gemini/advancedImageService';
+import { editImageWithPrompt } from '../services/geminiService';
+import { embedJsonInPng } from './uiFileUtilities';
 
 // --- PROMPT COMPONENTS ---
 const BACKGROUND_PROMPTS: Record<string, string> = {
@@ -447,6 +449,90 @@ const PosterCreator: React.FC<PosterCreatorProps> = (props) => {
         'Du lịch',
         'Sức khỏe & Y tế'
     ], []);
+
+    // Handle regeneration with custom prompt
+    const handleRegeneration = useCallback(async (imageUrl: string, customPrompt: string) => {
+        console.log('[PosterCreator] handleRegeneration called with prompt:', customPrompt);
+
+        if (!imageUrl) {
+            console.warn('[PosterCreator] No image URL provided for regeneration');
+            return;
+        }
+
+        // Check credits before proceeding
+        if (!await checkCredits()) {
+            return;
+        }
+
+        try {
+            // Show loading state - add pending slot
+            setPendingImageSlots(prev => prev + 1);
+            toast.loading('Đang tạo lại ảnh...', { id: 'regenerating' });
+
+            // Scroll to results section
+            setTimeout(() => {
+                resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+
+            // Convert URL to data URL if needed
+            let imageDataUrl = imageUrl;
+            if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('blob:')) {
+                console.log('[PosterCreator] Converting URL to data URL');
+                const response = await fetch(imageUrl);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch image: ${response.statusText}`);
+                }
+                const blob = await response.blob();
+                imageDataUrl = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result as string);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
+            }
+
+            // Use editImageWithPrompt to regenerate with custom prompt
+            const resultUrl = await editImageWithPrompt(imageDataUrl, customPrompt);
+
+            // Embed metadata if enabled
+            const settingsToEmbed = {
+                viewId: 'poster-creator',
+                state: { ...appState },
+            };
+            const settings = { enableImageMetadata: true };
+            const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
+
+            // Log generation
+            const creditCost = modelVersion === 'v3' ? 2 : 1;
+            logGeneration('poster-creator', appState, urlWithMetadata, {
+                credits_used: creditCost,
+                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image',
+                generation_count: 1
+            });
+
+            // Add to display images
+            setDisplayImages(prev => {
+                const newImages = [...prev, urlWithMetadata];
+                // Keep only last MAX_DISPLAY_IMAGES
+                return newImages.slice(-MAX_DISPLAY_IMAGES);
+            });
+
+            // Add to gallery
+            addImagesToGallery([urlWithMetadata]);
+
+            // Remove loading slot
+            setPendingImageSlots(prev => Math.max(0, prev - 1));
+            toast.success('Đã tạo lại ảnh thành công!', { id: 'regenerating' });
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+            console.error('[PosterCreator] Regeneration error:', errorMessage);
+
+            // Remove loading slot on error
+            setPendingImageSlots(prev => Math.max(0, prev - 1));
+            toast.error(`Lỗi tạo lại ảnh: ${errorMessage}`, { id: 'regenerating' });
+        }
+    }, [appState, checkCredits, modelVersion, logGeneration, addImagesToGallery]);
+
 
     // Helper to read file as Blob URL
     const handleFileAsBlob = (e: ChangeEvent<HTMLInputElement>, callback: (url: string) => void) => {
@@ -1181,6 +1267,7 @@ ${aspectRatioPrompt}
                                                 mediaUrl={imgUrl}
                                                 caption={`${t('common_result') || 'Kết quả'} ${index + 1}`}
                                                 onClick={() => openLightbox(appState.productImages.length + index)}
+                                                onRegenerate={(prompt) => handleRegeneration(imgUrl, prompt)}
                                                 onGenerateVideoFromPrompt={(prompt) => generateVideo(imgUrl, prompt)}
                                             />
                                         ))}

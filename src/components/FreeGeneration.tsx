@@ -84,6 +84,25 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
         setLocalPrompt(appState.options.prompt);
     }, [appState.options.prompt]);
 
+    // Auto-fill prompt from Prompt Library
+    useEffect(() => {
+        const selectedPrompt = sessionStorage.getItem('selectedPrompt');
+        if (selectedPrompt) {
+            console.log('[FreeGeneration] Auto-filling prompt from library:', selectedPrompt);
+            setLocalPrompt(selectedPrompt);
+            onStateChange({
+                ...appState,
+                options: {
+                    ...appState.options,
+                    prompt: selectedPrompt
+                }
+            });
+            // Clear from sessionStorage after using
+            sessionStorage.removeItem('selectedPrompt');
+        }
+    }, []); // Run only once on mount
+
+
 
 
     const lightboxImages = [appState.image1, appState.image2, appState.image3, appState.image4, ...appState.historicalImages].filter((img): img is string => !!img);

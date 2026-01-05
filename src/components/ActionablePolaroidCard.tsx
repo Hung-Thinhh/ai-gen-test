@@ -4,7 +4,7 @@
 */
 import React, { useState, useRef, useCallback, ChangeEvent, memo } from 'react';
 import PolaroidCard from './PolaroidCard';
-import { 
+import {
     handleFileUpload,
     downloadImage,
     RegenerationModal,
@@ -16,15 +16,15 @@ import {
 
 // NEW: More descriptive card types to centralize logic
 type CardType =
-  | 'uploader'          // Generic uploader placeholder for any image type
-  | 'photo-input'       // An input that is specifically a user's photograph (e.g., for an avatar)
-  | 'sketch-input'      // An input that is a sketch or architectural drawing
-  | 'clothing-input'    // An input for a clothing item
-  | 'content-input'     // A generic content image for styling or transformation
-  | 'style-input'       // An image used for its artistic style
-  | 'multi-input'       // A flexible input used in free-form generation
-  | 'output'            // A generated result from the AI
-  | 'display';          // A read-only card with no actions
+    | 'uploader'          // Generic uploader placeholder for any image type
+    | 'photo-input'       // An input that is specifically a user's photograph (e.g., for an avatar)
+    | 'sketch-input'      // An input that is a sketch or architectural drawing
+    | 'clothing-input'    // An input for a clothing item
+    | 'content-input'     // A generic content image for styling or transformation
+    | 'style-input'       // An image used for its artistic style
+    | 'multi-input'       // A flexible input used in free-form generation
+    | 'output'            // A generated result from the AI
+    | 'display';          // A read-only card with no actions
 
 interface ActionablePolaroidCardProps {
     // Core PolaroidCard props
@@ -35,7 +35,7 @@ interface ActionablePolaroidCardProps {
     placeholderType?: 'person' | 'architecture' | 'clothing' | 'magic' | 'style';
     isMobile?: boolean;
     onClick?: () => void;
-    
+
     // Role-based prop to determine which buttons to show
     type: CardType;
 
@@ -43,7 +43,7 @@ interface ActionablePolaroidCardProps {
     onImageChange?: (imageDataUrl: string | null) => void;
     onRegenerate?: (prompt: string) => void;
     onGenerateVideoFromPrompt?: (prompt: string) => void;
-    
+
     // Props for modals
     regenerationTitle?: string;
     regenerationDescription?: string;
@@ -83,7 +83,7 @@ const ActionablePolaroidCard: React.FC<ActionablePolaroidCardProps> = ({
     const isRegeneratable = type === 'output';
     const isGallerySelectable = type !== 'output' && type !== 'display';
     const isWebcamSelectable = settings?.enableWebcam && type !== 'output' && type !== 'display';
-    
+
     const handleFileSelected = useCallback((e: ChangeEvent<HTMLInputElement>) => {
         if (onImageChange) {
             const onUploadWrapper = (newUrl: string) => {
@@ -138,25 +138,37 @@ const ActionablePolaroidCard: React.FC<ActionablePolaroidCardProps> = ({
             openImageEditor(mediaUrl, onSaveWrapper);
         }
     }, [mediaUrl, onImageChange, openImageEditor]);
-    
+
     const handleClearClick = useCallback(() => {
         if (onImageChange) {
             onImageChange(null);
         }
     }, [onImageChange]);
-    
+
     const handleRegenerateClick = useCallback(() => {
         setIsRegenModalOpen(true);
     }, []);
 
     const handleConfirmImage = useCallback((prompt: string) => {
+        console.log('[ActionablePolaroidCard] handleConfirmImage called, prompt:', prompt);
+        console.log('[ActionablePolaroidCard] onRegenerate exists:', !!onRegenerate);
         setIsRegenModalOpen(false);
         if (onRegenerate) {
             onRegenerate(prompt);
+        } else {
+            console.warn('[ActionablePolaroidCard] onRegenerate prop is missing! Please add it to enable "Tạo lại ảnh" functionality.');
+            import('react-hot-toast').then(({ default: toast }) => {
+                toast.error('Chức năng "Tạo lại ảnh" chưa được hỗ trợ cho tool này.', {
+                    duration: 3000,
+                    position: 'bottom-right'
+                });
+            });
         }
     }, [onRegenerate]);
 
     const handleConfirmVideo = useCallback((prompt: string) => {
+        console.log('[ActionablePolaroidCard] handleConfirmVideo called, prompt:', prompt);
+        console.log('[ActionablePolaroidCard] onGenerateVideoFromPrompt exists:', !!onGenerateVideoFromPrompt);
         setIsRegenModalOpen(false);
         if (onGenerateVideoFromPrompt) {
             onGenerateVideoFromPrompt(prompt);

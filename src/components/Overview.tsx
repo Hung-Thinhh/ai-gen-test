@@ -8,6 +8,7 @@ import { Pricing } from './Pricing';
 import { HeroSlider } from './HeroSlider';
 import { PersonalGallery } from './PersonalGallery';
 import { ZaloCTA } from './ZaloCTA';
+import LeonardoBanner from './LeonardoBanner';
 import { getAllPrompts, incrementPromptUsage, getAllTools, getAllCategories } from '../services/storageService';
 
 // ... inside component ...
@@ -197,8 +198,15 @@ const Overview: React.FC = () => {
                 />
             )}
 
-            {/* ===== HERO BANNER SLIDER ===== */}
-            <HeroSlider />
+            {/* ===== LEONARDO BANNER ===== */}
+            <div className="relative w-screen left-1/2 -translate-x-1/2">
+                <LeonardoBanner />
+            </div>
+
+            {/* ===== LEONARDO loi ich ===== */}
+            <div className="relative w-screen left-1/2 -translate-x-1/2">
+                <LeonardoBanner />
+            </div>
 
             {/* ===== AI TOOLS GRID ===== */}
             <motion.section
