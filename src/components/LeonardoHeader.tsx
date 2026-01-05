@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAppControls } from './uiUtils';
 
 export const LeonardoHeader = () => {
     const [scrolled, setScrolled] = useState(false);
     const router = useRouter();
+    const pathname = usePathname();
     const { t, user, isLoggedIn } = useAppControls();
 
     useEffect(() => {
@@ -48,22 +49,22 @@ export const LeonardoHeader = () => {
 
                 {/* Navigation */}
                 <nav className="hidden md:flex items-center gap-8">
-                    <NavLink onClick={() => router.push('/tool')}>
+                    <NavLink href="/tool" isActive={pathname?.startsWith('/tool')}>
                         Công cụ
                     </NavLink>
-                    <NavLink onClick={() => router.push('/#solutions')}>
+                    <NavLink href="/solutions" isActive={pathname === '/solutions'}>
                         Giải pháp
                     </NavLink>
-                    <NavLink onClick={() => router.push('/#learn')}>
+                    <NavLink href="/learn" isActive={pathname === '/learn'}>
                         Hướng dẫn
                     </NavLink>
-                    <NavLink onClick={() => router.push('/#gallery')}>
+                    <NavLink href="/gallery" isActive={pathname === '/gallery'}>
                         Thư viện
                     </NavLink>
-                    <NavLink onClick={() => router.push('/#pricing')}>
+                    <NavLink href="/pricing" isActive={pathname === '/pricing'}>
                         Bảng giá
                     </NavLink>
-                    <NavLink onClick={() => router.push('/#contact')}>
+                    <NavLink href="/contact" isActive={pathname === '/contact'}>
                         Liên hệ
                     </NavLink>
                 </nav>
@@ -106,14 +107,23 @@ export const LeonardoHeader = () => {
     );
 };
 
-const NavLink = ({ onClick, children }: { onClick: () => void; children: React.ReactNode }) => (
-    <button
-        onClick={onClick}
-        className="text-gray-400 hover:text-orange-400 transition-colors relative group"
-    >
-        {children}
-        <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-orange-400 to-orange-600 group-hover:w-full transition-all duration-300" />
-    </button>
-);
+const NavLink = ({ href, isActive, children }: { href: string; isActive?: boolean; children: React.ReactNode }) => {
+    const router = useRouter();
+    return (
+        <button
+            onClick={() => router.push(href)}
+            className={cn(
+                "transition-colors relative group",
+                isActive ? "text-orange-400 font-medium" : "text-gray-400 hover:text-orange-400"
+            )}
+        >
+            {children}
+            <span className={cn(
+                "absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-orange-400 to-orange-600 transition-all duration-300",
+                isActive ? "w-full" : "w-0 group-hover:w-full"
+            )} />
+        </button>
+    );
+};
 
 export default LeonardoHeader;

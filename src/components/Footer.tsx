@@ -29,7 +29,7 @@ const Footer: React.FC<{}> = () => {
     };
 
     return (
-        <footer className="w-full mt-20 px-20 bg-black text-neutral-400 text-sm border-t border-white/10 relative z-10 pt-10 pb-6">
+        <footer className="w-full px-20 bg-black text-neutral-400 text-sm border-t border-white/10 relative z-10 pt-10 pb-6">
             <div className="w-full px-8 md:px-12 grid grid-cols-1 md:grid-cols-4 gap-8">
                 {/* Column 1: Brand & Language */}
                 {/* Column 1: Brand & Description */}

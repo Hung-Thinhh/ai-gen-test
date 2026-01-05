@@ -33,11 +33,24 @@ export const LeonardoBanner = () => {
     const rotate2 = useTransform(scrollY, [0, 500], [0, 10]);
 
     return (
-        <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-black">
-            {/* Gradient Background */}
-            <div className="absolute inset-0">
-                {/* Base gradient */}
-                <div className="absolute inset-0 bg-gradient-to-br from-orange-900/30 via-black to-black" />
+        <section className="relative min-h-screen flex items-center flex-col justify-center overflow-hidden bg-black">
+            {/* Background Image */}
+            <div className="absolute inset-0 z-0">
+                <img
+                    src="https://res.cloudinary.com/dmxmzannb/image/upload/v1767599662/UX-Duky-AI_1_zufq7x.jpg"
+                    onError={(e) => {
+                        // Fallback to img_base if bg_banner is missing
+                        e.currentTarget.src = "/img/img_base.webp";
+                    }}
+                    alt="Banner Background"
+                    className="w-full h-full object-cover"
+                />
+            </div>
+
+            {/* Gradient Background Overlays */}
+            <div className="absolute inset-0 z-1">
+                {/* Base gradient - darker at bottom */}
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/50 to-black" />
 
                 {/* Radial gradient overlay */}
                 <div className="absolute inset-0 bg-gradient-radial from-orange-600/20 via-transparent to-transparent" />
@@ -52,6 +65,8 @@ export const LeonardoBanner = () => {
                     }}
                 />
             </div>
+
+
 
             {/* Floating Images - Parallax Effect */}
             {/* Top Left */}
@@ -69,7 +84,7 @@ export const LeonardoBanner = () => {
             {/* Bottom Left */}
             <motion.div
                 style={{ y: y2, rotate: -8 }}
-                className="absolute origin-bottom bottom-20 left-10 md:left-[20%] w-36 h-44 md:w-52 md:h-64 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20 z-10"
+                className="absolute origin-bottom bottom-70 left-10 md:left-[20%] w-36 h-44 md:w-52 md:h-64 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20 z-99"
             >
                 <img
                     src="/img/thoitrang.webp"
@@ -93,7 +108,7 @@ export const LeonardoBanner = () => {
             {/* Bottom Right */}
             <motion.div
                 style={{ y: y4, rotate: 8 }}
-                className="absolute origin-center bottom-32 right-10 md:right-[20%] w-32 h-40 md:w-44 md:h-56 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20 z-10"
+                className="absolute origin-center bottom-85 right-10 md:right-[20%] w-32 h-40 md:w-44 md:h-56 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20 z-99"
             >
                 <img
                     src="/img/baby.webp"
@@ -180,7 +195,55 @@ export const LeonardoBanner = () => {
                         />
                     </div>
                 </motion.div>
+
+
             </div>
+            {/* Benefits Grid */}
+            <motion.div
+                initial={{ opacity: 0, y: 50 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8 }}
+                className="benefit relative z-20 container max-w-[1300px] mx-auto px-6 mt-10 z-999"
+            >
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-[1300px] mx-auto">
+                    {/* Item 1 */}
+                    <div className="group p-8 rounded-3xl bg-orange-400/30 backdrop-blur-md border border-white/10 hover:border-orange-500/30 transition-all duration-300 hover:transform hover:-translate-y-2">
+                        <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-white flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.3)] group-hover:shadow-[0_0_25px_rgba(249,115,22,0.4)] transition-all duration-300">
+                            <svg className="w-10 h-10 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                        </div>
+                        <p className="text-white text-lg font-medium leading-relaxed">
+                            Tạo ảnh nhanh chóng,<br />số lượng lớn
+                        </p>
+                    </div>
+
+                    {/* Item 2 */}
+                    <div className="group p-8 rounded-3xl bg-orange-400/30 backdrop-blur-md border border-white/10 hover:border-orange-500/30 transition-all duration-300 hover:transform hover:-translate-y-2">
+                        <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-white flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.3)] group-hover:shadow-[0_0_25px_rgba(249,115,22,0.4)] transition-all duration-300">
+                            <svg className="w-10 h-10 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <p className="text-white text-lg font-medium leading-relaxed">
+                            Tiết kiệm chi phí<br />& thời gian
+                        </p>
+                    </div>
+
+                    {/* Item 3 */}
+                    <div className="group p-8 rounded-3xl bg-orange-400/30 backdrop-blur-md border border-white/10 hover:border-orange-500/30 transition-all duration-300 hover:transform hover:-translate-y-2">
+                        <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-white flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.3)] group-hover:shadow-[0_0_25px_rgba(249,115,22,0.4)] transition-all duration-300">
+                            <svg className="w-10 h-10 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                        </div>
+                        <p className="text-white text-lg font-medium leading-relaxed">
+                            Dễ dàng thay đổi concept,<br />không phụ thuộc đội ngũ
+                        </p>
+                    </div>
+                </div>
+            </motion.div>
         </section>
     );
 };

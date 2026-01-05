@@ -205,7 +205,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     "relative z-10 w-full flex-1 flex flex-col md:pt-16",
                     currentView?.viewId !== 'overview' && currentView?.viewId !== 'home' && "pt-16"
                 )}>
-                    <div className="flex-1 w-full flex flex-col pb-[100px]">
+                    <div className="flex-1 w-full flex flex-col">
                         {children}
                     </div>
                     {!isMobile && <Footer />}

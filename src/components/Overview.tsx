@@ -9,6 +9,9 @@ import { HeroSlider } from './HeroSlider';
 import { PersonalGallery } from './PersonalGallery';
 import { ZaloCTA } from './ZaloCTA';
 import LeonardoBanner from './LeonardoBanner';
+import ToolShowcase from './ToolShowcase';
+import StudioConcept from './StudioConcept';
+import CommunitySection from './CommunitySection';
 import { getAllPrompts, incrementPromptUsage, getAllTools, getAllCategories } from '../services/storageService';
 
 // ... inside component ...
@@ -203,14 +206,21 @@ const Overview: React.FC = () => {
                 <LeonardoBanner />
             </div>
 
-            {/* ===== LEONARDO loi ich ===== */}
-            <div className="relative w-screen left-1/2 -translate-x-1/2">
-                <LeonardoBanner />
+            {/* Tool Showcase Section */}
+            <div className="relative z-10 w-screen left-1/2 -translate-x-1/2 bg-black">
+                <ToolShowcase />
             </div>
+
+            {/* Studio Concept Section */}
+            <div className="relative z-10 w-screen left-1/2 -translate-x-1/2 bg-black">
+                <StudioConcept />
+            </div>
+
+
 
             {/* ===== AI TOOLS GRID ===== */}
             <motion.section
-                className="ai-tools-section"
+                className="ai-tools-section md:hidden"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.1 }}
@@ -311,43 +321,46 @@ const Overview: React.FC = () => {
 
             {/* ===== FEATURED PROMPTS ===== */}
             <motion.section
-                className="featured-prompts-section px-4 pb-20"
+                className="featured-prompts-section px-4 pb-20 max-w-[1300px] mx-auto"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
             >
-                <div className="section-header-inline mb-6">
-                    <h2 className="section-title-v2">
-                        🎨 Featured Prompts / Gợi ý
-                    </h2>
-                    <Link href="/prompt-library" className="see-all-link">See All</Link>
-                </div>
+                <div className="flex items-center flex-col justify-center">
 
-                {/* Category Filter Tabs */}
-                <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
-                    <button
-                        onClick={() => setActiveCategory('all')}
-                        className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${activeCategory === 'all'
-                            ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
-                            : 'bg-white/5 text-white/70 hover:bg-white/10'
-                            }`}
-                    >
-                        Tất cả
-                    </button>
-                    {categories.map((cat) => (
+
+                    <div className=" mb-6 text-center">
+                        <h2 className="text-3xl text-orange-600">
+                            Thư viện Prompt
+                        </h2>
+                        {/* <Link href="/prompt-library" className="see-all-link">See All</Link> */}
+                    </div>
+
+                    {/* Category Filter Tabs */}
+                    <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
                         <button
-                            key={cat.id}
-                            onClick={() => setActiveCategory(cat.id)}
-                            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${activeCategory === cat.id
+                            onClick={() => setActiveCategory('all')}
+                            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap w-[120px] cursor-pointer transition-all ${activeCategory === 'all'
                                 ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
                                 : 'bg-white/5 text-white/70 hover:bg-white/10'
                                 }`}
                         >
-                            {cat.name}
+                            Tất cả
                         </button>
-                    ))}
+                        {categories.map((cat) => (
+                            <button
+                                key={cat.id}
+                                onClick={() => setActiveCategory(cat.id)}
+                                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap w-[120px] cursor-pointer transition-all ${activeCategory === cat.id
+                                    ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
+                                    : 'bg-white/5 text-white hover:bg-orange-500'
+                                    }`}
+                            >
+                                {cat.name}
+                            </button>
+                        ))}
+                    </div>
                 </div>
-
                 {loadingPrompts ? (
                     <div className="flex justify-center py-10">
                         <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
@@ -397,12 +410,11 @@ const Overview: React.FC = () => {
 
 
 
-            {/* ===== ZALO CTA SECTION ===== */}
-            <ZaloCTA />
-
+            {/* ===== COMMUNITY SECTION ===== */}
+            <CommunitySection />
             {/* ===== PERSONAL GALLERY SECTION ===== */}
             <motion.section
-                className="gallery-section"
+                className="gallery-section md:hidden"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.3 }}
