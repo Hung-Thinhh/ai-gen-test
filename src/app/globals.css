@@ -57,6 +57,56 @@ body {
 }
 
 /* Utility Classes used in components */
+/* Custom Font: IFTV Magesta */
+@font-face {
+    font-family: 'IFTV Magesta';
+    src: url('/fonts/1FTV-Magesta-1.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* Custom Font: Product Sans */
+@font-face {
+    font-family: 'Product Sans';
+    src: url('/fonts/Product Sans Regular.otf') format('opentype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Product Sans';
+    src: url('/fonts/Product Sans Italic.otf') format('opentype');
+    font-weight: 400;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Product Sans';
+    src: url('/fonts/Product Sans Bold.otf') format('opentype');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Product Sans';
+    src: url('/fonts/Product Sans Bold Italic.otf') format('opentype');
+    font-weight: 700;
+    font-style: italic;
+    font-display: swap;
+}
+
+.font-magesta {
+    font-family: 'IFTV Magesta', serif;
+}
+
+.font-product-sans {
+    font-family: 'Product Sans', sans-serif;
+}
+
 .themed-bg {
     background-color: var(--background-primary);
     color: var(--text-primary);

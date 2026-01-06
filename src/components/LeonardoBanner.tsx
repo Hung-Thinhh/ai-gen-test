@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, useScroll, useTransform, useMotionValue } from 'framer-motion';
-
+import Image from 'next/image'
 export const LeonardoBanner = () => {
     const router = useRouter();
     const scrollY = useMotionValue(0);
@@ -25,9 +25,16 @@ export const LeonardoBanner = () => {
 
     // Parallax transforms for floating images
     const y1 = useTransform(scrollY, [0, 500], [0, -100]);
+    const x1 = useTransform(scrollY, [0, 500], [0, -100]); // Top-Left: Up & Left
+
     const y2 = useTransform(scrollY, [0, 500], [0, 100]);
+    const x2 = useTransform(scrollY, [0, 500], [0, -100]); // Bottom-Left: Down & Left
+
     const y3 = useTransform(scrollY, [0, 500], [0, -80]);
+    const x3 = useTransform(scrollY, [0, 500], [0, 80]);   // Top-Right: Up & Right
+
     const y4 = useTransform(scrollY, [0, 500], [0, 120]);
+    const x4 = useTransform(scrollY, [0, 500], [0, 100]);  // Bottom-Right: Down & Right
 
     const rotate1 = useTransform(scrollY, [0, 500], [0, -10]);
     const rotate2 = useTransform(scrollY, [0, 500], [0, 10]);
@@ -68,53 +75,77 @@ export const LeonardoBanner = () => {
 
 
 
-            {/* Floating Images - Parallax Effect */}
+            {/* Floating Images - Parallax Effect + Idle Float */}
             {/* Top Left */}
             <motion.div
-                style={{ y: y1, rotate: -16 }}
-                className="absolute origin-bottom top-20 left-10 md:left-[20%] w-32 h-40 md:w-48 md:h-60 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20 z-10"
+                style={{ y: y1, x: x1, rotate: -16 }}
+                className="absolute origin-bottom top-20 left-10 md:left-[20%] z-10"
             >
-                <img
-                    src="/img/beauty.webp"
-                    alt="AI Generated Portrait"
-                    className="w-full h-full object-cover rounded-xl"
-                />
+                <motion.div
+                    animate={{ y: [-10, 10, -10] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                    className="w-32 h-40 md:w-48 md:h-60 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20"
+                >
+                    <img
+                        src="/img/beauty.webp"
+                        alt="AI Generated Portrait"
+                        className="w-full h-full object-cover rounded-xl"
+                    />
+                </motion.div>
             </motion.div>
 
             {/* Bottom Left */}
             <motion.div
-                style={{ y: y2, rotate: -8 }}
-                className="absolute origin-bottom bottom-70 left-10 md:left-[20%] w-36 h-44 md:w-52 md:h-64 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20 z-99"
+                style={{ y: y2, x: x2, rotate: -8 }}
+                className="absolute origin-bottom bottom-70 left-10 md:left-[20%] z-99"
             >
-                <img
-                    src="/img/thoitrang.webp"
-                    alt="AI Generated Art"
-                    className="w-full h-full object-cover rounded-xl"
-                />
+                <motion.div
+                    animate={{ y: [-12, 12, -12] }}
+                    transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+                    className="w-36 h-44 md:w-52 md:h-64 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20"
+                >
+                    <img
+                        src="/img/thoitrang.webp"
+                        alt="AI Generated Art"
+                        className="w-full h-full object-cover rounded-xl"
+                    />
+                </motion.div>
             </motion.div>
 
             {/* Top Right */}
             <motion.div
-                style={{ y: y3, rotate: 12 }}
-                className="absolute origin-center top-32 right-10 md:right-[20%] w-40 h-48 md:w-56 md:h-72 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20 z-10"
+                style={{ y: y3, x: x3, rotate: 12 }}
+                className="absolute origin-center top-32 right-10 md:right-[20%] z-10"
             >
-                <img
-                    src="/img/doanhnhan.webp"
-                    alt="AI Portrait"
-                    className="w-full h-full object-cover"
-                />
+                <motion.div
+                    animate={{ y: [-8, 8, -8] }}
+                    transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                    className="w-40 h-48 md:w-56 md:h-72 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20"
+                >
+                    <img
+                        src="/img/doanhnhan.webp"
+                        alt="AI Portrait"
+                        className="w-full h-full object-cover"
+                    />
+                </motion.div>
             </motion.div>
 
             {/* Bottom Right */}
             <motion.div
-                style={{ y: y4, rotate: 8 }}
-                className="absolute origin-center bottom-85 right-10 md:right-[20%] w-32 h-40 md:w-44 md:h-56 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20 z-99"
+                style={{ y: y4, x: x4, rotate: 8 }}
+                className="absolute origin-center bottom-85 right-10 md:right-[20%] z-99"
             >
-                <img
-                    src="/img/baby.webp"
-                    alt="AI Generated"
-                    className="w-full h-full object-cover"
-                />
+                <motion.div
+                    animate={{ y: [-15, 15, -15] }}
+                    transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
+                    className="w-32 h-40 md:w-44 md:h-56 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20"
+                >
+                    <img
+                        src="/img/baby.webp"
+                        alt="AI Generated"
+                        className="w-full h-full object-cover"
+                    />
+                </motion.div>
             </motion.div>
 
             {/* Center Content - Fixed */}
@@ -186,7 +217,7 @@ export const LeonardoBanner = () => {
                     transition={{ duration: 0.8, delay: 0.4 }}
                     className="relative mt-16 mx-auto max-w-4xl"
                 >
-                    <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-white/10 bg-gradient-to-br from-orange-500/10 to-orange-600/5 backdrop-blur-sm p-4">
+                    <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-white/10 bg-gradient-to-br from-white/10  to-white/15 backdrop-blur-sm p-4">
                         {/* Mockup placeholder - replace with actual screenshot */}
                         <img
                             src="/img/trungthu.webp"
@@ -208,37 +239,49 @@ export const LeonardoBanner = () => {
             >
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-[1300px] mx-auto">
                     {/* Item 1 */}
-                    <div className="group p-8 rounded-3xl bg-orange-400/30 backdrop-blur-md border border-white/10 hover:border-orange-500/30 transition-all duration-300 hover:transform hover:-translate-y-2">
-                        <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-white flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.3)] group-hover:shadow-[0_0_25px_rgba(249,115,22,0.4)] transition-all duration-300">
-                            <svg className="w-10 h-10 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                            </svg>
+                    <div className="group p-8 rounded-3xl bg-black/70 backdrop-blur-md border border-orange-600/60 hover:border-orange-600/40 transition-all duration-300 hover:transform hover:-translate-y-2">
+                        <div className="w-30 h-30 mx-auto mb-6 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.3)] group-hover:shadow-[0_0_25px_rgba(249,115,22,0.4)] transition-all duration-300">
+                            <Image
+                                src="/img/icon_1.png"
+                                width={500}
+                                height={500}
+                                alt="Picture of the author"
+                                className="w-20 h-20 object-contain"
+                            />
                         </div>
-                        <p className="text-white text-lg font-medium leading-relaxed">
+                        <p className="text-white text-lg font-medium leading-relaxed text-center">
                             Tạo ảnh nhanh chóng,<br />số lượng lớn
                         </p>
                     </div>
 
                     {/* Item 2 */}
-                    <div className="group p-8 rounded-3xl bg-orange-400/30 backdrop-blur-md border border-white/10 hover:border-orange-500/30 transition-all duration-300 hover:transform hover:-translate-y-2">
-                        <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-white flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.3)] group-hover:shadow-[0_0_25px_rgba(249,115,22,0.4)] transition-all duration-300">
-                            <svg className="w-10 h-10 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
+                    <div className="group p-8 rounded-3xl bg-black/70 backdrop-blur-md border border-orange-600/60 hover:border-orange-600/40 transition-all duration-300 hover:transform hover:-translate-y-2">
+                        <div className="w-30 h-30 mx-auto mb-6 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.3)] group-hover:shadow-[0_0_25px_rgba(249,115,22,0.4)] transition-all duration-300">
+                            <Image
+                                src="/img/icon_2.png"
+                                width={500}
+                                height={500}
+                                alt="Picture of the author"
+                                className="w-20 h-20  object-contain"
+                            />
                         </div>
-                        <p className="text-white text-lg font-medium leading-relaxed">
+                        <p className="text-white text-lg font-medium leading-relaxed text-center">
                             Tiết kiệm chi phí<br />& thời gian
                         </p>
                     </div>
 
                     {/* Item 3 */}
-                    <div className="group p-8 rounded-3xl bg-orange-400/30 backdrop-blur-md border border-white/10 hover:border-orange-500/30 transition-all duration-300 hover:transform hover:-translate-y-2">
-                        <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-white flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.3)] group-hover:shadow-[0_0_25px_rgba(249,115,22,0.4)] transition-all duration-300">
-                            <svg className="w-10 h-10 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
+                    <div className="group p-8 rounded-3xl bg-black/70 backdrop-blur-md border border-orange-600/60 hover:border-orange-600/40 transition-all duration-300 hover:transform hover:-translate-y-2">
+                        <div className="w-30 h-30 mx-auto mb-6 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.3)] group-hover:shadow-[0_0_25px_rgba(249,115,22,0.4)] transition-all duration-300">
+                            <Image
+                                src="/img/icon_3.png"
+                                width={500}
+                                height={500}
+                                alt="Picture of the author"
+                                className="w-20 h-20  object-contain"
+                            />
                         </div>
-                        <p className="text-white text-lg font-medium leading-relaxed">
+                        <p className="text-white text-lg font-medium leading-relaxed text-center">
                             Dễ dàng thay đổi concept,<br />không phụ thuộc đội ngũ
                         </p>
                     </div>

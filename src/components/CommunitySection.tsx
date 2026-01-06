@@ -6,19 +6,19 @@ const testimonials = [
     {
         id: 1,
         quote: "Duky AI phù hợp cho cả những người mới bắt đầu tìm hiểu về thế giới hình ảnh AI cũng như các chuyên gia, vì nó cung cấp cho họ một loạt các công cụ để làm việc.",
-        author: "Lorem Ipsum",
+        author: "Anh Lâm",
         avatar: "https://ui-avatars.com/api/?name=L+I&background=random"
     },
     {
         id: 2,
         quote: "Trước đây, khi không có trí tuệ nhân tạo, tôi rất vất vả trong việc chụp và thiết kế hình cho quán mình, giờ đây chỉ cần 1 vài thao tác là đã có hình ưng ý.",
-        author: "Lorem Ipsum",
+        author: "Chị Hương",
         avatar: "https://ui-avatars.com/api/?name=L+I&background=random"
     },
     {
         id: 3,
         quote: "Với các tính năng được tinh chỉnh kỹ lưỡng, Duky AI giúp việc tạo ra ảnh sản phẩm trở nên dễ dàng và tiết kiệm hơn. Tôi tiết kiệm khá nhiều tiền và thời gian nhờ Duky AI đấy.",
-        author: "Lorem Ipsum",
+        author: "Anh Sơn",
         avatar: "https://ui-avatars.com/api/?name=L+I&background=random"
     }
 ];
@@ -61,7 +61,7 @@ export const CommunitySection = () => {
                                 {index !== 0 && (
                                     <div className="hidden md:block absolute -left-4 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-white/20 to-transparent" style={{ left: '-1rem' }} />
                                 )}
-                                <p className="text-gray-400 leading-relaxed min-h-[80px]">
+                                <p className="text-white/80 leading-relaxed min-h-[80px]">
                                     "{item.quote}"
                                 </p>
                             </div>
@@ -108,19 +108,17 @@ export const CommunitySection = () => {
                     initial={{ opacity: 0, y: 50 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className="mt-32 relative rounded-[2.5rem] overflow-hidden bg-gradient-to-r from-orange-450 via-orange-500/40 to-orange-700 border border-white/5"
+                    className="mt-32 relative rounded-[2.5rem]  border border-white/5 bg-[url('/img/bg_before_footer.png')]"
                 >
-                    {/* Background glow effects */}
-                    <div className="absolute top-0 left-0 w-2/3 h-full bg-orange-600/10 blur-[100px] pointer-events-none" />
 
-                    <div className="flex flex-col md:flex-row items-center relative z-10">
+                    <div className="flex flex-col md:flex-row items-center relative z-10 w-[1300px] justify-center items-center mx-auto">
                         {/* Text Content */}
                         <div className="flex-1 p-10 md:p-16 text-left space-y-8">
-                            <h2 className="text-3xl md:text-5xl font-bold leading-tight text-white">
+                            <h2 className="text-3xl md:text-4xl font-bold leading-tight text-white">
                                 Bắt đầu tạo ảnh của bạn<br />
-                                <span className="text-orange-500">với sức mạnh của Duky AI</span>
+                                <span className="text-orange-500 ml-10">với sức mạnh của Duky AI</span>
                             </h2>
-                            <button className="px-8 py-3 bg-white text-black font-semibold rounded-full hover:bg-gray-100 transition-colors transform hover:scale-105 duration-200">
+                            <button className="px-8 py-3 ml-20 bg-white text-orange-500 cursor-pointer font-semibold rounded-full hover:bg-gray-100 transition-colors transform hover:scale-105 duration-500">
                                 Thử ngay
                             </button>
                         </div>
@@ -128,7 +126,7 @@ export const CommunitySection = () => {
                         {/* Image Grid / Tablet Mockup */}
                         <div className="flex-1 w-full relative">
                             <div className="md:absolute right-0 top-1/2 md:-translate-y-1/2 w-full md:w-[120%] h-full md:h-[140%] flex items-center justify-center p-8 md:p-0">
-                                <div className="relative w-full max-w-md md:max-w-none md:w-[600px] aspect-[4/3] bg-neutral-900/90 rounded-2xl border border-white/10 p-2 shadow-2xl rotate-0 md:-rotate-6 md:translate-x-10 overflow-hidden backdrop-blur-sm">
+                                <div className="relative w-full max-w-md md:max-w-none md:w-[600px] aspect-[4/3] border-white/20 bg-gradient-to-br from-white/10  to-white/20 backdrop-blur-xl rounded-2xl border border-white/50 p-2 shadow-2xl rotate-0 md:-rotate-6 md:translate-x-10 ">
                                     <div className="grid grid-cols-4 gap-2 h-full">
                                         {/* Using a mix of placeholder images to simulate the gallery */}
                                         <div className="col-span-1 space-y-2">
@@ -156,8 +154,8 @@ export const CommunitySection = () => {
                         </div>
                     </div>
                 </motion.div>
-            </div>
-        </section>
+            </div >
+        </section >
     );
 };
 

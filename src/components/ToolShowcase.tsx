@@ -4,30 +4,46 @@ import React from 'react';
 
 const ToolCard = ({
     title,
+    big_title,
     description,
     image,
     btnText = "Thử ngay",
     reverse = false,
-    onClick
+    onClick,
+    index = 0
 }: {
     title: string;
+    big_title: string;
     description: string;
     image: string;
     btnText?: string;
     reverse?: boolean;
     onClick?: () => void;
+    index?: number;
 }) => {
+    const rotateValue = index === 0 ? 0 : (index % 2 === 0 ? 1 : -1) * 1.5;
+
     return (
         <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.6 }}
-            className={`flex flex-col ${reverse ? 'md:flex-row-reverse' : 'md:flex-row'} gap-8 md:gap-16 items-center py-20 px-10 border border-orange-300 rounded-2xl`}
+            initial={{ opacity: 0, y: 100, scale: 0.9 }}
+            whileInView={{ opacity: 1, y: 0, scale: 1 }}
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className={`flex flex-col ${reverse ? 'md:flex-row-reverse' : 'md:flex-row'} gap-8 md:gap-16 items-center py-20 px-20 border border-white/20 hover:border-orange-400/70 transition-all duration-300 rounded-3xl bg-black/80 backdrop-blur-xl shadow-2xl mb-8`}
+            style={{
+                zIndex: index + 1,
+                position: 'sticky',
+                top: `calc(100px + ${index * 15}px)`,
+                rotate: rotateValue,
+                transformOrigin: 'top center'
+            }}
         >
             {/* Context/Text Section */}
-            <div className="flex-1 space-y-6 text-left">
-                <h3 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-orange-400 to-orange-600 bg-clip-text text-transparent">
+            <div className="flex-1 text-left">
+                <h3 className="text-4xl leading-[1.5] md:text-8xl  font-magesta bg-gradient-to-r from-[#eb5a01] to-[#eb5a00] bg-clip-text text-transparent">
+                    {big_title}
+                </h3>
+                <h3 className="text-3xl  mt-[-40px] mb-5  md:text-4xl  bg-clip-text text-white">
                     {title}
                 </h3>
                 <p className="text-lg text-gray-400 leading-relaxed max-w-lg">
@@ -35,7 +51,7 @@ const ToolCard = ({
                 </p>
                 <button
                     onClick={onClick}
-                    className="group relative px-8 py-3 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full text-white font-medium hover:shadow-lg hover:shadow-orange-500/30 transition-all duration-300 hover:-translate-y-1 overflow-hidden"
+                    className="group cursor-pointer relative px-8 py-3 mt-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full text-white font-medium hover:shadow-lg hover:shadow-orange-500/30 transition-all duration-300 hover:-translate-y-1 overflow-hidden"
                 >
                     <span className="relative z-10 flex items-center gap-2">
                         {btnText}
@@ -76,78 +92,65 @@ export const ToolShowcase = () => {
     const router = useRouter();
 
     return (
-        <section className="relative py-20 bg-black overflow-hidden">
+        <section className="relative py-20 bg-black">
             {/* Background Decorations */}
             <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
-            <div className="container mx-auto max-w-[1300px] ">
+            <div className="container mx-auto max-w-[1300px] pb-20">
                 {/* Card 1: Product Photography */}
                 <ToolCard
-                    title="Studio ảnh mỹ phẩm"
-                    description="Thử nghiệm các ý tưởng thiết kế, chuyển đổi concept sản phẩm chỉ bằng một cú nhấp chuột. Tối ưu hình ảnh thương mại điện tử chuyên nghiệp."
+                    index={1}
+                    title="ảnh mỹ phẩm"
+                    big_title="Studio"
+                    description="Thử nghiệm các ý tưởng thiết kế giúp chuyển đổi concept chỉ bằng một cú nhấp chuột."
                     image="/img/img_base.webp"
-                    onClick={() => router.push('/tool/product-photography')}
+                    onClick={() => router.push('/tool/poster-creator')}
                 />
-
-                {/* Vertical Divider */}
-                <div className="w-px h-10 bg-gradient-to-b from-transparent via-white/10 to-transparent mx-auto my-2" />
 
                 {/* Card 2: Social Media Poster */}
                 <ToolCard
+                    index={2}
                     reverse
-                    title="Poster Social Media"
-                    description="Tự động hoá quy trình thiết kế Poster & Banner quảng cáo. Đa dạng phong cách từ Tết, Giáng Sinh đến sự kiện Doanh nghiệp."
+                    title="Social Media"
+                    big_title="Poster"
+                    description="Thiết kế poster sản phẩm đơn giản, không cần biết thiết kế."
                     image="/img/trungthu.webp"
                     btnText="Khám phá ngay"
                     onClick={() => router.push('/tool/poster-creator')}
                 />
-                {/* Vertical Divider */}
-                <div className="w-px h-10 bg-gradient-to-b from-transparent via-white/10 to-transparent mx-auto my-2" />
 
-                {/* Card 2: Social Media Poster */}
+                {/* Card 3: Food Concept */}
                 <ToolCard
-                    reverse
-                    title="Poster Social Media"
-                    description="Tự động hoá quy trình thiết kế Poster & Banner quảng cáo. Đa dạng phong cách từ Tết, Giáng Sinh đến sự kiện Doanh nghiệp."
+                    index={3}
+                    title="trong tầm tay"
+                    big_title="Thời trang"
+                    description="Ghép quần áo và trang sức của bạn lên các mô hình do Ai tạo ra, giữ nguyên hoạ tiết và logo."
                     image="/img/trungthu.webp"
                     btnText="Khám phá ngay"
                     onClick={() => router.push('/tool/poster-creator')}
                 />
-                {/* Vertical Divider */}
-                <div className="w-px h-10 bg-gradient-to-b from-transparent via-white/10 to-transparent mx-auto my-2" />
 
-                {/* Card 2: Social Media Poster */}
+                {/* Card 4: Baby Photo */}
                 <ToolCard
+                    index={4}
                     reverse
-                    title="Poster Social Media"
-                    description="Tự động hoá quy trình thiết kế Poster & Banner quảng cáo. Đa dạng phong cách từ Tết, Giáng Sinh đến sự kiện Doanh nghiệp."
+                    title="ảnh cho bé"
+                    big_title="Studio"
+                    description="Tiết kiệm thời ghian và chi phí chụp ảnh cho bé"
                     image="/img/trungthu.webp"
                     btnText="Khám phá ngay"
-                    onClick={() => router.push('/tool/poster-creator')}
+                    onClick={() => router.push('/tool/baby-photo-creator')}
                 />
-                {/* Vertical Divider */}
-                <div className="w-px h-10 bg-gradient-to-b from-transparent via-white/10 to-transparent mx-auto my-2" />
 
-                {/* Card 2: Social Media Poster */}
+                {/* Card 5: ID Photo */}
                 <ToolCard
-                    reverse
-                    title="Poster Social Media"
-                    description="Tự động hoá quy trình thiết kế Poster & Banner quảng cáo. Đa dạng phong cách từ Tết, Giáng Sinh đến sự kiện Doanh nghiệp."
+                    index={5}
+                    title="dành cho người bận rộn"
+                    big_title="Ảnh thẻ"
+                    description="Phòng chụp ảnh thẻ nhanh gọn và xuất file in ấn tiện lợi"
                     image="/img/trungthu.webp"
                     btnText="Khám phá ngay"
-                    onClick={() => router.push('/tool/poster-creator')}
-                />
-                {/* Vertical Divider */}
-                <div className="w-px h-10 bg-gradient-to-b from-transparent via-white/10 to-transparent mx-auto my-2" />
-
-                {/* Card 2: Social Media Poster */}
-                <ToolCard
-                    reverse
-                    title="Poster Social Media"
-                    description="Tự động hoá quy trình thiết kế Poster & Banner quảng cáo. Đa dạng phong cách từ Tết, Giáng Sinh đến sự kiện Doanh nghiệp."
-                    image="/img/trungthu.webp"
-                    btnText="Khám phá ngay"
-                    onClick={() => router.push('/tool/poster-creator')}
+                    onClick={() => router.push('/tool/id-photo-creator')}
                 />
             </div>
         </section>

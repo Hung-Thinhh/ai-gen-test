@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useAppControls } from './uiUtils';
 import { useIsMobile } from '../utils/mobileUtils';
@@ -91,6 +92,7 @@ interface FeaturedPrompt {
 const Overview: React.FC = () => {
     const appControls = useAppControls() as any;
     const { t, handleSelectApp, settings, language, modelVersion, handleModelVersionChange, guestCredits, userCredits, isLoggedIn } = appControls;
+    const router = useRouter();
     const [featuredPrompts, setFeaturedPrompts] = React.useState<FeaturedPrompt[]>([]);
     const [loadingPrompts, setLoadingPrompts] = React.useState(true);
     const [copiedId, setCopiedId] = React.useState<number | null>(null);
@@ -108,6 +110,15 @@ const Overview: React.FC = () => {
         } catch (err) {
             console.error('Failed to copy:', err);
         }
+    };
+
+    const handleUsePrompt = (e: React.MouseEvent, prompt: FeaturedPrompt) => {
+        e.stopPropagation(); // Prevent triggering copy on parent click
+        // Store prompt in sessionStorage
+        sessionStorage.setItem('selectedPrompt', prompt.description);
+
+        // Navigate to free generation tool
+        router.push('/tool/free-generation');
     };
 
 
@@ -326,11 +337,11 @@ const Overview: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
             >
-                <div className="flex items-center flex-col justify-center">
+                <div className="flex  flex-col justify-center">
 
 
-                    <div className=" mb-6 text-center">
-                        <h2 className="text-3xl text-orange-600">
+                    <div className=" mb-6 text-start">
+                        <h2 className="text-3xl leading-[1.5] md:text-6xl text-start font-magesta bg-gradient-to-r from-[#eb5a01] to-[#eb5a00] text-transparent bg-clip-text">
                             Thư viện Prompt
                         </h2>
                         {/* <Link href="/prompt-library" className="see-all-link">See All</Link> */}
@@ -353,7 +364,7 @@ const Overview: React.FC = () => {
                                 onClick={() => setActiveCategory(cat.id)}
                                 className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap w-[120px] cursor-pointer transition-all ${activeCategory === cat.id
                                     ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
-                                    : 'bg-white/5 text-white hover:bg-orange-500'
+                                    : 'border border-orange-500/60 text-white hover:bg-orange-500'
                                     }`}
                             >
                                 {cat.name}
@@ -400,7 +411,17 @@ const Overview: React.FC = () => {
                                     {/* Card Body */}
                                     <div className="p-3">
                                         <h3 className="text-white font-semibold text-sm truncate mb-1" title={prompt.title}>{prompt.title}</h3>
-                                        <p className="text-neutral-400 text-xs truncate">{prompt.description || prompt.title}</p>
+                                        <p className="text-neutral-400 text-xs truncate mb-3">{prompt.description || prompt.title}</p>
+
+                                        <button
+                                            onClick={(e) => handleUsePrompt(e, prompt)}
+                                            className="w-full cursor-pointer py-2 flex items-center justify-center gap-2 transition-all duration-200 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98]"
+                                        >
+                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                            </svg>
+                                            <span className="text-xs font-semibold">Dùng ngay</span>
+                                        </button>
                                     </div>
                                 </motion.div>
                             ))}
