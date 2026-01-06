@@ -97,7 +97,7 @@ export const LeonardoBanner = () => {
             {/* Bottom Left */}
             <motion.div
                 style={{ y: y2, x: x2, rotate: -8 }}
-                className="absolute origin-bottom bottom-70 left-10 md:left-[20%] z-99"
+                className="absolute origin-bottom md:top-120 md:bottom-70 left-10 md:left-[20%] z-99"
             >
                 <motion.div
                     animate={{ y: [-12, 12, -12] }}
@@ -133,7 +133,7 @@ export const LeonardoBanner = () => {
             {/* Bottom Right */}
             <motion.div
                 style={{ y: y4, x: x4, rotate: 8 }}
-                className="absolute origin-center bottom-85 right-10 md:right-[20%] z-99"
+                className="absolute origin-center top-120 md:bottom-85 right-10 md:right-[20%] z-99"
             >
                 <motion.div
                     animate={{ y: [-15, 15, -15] }}
