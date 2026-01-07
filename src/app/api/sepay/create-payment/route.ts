@@ -40,19 +40,43 @@ export async function POST(req: NextRequest) {
             console.log('[SePay] DEV MODE: Using test user ID:', userId);
         }
 
-        // 3. Get package details
-        const selectedPackage = PRICING_PACKAGES.find(p => p.id === packageId);
-        if (!selectedPackage) {
+        // 3. Get package details from Database
+
+        let query = supabaseAdmin.from('packages').select('*');
+
+        // Check if packageId is purely numeric to avoid Postgres type errors on 'id' column
+        const isNumericId = /^\d+$/.test(String(packageId));
+
+        if (isNumericId) {
+            // If numeric, it could be either key (unlikely but possible) or ID
+            query = query.or(`package_key.eq.${packageId},id.eq.${packageId}`);
+        } else {
+            // If string, must be package_key
+            query = query.eq('package_key', packageId);
+        }
+
+        const { data: selectedPackage, error: packageError } = await query.single();
+
+        if (packageError || !selectedPackage) {
+            console.error('[SePay] Package not found:', packageId, packageError);
             return NextResponse.json(
                 { success: false, error: 'Invalid package' } as CreatePaymentResponse,
                 { status: 400 }
             );
         }
 
-        // 4. Skip payment for free and enterprise packages
-        if (selectedPackage.id === 'free' || selectedPackage.id === 'enterprise') {
+        // 4. Skip payment for free packages (check key or price)
+        if (selectedPackage.package_key === 'free' || selectedPackage.price_vnd === 0) {
             return NextResponse.json(
                 { success: false, error: 'This package does not require payment' } as CreatePaymentResponse,
+                { status: 400 }
+            );
+        }
+
+        const price = Number(selectedPackage.price_vnd);
+        if (!price || price <= 0) {
+            return NextResponse.json(
+                { success: false, error: 'Invalid package price' } as CreatePaymentResponse,
                 { status: 400 }
             );
         }
@@ -111,8 +135,8 @@ export async function POST(req: NextRequest) {
                 user_id: userId,
                 order_id: orderId,
                 package_id: packageId,
-                amount: selectedPackage.price,
-                credits: selectedPackage.credits,
+                amount: price,
+                credits: selectedPackage.credits_included || 0,
                 status: 'pending'
             })
             .select()
@@ -139,7 +163,7 @@ export async function POST(req: NextRequest) {
         const paymentContent = `${vaPrefix} ${orderId}`;
 
         // Generate VietQR link  
-        const qrUrl = `https://qr.sepay.vn/img?acc=${vaAccount}&bank=${vaBankCode}&amount=${selectedPackage.price}&des=${encodeURIComponent(paymentContent)}`;
+        const qrUrl = `https://qr.sepay.vn/img?acc=${vaAccount}&bank=${vaBankCode}&amount=${price}&des=${encodeURIComponent(paymentContent)}`;
 
         console.log('[SePay VA] Generated QR URL:', qrUrl);
         console.log('[SePay VA] Payment content:', paymentContent);

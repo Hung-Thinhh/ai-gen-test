@@ -85,7 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
                 return prev;
             });
-        }, 2000);  // ← Reduced from 5000ms to 2000ms
+        }, 1000);  // ← Increased from 2000ms to 8000ms for slow networks
 
         // Get initial session and start role fetch in parallel
         supabase.auth.getSession().then(({ data: { session } }) => {
@@ -286,6 +286,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
         }
     }, []);
+
+    // Listen for manual user data refresh (e.g. after payment)
+    useEffect(() => {
+        const handleRefresh = async () => {
+            if (!user) return;
+            console.log('🔄 [Auth] Refreshing user data...');
+            try {
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('current_credits, role')
+                    .eq('user_id', user.id)
+                    .single();
+
+                if (data && !error) {
+                    console.log('✅ [Auth] User data refreshed:', data);
+                    setUserRole(data.role);
+
+                    // Dispatch update for components
+                    window.dispatchEvent(new CustomEvent('user-credits-updated', {
+                        detail: { credits: data.current_credits }
+                    }));
+                }
+            } catch (e) {
+                console.error('Error refreshing user data:', e);
+            }
+        };
+
+        window.addEventListener('refresh-user-data', handleRefresh);
+        return () => window.removeEventListener('refresh-user-data', handleRefresh);
+    }, [user]);
 
     const loginGoogle = async () => {
         try {

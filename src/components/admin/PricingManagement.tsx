@@ -17,7 +17,11 @@ import {
     IconButton,
     TextField,
     InputAdornment,
-    CircularProgress
+    CircularProgress,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem
 } from '@mui/material';
 import {
     Add as AddIcon,
@@ -87,7 +91,10 @@ export default function PricingManagement() {
                 price_vnd: Number(currentPkg.price_vnd),
                 original_price_vnd: Number(currentPkg.original_price_vnd) || 0,
                 credits_included: Number(currentPkg.credits_included),
-                badge_text: currentPkg.badge_text || null,
+                discount_percent: Number(currentPkg.discount_percent) || 0,
+                is_popular: !!currentPkg.is_popular,
+                is_active: currentPkg.is_active !== false,
+                sort_order: Number(currentPkg.sort_order) || 0,
                 features: featuresArray
             };
 
@@ -176,7 +183,7 @@ export default function PricingManagement() {
                             <TableCell sx={{ color: '#6B7280', fontWeight: 600, border: 'none', fontSize: '0.875rem' }}>Giá (VNĐ)</TableCell>
                             <TableCell sx={{ color: '#6B7280', fontWeight: 600, border: 'none', fontSize: '0.875rem' }}>Giá gốc</TableCell>
                             <TableCell sx={{ color: '#6B7280', fontWeight: 600, border: 'none', fontSize: '0.875rem' }}>Credits</TableCell>
-                            <TableCell sx={{ color: '#6B7280', fontWeight: 600, border: 'none', fontSize: '0.875rem' }}>Badge</TableCell>
+                            <TableCell sx={{ color: '#6B7280', fontWeight: 600, border: 'none', fontSize: '0.875rem' }}>Giảm giá (%)</TableCell>
                             <TableCell sx={{ color: '#6B7280', fontWeight: 600, border: 'none', fontSize: '0.875rem' }}>Trạng thái</TableCell>
                             <TableCell sx={{ border: 'none' }}>Hành động</TableCell>
                         </TableRow>
@@ -234,8 +241,8 @@ export default function PricingManagement() {
                                         />
                                     </TableCell>
                                     <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
-                                        {pkg.badge_text ? (
-                                            <Chip label={pkg.badge_text} size="small" color="secondary" sx={{ height: 20, fontSize: '0.7rem' }} />
+                                        {pkg.discount_percent ? (
+                                            <Chip label={`-${pkg.discount_percent}%`} size="small" color="error" sx={{ height: 20, fontSize: '0.7rem' }} />
                                         ) : (
                                             <Typography variant="caption" color="text.disabled">-</Typography>
                                         )}
@@ -291,14 +298,21 @@ export default function PricingManagement() {
                                 value={currentPkg.display_name}
                                 onChange={(e) => setCurrentPkg({ ...currentPkg, display_name: e.target.value })}
                             />
-                            <TextField
-                                label="Mô tả ngắn"
-                                fullWidth
-                                multiline
-                                rows={2}
-                                value={currentPkg.description}
-                                onChange={(e) => setCurrentPkg({ ...currentPkg, description: e.target.value })}
-                            />
+
+
+                            <FormControl fullWidth>
+                                <InputLabel>Loại gói (Billing Cycle)</InputLabel>
+                                <Select
+                                    label="Loại gói (Billing Cycle)"
+                                    value={currentPkg.category || 'month'}
+                                    onChange={(e) => setCurrentPkg({ ...currentPkg, category: e.target.value })}
+                                    MenuProps={{ style: { zIndex: 10000 } }}
+                                >
+                                    <MenuItem value="month">Gói Tháng (Monthly)</MenuItem>
+                                    <MenuItem value="year">Gói Năm (Yearly)</MenuItem>
+                                    <MenuItem value="credit">Gói Credit (One-time)</MenuItem>
+                                </Select>
+                            </FormControl>
 
                             <Stack direction="row" spacing={2}>
                                 <TextField
@@ -326,11 +340,57 @@ export default function PricingManagement() {
                                     onChange={(e) => setCurrentPkg({ ...currentPkg, credits_included: e.target.value })}
                                 />
                                 <TextField
-                                    label="Badge (Ví dụ: HOT, SALE)"
+                                    label="Giảm giá (%)"
+                                    type="number"
                                     fullWidth
-                                    value={currentPkg.badge_text || ''}
-                                    onChange={(e) => setCurrentPkg({ ...currentPkg, badge_text: e.target.value })}
+                                    value={currentPkg.discount_percent || 0}
+                                    onChange={(e) => setCurrentPkg({ ...currentPkg, discount_percent: e.target.value })}
                                 />
+                            </Stack>
+
+                            <TextField
+                                label="Mô tả / Đối tượng sử dụng"
+                                fullWidth
+                                multiline
+                                rows={2}
+                                value={currentPkg.description}
+                                onChange={(e) => setCurrentPkg({ ...currentPkg, description: e.target.value })}
+                            />
+
+                            <Stack direction="row" spacing={2} alignItems="center">
+                                <TextField
+                                    label="Thứ tự hiển thị"
+                                    type="number"
+                                    sx={{ width: 150 }}
+                                    value={currentPkg.sort_order || 0}
+                                    onChange={(e) => setCurrentPkg({ ...currentPkg, sort_order: Number(e.target.value) })}
+                                />
+
+                                <Stack direction="row" spacing={1} alignItems="center" sx={{ border: '1px solid #ccc', borderRadius: 1, px: 2, py: 1 }}>
+                                    <input
+                                        type="checkbox"
+                                        id="popularCheck"
+                                        checked={currentPkg.is_popular || false}
+                                        onChange={(e) => setCurrentPkg({ ...currentPkg, is_popular: e.target.checked })}
+                                        style={{ width: 20, height: 20, cursor: 'pointer' }}
+                                    />
+                                    <label htmlFor="popularCheck" style={{ cursor: 'pointer', fontWeight: 500 }}>
+                                        Nổi bật (Popular)
+                                    </label>
+                                </Stack>
+
+                                <Stack direction="row" spacing={1} alignItems="center" sx={{ border: '1px solid #ccc', borderRadius: 1, px: 2, py: 1 }}>
+                                    <input
+                                        type="checkbox"
+                                        id="activeCheck"
+                                        checked={currentPkg.is_active !== false} // Default true if undefined
+                                        onChange={(e) => setCurrentPkg({ ...currentPkg, is_active: e.target.checked })}
+                                        style={{ width: 20, height: 20, cursor: 'pointer' }}
+                                    />
+                                    <label htmlFor="activeCheck" style={{ cursor: 'pointer', fontWeight: 500 }}>
+                                        Kích hoạt (Active)
+                                    </label>
+                                </Stack>
                             </Stack>
 
                             <TextField

@@ -335,7 +335,7 @@ function MainApp() {
         // Pricing Page
         if (currentView.viewId === 'pricing') {
             return (
-                <div className="container mx-auto py-8 px-4 max-w-7xl">
+                <div className="container mx-auto py-8 px-4 max-w-8xl">
                     <Pricing />
                 </div>
             );

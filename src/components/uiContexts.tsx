@@ -319,6 +319,19 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         return () => window.removeEventListener('user-logged-out', handleLogout);
     }, [guestId]);
 
+    // Listen for credit updates from AuthContext (e.g. after payment or login)
+    useEffect(() => {
+        const handleCreditsUpdate = (event: CustomEvent) => {
+            if (event.detail && typeof event.detail.credits === 'number') {
+                console.log('[uiContexts] Received external credit update:', event.detail.credits);
+                setUserCredits(event.detail.credits);
+            }
+        };
+
+        window.addEventListener('user-credits-updated', handleCreditsUpdate as EventListener);
+        return () => window.removeEventListener('user-credits-updated', handleCreditsUpdate as EventListener);
+    }, []);
+
 
     const t = useCallback((key: string, ...args: any[]) => {
         const keys = key.split('.');

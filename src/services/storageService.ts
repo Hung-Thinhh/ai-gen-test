@@ -784,7 +784,7 @@ export const getAllTools = async () => {
         }
 
         console.log("[Storage] Fetching all tools from API...");
-        const response = await fetch('/api/data/tools');
+        const response = await fetch('/api/resources/tools'); // Refactored to unified API
 
         if (!response.ok) {
             console.error("Error fetching tools from API:", response.status);
@@ -958,16 +958,21 @@ export const logGenerationHistory = async (userId: string | null, entry: any, to
  * Fetches all pricing packages from the database.
  */
 export const getAllPackages = async () => {
+    console.log('[Storage] getAllPackages called (via API)');
     try {
-        const { data, error } = await supabase
-            .from('packages')
-            .select('*')
-            .order('price_vnd', { ascending: true }); // Order by price
+        // Fetch from our own API to bypass RLS/Client issues
+        const response = await fetch('/api/packages');
+        const result = await response.json();
 
-        if (error) throw error;
-        return data || [];
+        if (!result.success) {
+            console.error('[Storage] API error:', result.error);
+            return [];
+        }
+
+        console.log('[Storage] getAllPackages success, count:', result.data?.length);
+        return result.data || [];
     } catch (error) {
-        console.error("Error fetching packages:", error);
+        console.error("[Storage] Error fetching packages:", error);
         return [];
     }
 };
@@ -1032,7 +1037,7 @@ export const getAllCategories = async () => {
         }
 
         console.log("[Storage] Fetching categories from API...");
-        const response = await fetch('/api/data/categories');
+        const response = await fetch('/api/resources/categories');
 
         if (!response.ok) {
             console.error("Error fetching categories from API:", response.status);
@@ -1142,17 +1147,16 @@ export const deleteCategory = async (categoryId: string) => {
  */
 export const getAllSystemConfigs = async () => {
     try {
-        const { data, error } = await supabase
-            .from('system_configs')
-            .select('*')
-            .order('config_key', { ascending: true });
+        console.log("[Storage] Fetching system configs from API...");
+        const response = await fetch('/api/resources/system_configs');
+        const result = await response.json();
 
-        if (error) {
-            console.error("Error fetching system configs:", error);
+        if (!result.success) {
+            console.error("Error fetching system configs:", result.error);
             return [];
         }
 
-        return data || [];
+        return result.data || [];
     } catch (error) {
         console.error("Error fetching system configs:", error);
         return [];
@@ -1247,18 +1251,16 @@ export const getAllBanners = async () => {
             return cached;
         }
 
-        console.log("[Storage] Fetching banners from database...");
-        const { data, error } = await supabase
-            .from('hero_banners')
-            .select('*')
-            .order('sort_order', { ascending: true });
+        console.log("[Storage] Fetching banners from API...");
+        const response = await fetch('/api/resources/hero_banners');
+        const result = await response.json();
 
-        if (error) {
-            console.error("Error fetching banners:", error);
+        if (!result.success) {
+            console.error("Error fetching banners:", result.error);
             return [];
         }
 
-        const banners = data || [];
+        const banners = result.data || [];
 
         // Cache the result
         cacheService.set(CACHE_KEYS.BANNERS, banners, CACHE_TTL.BANNERS);
@@ -1365,19 +1367,17 @@ export const deleteBanner = async (bannerId: number) => {
  */
 export const getAllStudios = async () => {
     try {
-        const { data, error } = await supabase
-            .from('studio')
-            .select('*')
-            .order('sort_order', { ascending: true })
-            .select('*, prompts, categories(name)'); // Fetch category name
+        console.log("[Storage] Fetching studios from API...");
+        const response = await fetch('/api/resources/studio');
+        const result = await response.json();
 
-        if (error) {
-            console.error("Error fetching studios:", error);
+        if (!result.success) {
+            console.error("Error fetching studios:", result.error);
             return [];
         }
 
-        let studios = data || [];
-        studios.sort((a, b) => {
+        let studios = result.data || [];
+        studios.sort((a: any, b: any) => {
             const orderA = a.sort_order || 0;
             const orderB = b.sort_order || 0;
             if (orderA === 0 && orderB !== 0) return 1;
@@ -1494,7 +1494,7 @@ export const getAllPrompts = async (sortBy: 'created_at' | 'usage' = 'created_at
         }
 
         console.log("[Storage] Fetching prompts from API. Sort:", sortBy);
-        const response = await fetch('/api/data/prompts');
+        const response = await fetch('/api/resources/prompts');
 
         if (!response.ok) {
             console.error("[Storage] Error fetching prompts from API:", response.status);
@@ -1636,5 +1636,6 @@ export const incrementPromptUsage = async (promptId: number) => {
         return false;
     }
 };
+
 
 
