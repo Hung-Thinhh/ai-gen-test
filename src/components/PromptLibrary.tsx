@@ -158,10 +158,10 @@ export const PromptLibrary: React.FC<PromptLibraryProps> = ({ onClose }) => {
                 <p className="themed-text-secondary text-center pt-2 mb-4">{t('promptLibrary_subtitle')}</p>
 
                 {/* Categories */}
-                <div className="flex justify-center gap-2 mb-6 flex-wrap px-4 pt-10">
+                <div className="flex gap-2 mb-6 px-4 pt-10 pb-4 custom-scrollbar-orange transition-all">
                     <button
                         onClick={() => handleCategoryChange('all')}
-                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeCategory === 'all'
+                        className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${activeCategory === 'all'
                             ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
                             : 'themed-bg-elevated themed-text hover:bg-white/10'
                             }`}
@@ -172,7 +172,7 @@ export const PromptLibrary: React.FC<PromptLibraryProps> = ({ onClose }) => {
                         <button
                             key={cat.id}
                             onClick={() => handleCategoryChange(cat.id)}
-                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeCategory === cat.id
+                            className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${activeCategory === cat.id
                                 ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
                                 : 'themed-bg-elevated themed-text hover:bg-white/10'
                                 }`}
@@ -180,6 +180,13 @@ export const PromptLibrary: React.FC<PromptLibraryProps> = ({ onClose }) => {
                             {cat.name}
                         </button>
                     ))}
+
+                    {/* Scroll Indicator Icon */}
+                    <div className="flex-shrink-0 flex items-center justify-center px-2 text-orange-500/50 animate-pulse">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                        </svg>
+                    </div>
                 </div>
             </div>
 

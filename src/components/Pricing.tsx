@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Pricing Component - Display subscription packages
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAppControls } from './uiUtils';
 import { supabase } from '../lib/supabase/client';
 import { useAuth } from '../contexts/AuthContext';
@@ -15,6 +15,15 @@ import TabletMacIcon from '@mui/icons-material/TabletMac';
 import PhoneIphoneIcon from '@mui/icons-material/PhoneIphone';
 import AppleIcon from '@mui/icons-material/Apple';
 import AndroidIcon from '@mui/icons-material/Android';
+import { motion, AnimatePresence } from 'framer-motion';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Pagination, Navigation } from 'swiper/modules';
+import type { Swiper as SwiperType } from 'swiper';
+import 'swiper/css';
+import 'swiper/css/pagination';
+import 'swiper/css/navigation';
 
 interface PricingProps {
     onClose?: () => void;
@@ -201,6 +210,99 @@ export const PricingCard: React.FC<{ plan: PricingPackage; billingCycle: 'monthl
     );
 };
 
+
+
+const MobilePricingSlider: React.FC<{ packages: PricingPackage[], billingCycle: 'monthly' | 'yearly' }> = ({ packages, billingCycle }) => {
+    const [swiperInstance, setSwiperInstance] = useState<SwiperType | null>(null);
+    const [activeIndex, setActiveIndex] = useState(0);
+
+    // Sync active index
+    const handleSlideChange = (swiper: SwiperType) => {
+        setActiveIndex(swiper.realIndex);
+    };
+
+    const handleNext = () => {
+        swiperInstance?.slideNext();
+    };
+
+    const handlePrev = () => {
+        swiperInstance?.slidePrev();
+    };
+
+    const handleDotClick = (index: number) => {
+        swiperInstance?.slideToLoop(index);
+    };
+
+    return (
+        <div className="w-full py-8">
+            {/* Top Navigation Row: Arrow Left - Dots - Arrow Right */}
+            <div className="flex items-center justify-center gap-6 mb-8 px-4">
+                <button
+                    onClick={handlePrev}
+                    className="p-2 rounded-full text-white hover:bg-white/10 transition-all active:scale-95"
+                >
+                    <ChevronLeftIcon sx={{ fontSize: 32 }} />
+                </button>
+
+                {/* Dots */}
+                <div className="flex justify-center gap-3">
+                    {packages.map((_, idx) => (
+                        <button
+                            key={idx}
+                            onClick={() => handleDotClick(idx)}
+                            className={`transition-all duration-300 rounded-full ${activeIndex === idx
+                                ? 'bg-orange-500 w-3 h-3 !p-1 !w-3 !h-2 !min-w-3 !min-h-2'
+                                : 'bg-white/20 !p-1 !w-2 !h-2 !min-w-2 !min-h-2 hover:bg-white/40'
+                                }`}
+                        />
+                    ))}
+                </div>
+
+                <button
+                    onClick={handleNext}
+                    className="p-2 rounded-full text-white hover:bg-white/10 transition-all active:scale-95"
+                >
+                    <ChevronRightIcon sx={{ fontSize: 32 }} />
+                </button>
+            </div>
+
+            {/* Swiper Slider */}
+            <div className="w-full">
+                <Swiper
+                    modules={[Pagination, Navigation]}
+                    spaceBetween={16}
+                    slidesPerView={'auto'}
+                    centeredSlides={true}
+                    loop={true}
+                    onSwiper={setSwiperInstance}
+                    onSlideChange={handleSlideChange}
+                    className="w-full !overflow-visible" // Allow shadows/scale to overflow container if needed
+                    speed={500}
+                >
+                    {packages.map((pkg) => (
+                        <SwiperSlide
+                            key={pkg.id}
+                            style={{ width: '85%' }} // Explicit width for centeredSlides + slidesPerView='auto'
+                            className="transition-all duration-300"
+                        >
+                            {/* Inner wrapper for scale/opacity effect using purely CSS based on parent class */}
+                            {/* Swiper adds 'swiper-slide-active' to the active slide */}
+                            {({ isActive }) => (
+                                <div
+                                    className={`relative transition-all duration-500 ease-out ${isActive ? 'scale-100 opacity-100 z-10' : 'scale-90 opacity-50 z-0'
+                                        }`}
+                                >
+                                    <PricingCard plan={pkg} billingCycle={billingCycle} />
+                                </div>
+                            )}
+                        </SwiperSlide>
+                    ))}
+                </Swiper>
+            </div>
+        </div>
+    );
+};
+
 export const Pricing: React.FC<PricingProps> = ({ onClose }) => {
     const { language } = useAppControls();
     const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly'); // Default to monthly
@@ -329,8 +431,8 @@ export const Pricing: React.FC<PricingProps> = ({ onClose }) => {
                 </div>
             </div>
 
-            {/* Pricing Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 max-w-[1400px] w-full mx-auto px-4">
+            {/* Pricing Grid - Desktop */}
+            <div className="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 md:gap-4 gap-8 max-w-[1400px] w-full mx-auto px-4">
                 {displayedPackages.length > 0 ? displayedPackages.map((plan) => (
                     <div key={plan.id} className="min-w-[220px]">
                         <PricingCard plan={plan} billingCycle={billingCycle} />
@@ -342,6 +444,20 @@ export const Pricing: React.FC<PricingProps> = ({ onClose }) => {
                 )}
             </div>
 
+            {/* Pricing Slider - Mobile */}
+            <div className="md:hidden w-full">
+                {displayedPackages.length > 0 ? (
+                    <MobilePricingSlider
+                        key={`${billingCycle}-${displayedPackages.length}`} // Force reset on change
+                        packages={displayedPackages}
+                        billingCycle={billingCycle}
+                    />
+                ) : (
+                    <div className="text-center text-neutral-400 py-10">
+                        {billingCycle === 'yearly' ? 'Chưa có gói năm. Vui lòng chọn gói tháng.' : 'No packages found.'}
+                    </div>
+                )}
+            </div>
             {/* Footer Note */}
             <div className="mt-12 text-center text-neutral-500 text-xs max-w-2xl mx-auto">
                 <p>* Số lượng token được phép sử dụng sẽ được đặt lại hàng tháng. Các token chưa sử dụng sẽ được chuyển sang kỳ tiếp theo cho đến khi đạt giới hạn được quy định trong gói cước của bạn.</p>

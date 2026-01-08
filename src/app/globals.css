@@ -1,6 +1,38 @@
 ﻿@import "tailwindcss";
 /* @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap'); */
 
+/* Custom Orange Scrollbar for Prompt Library */
+.custom-scrollbar-orange {
+    overflow-x: auto;
+    scrollbar-color: #FF6600 rgba(255, 255, 255, 0.05);
+    /* Firefox */
+    scrollbar-width: thin;
+    /* Firefox */
+}
+
+/* Chrome/Edge/Safari */
+.custom-scrollbar-orange::-webkit-scrollbar {
+    height: 6px;
+    /* Horizontal scrollbar height */
+    width: 6px;
+    /* Vertical scrollbar width */
+}
+
+.custom-scrollbar-orange::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 100vh;
+}
+
+.custom-scrollbar-orange::-webkit-scrollbar-thumb {
+    background: #FF6600;
+    border-radius: 100vh;
+}
+
+.custom-scrollbar-orange::-webkit-scrollbar-thumb:hover {
+    background: #FF8533;
+}
+
+
 @layer base {
     :root {
         --background: 0 0% 100%;
@@ -2570,7 +2602,7 @@ input:checked+.switch-slider:before {
         min-height: 24px !important;
         min-width: 20px !important;
         font-size: 16px;
-        padding: 12px 20px;
+        padding: 8px 20px;
     }
 
     .btn-primary,
@@ -4247,4 +4279,24 @@ input:checked+.switch-slider:before {
 
 .btn_main {
     background: linear-gradient(to right, #c65c0e, #fc7c0f);
+}
+
+/* Swiper Pagination Customization */
+.swiper-wrapper {
+    padding-bottom: 50px;
+}
+
+.swiper-pagination-bullet {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+    opacity: 1 !important;
+    width: 8px !important;
+    height: 8px !important;
+    transition: all 0.3s ease !important;
+}
+
+.swiper-pagination-bullet-active {
+    background-color: #f97316 !important;
+    /* orange-500 */
+    width: 24px !important;
+    border-radius: 9999px !important;
 }

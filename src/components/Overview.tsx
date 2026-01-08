@@ -231,7 +231,7 @@ const Overview: React.FC = () => {
 
             {/* ===== AI TOOLS GRID ===== */}
             <motion.section
-                className="ai-tools-section md:hidden"
+                className="ai-tools-section hidden"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.1 }}
@@ -245,7 +245,7 @@ const Overview: React.FC = () => {
 
                 {isMobile ? (
                     // MOBILE LAYOUT - Keep Icons
-                    <div className="tools-icon-grid">
+                    <div className="tools-icon-grid hidden">
                         {popularTools.map((tool: any, index: number) => {
                             const IconComponent = TOOL_ICON_COMPONENTS[tool.id] || PlaceholderMagicIcon;
                             const iconColor = TOOL_ICON_COLORS[index % TOOL_ICON_COLORS.length];
@@ -332,7 +332,7 @@ const Overview: React.FC = () => {
 
             {/* ===== FEATURED PROMPTS ===== */}
             <motion.section
-                className="featured-prompts-section px-4 pb-20 max-w-[1300px] mx-auto"
+                className="featured-prompts-section px-4 pb-20 mt-20 max-w-[1300px] mx-auto"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
@@ -341,7 +341,7 @@ const Overview: React.FC = () => {
 
 
                     <div className=" mb-6 text-start">
-                        <h2 className="text-3xl leading-[1.5] md:text-6xl text-start font-magesta bg-gradient-to-r from-[#eb5a01] to-[#eb5a00] text-transparent bg-clip-text">
+                        <h2 className="!text-4xl leading-[1.5] md:text-6xl text-start font-magesta bg-gradient-to-r from-[#eb5a01] to-[#eb5a00] text-transparent bg-clip-text">
                             Thư viện Prompt
                         </h2>
                         {/* <Link href="/prompt-library" className="see-all-link">See All</Link> */}
@@ -351,7 +351,7 @@ const Overview: React.FC = () => {
                     <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
                         <button
                             onClick={() => setActiveCategory('all')}
-                            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap w-[120px] cursor-pointer transition-all ${activeCategory === 'all'
+                            className={`px-4 !py-[5px] rounded-full text-sm  font-medium whitespace-nowrap w-[129px] cursor-pointer transition-all ${activeCategory === 'all'
                                 ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
                                 : 'bg-white/5 text-white/70 hover:bg-white/10'
                                 }`}
@@ -362,7 +362,7 @@ const Overview: React.FC = () => {
                             <button
                                 key={cat.id}
                                 onClick={() => setActiveCategory(cat.id)}
-                                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap w-[120px] cursor-pointer transition-all ${activeCategory === cat.id
+                                className={`px-4 !py-[5px] rounded-full text-sm font-medium whitespace-nowrap w-auto cursor-pointer transition-all ${activeCategory === cat.id
                                     ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
                                     : 'border border-orange-500/60 text-white hover:bg-orange-500'
                                     }`}
@@ -411,7 +411,7 @@ const Overview: React.FC = () => {
                                     {/* Card Body */}
                                     <div className="p-3">
                                         <h3 className="text-white font-semibold text-sm truncate mb-1" title={prompt.title}>{prompt.title}</h3>
-                                        <p className="text-neutral-400 text-xs truncate mb-3">{prompt.description || prompt.title}</p>
+                                        {/* <p className="text-neutral-400 text-xs truncate mb-3">{prompt.description || prompt.title}</p> */}
 
                                         <button
                                             onClick={(e) => handleUsePrompt(e, prompt)}
@@ -435,7 +435,7 @@ const Overview: React.FC = () => {
             <CommunitySection />
             {/* ===== PERSONAL GALLERY SECTION ===== */}
             <motion.section
-                className="gallery-section md:hidden"
+                className="gallery-section hidden"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.3 }}

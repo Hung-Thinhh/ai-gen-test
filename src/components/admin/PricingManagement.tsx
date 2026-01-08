@@ -30,7 +30,7 @@ import {
     Delete as DeleteIcon
 } from '@mui/icons-material';
 import toast from 'react-hot-toast';
-import { getAllPackages, updatePackage } from '../../services/storageService';
+import { getAllPackages, updatePackage, createPackage, deletePackage } from '../../services/storageService';
 
 export default function PricingManagement() {
     const [packages, setPackages] = useState<any[]>([]);
@@ -39,6 +39,7 @@ export default function PricingManagement() {
     const [openEdit, setOpenEdit] = useState(false);
     const [currentPkg, setCurrentPkg] = useState<any>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
         fetchPackages();
@@ -54,6 +55,26 @@ export default function PricingManagement() {
             toast.error("Không thể tải danh sách gói cước");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDelete = async (pkg: any) => {
+        if (!confirm(`Bạn có chắc muốn xóa gói "${pkg.display_name?.vi || pkg.display_name}" không?`)) return;
+
+        setIsDeleting(true);
+        try {
+            const success = await deletePackage(pkg.package_id);
+            if (success) {
+                toast.success('Đã xóa gói cước');
+                fetchPackages();
+            } else {
+                toast.error('Không thể xóa gói cước');
+            }
+        } catch (error) {
+            console.error("Delete failed", error);
+            toast.error('Lỗi khi xóa gói cước');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -76,6 +97,26 @@ export default function PricingManagement() {
         setCurrentPkg(null);
     };
 
+    const handleCreateClick = () => {
+        setCurrentPkg({
+            is_new: true, // Flag to identify new package
+            display_name: '',
+            description: '',
+            price_vnd: 0,
+            original_price_vnd: 0,
+            credits_included: 0,
+            discount_percent: 0,
+            is_popular: false,
+            is_active: true,
+            sort_order: 0,
+            category: 'month',
+            features_text: ''
+        });
+        setOpenEdit(true);
+    };
+
+    // ...
+
     const handleSavePackage = async () => {
         if (!currentPkg) return;
         setIsSaving(true);
@@ -85,23 +126,34 @@ export default function PricingManagement() {
                 ? currentPkg.features_text.split('\n').map((f: string) => f.trim()).filter((f: string) => f)
                 : [];
 
-            const updates = {
+            const packageData = {
                 display_name: { vi: currentPkg.display_name, en: currentPkg.display_name },
                 description: { vi: currentPkg.description, en: currentPkg.description },
                 price_vnd: Number(currentPkg.price_vnd),
+                // Only include original_price if > 0
                 original_price_vnd: Number(currentPkg.original_price_vnd) || 0,
                 credits_included: Number(currentPkg.credits_included),
                 discount_percent: Number(currentPkg.discount_percent) || 0,
                 is_popular: !!currentPkg.is_popular,
                 is_active: currentPkg.is_active !== false,
                 sort_order: Number(currentPkg.sort_order) || 0,
-                features: featuresArray
+                category: currentPkg.category || 'month',
+                package_type: currentPkg.category === 'credit' ? 'credit' : 'subscription',
+                features: featuresArray,
+                // generate a random key for new package if needed, or let DB handle it? 
+                // DB usually needs package_key. Let's start with a random one or timestamp
+                package_key: currentPkg.package_key || `PKG_${Date.now()}`
             };
 
-            const success = await updatePackage(currentPkg.package_id, updates);
+            let success;
+            if (currentPkg.is_new) {
+                success = await createPackage(packageData);
+            } else {
+                success = await updatePackage(currentPkg.package_id, packageData);
+            }
 
             if (success) {
-                toast.success('Đã cập nhật gói cước');
+                toast.success(currentPkg.is_new ? 'Đã tạo gói mới' : 'Đã cập nhật gói cước');
                 fetchPackages();
                 handleCloseEdit();
             } else {
@@ -145,9 +197,29 @@ export default function PricingManagement() {
                         color="primary"
                         startIcon={<AddIcon />}
                         sx={{ borderRadius: 2, height: 40, px: 3, textTransform: 'none', fontWeight: 600 }}
-                        onClick={() => toast.success('Tính năng thêm đang phát triển')}
+                        onClick={handleCreateClick}
                     >
                         Thêm gói mới
+                    </Button>
+                    <Button
+                        variant="outlined"
+                        color="warning"
+                        sx={{ borderRadius: 2, height: 40, px: 2, textTransform: 'none' }}
+                        onClick={async () => {
+                            const { data: { user } } = await import('../../lib/supabase/client').then(m => m.supabase.auth.getUser());
+                            if (!user) { toast.error('Chưa đăng nhập!'); return; }
+
+                            const { data, error } = await import('../../lib/supabase/client').then(m => m.supabase
+                                .from('users')
+                                .select('role')
+                                .eq('user_id', user.id) // Supabase auto-handles uuid->text usually, but let's see result
+                                .single());
+
+                            if (error) toast.error(`Lỗi DB: ${error.message}`);
+                            else toast.success(`DB Role: ${data?.role} (ID: ${user.id.slice(0, 5)}...)`);
+                        }}
+                    >
+                        Check Role
                     </Button>
                     <TextField
                         placeholder="Tìm kiếm gói..."
@@ -170,8 +242,8 @@ export default function PricingManagement() {
                             }
                         }}
                     />
-                </Stack>
-            </Stack>
+                </Stack >
+            </Stack >
 
             {/* Table */}
             <TableContainer sx={{ boxShadow: 'none' }}>
@@ -184,6 +256,7 @@ export default function PricingManagement() {
                             <TableCell sx={{ color: '#6B7280', fontWeight: 600, border: 'none', fontSize: '0.875rem' }}>Giá gốc</TableCell>
                             <TableCell sx={{ color: '#6B7280', fontWeight: 600, border: 'none', fontSize: '0.875rem' }}>Credits</TableCell>
                             <TableCell sx={{ color: '#6B7280', fontWeight: 600, border: 'none', fontSize: '0.875rem' }}>Giảm giá (%)</TableCell>
+                            <TableCell sx={{ color: '#6B7280', fontWeight: 600, border: 'none', fontSize: '0.875rem' }}>Loại gói</TableCell>
                             <TableCell sx={{ color: '#6B7280', fontWeight: 600, border: 'none', fontSize: '0.875rem' }}>Trạng thái</TableCell>
                             <TableCell sx={{ border: 'none' }}>Hành động</TableCell>
                         </TableRow>
@@ -249,6 +322,17 @@ export default function PricingManagement() {
                                     </TableCell>
                                     <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
                                         <Chip
+                                            label={pkg.category === 'year' ? 'Năm' : pkg.category === 'credit' ? 'Credit' : 'Tháng'}
+                                            size="small"
+                                            sx={{
+                                                bgcolor: pkg.category === 'year' ? '#E0E7FF' : pkg.category === 'credit' ? '#FFFBEB' : '#DBEAFE',
+                                                color: pkg.category === 'year' ? '#4338CA' : pkg.category === 'credit' ? '#D97706' : '#1E40AF',
+                                                fontWeight: 600
+                                            }}
+                                        />
+                                    </TableCell>
+                                    <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
+                                        <Chip
                                             label={pkg.is_active ? 'Active' : 'Hidden'}
                                             size="small"
                                             sx={{
@@ -270,6 +354,17 @@ export default function PricingManagement() {
                                             >
                                                 <EditIcon fontSize="small" />
                                             </Button>
+                                            <Button
+                                                size="small"
+                                                variant="contained"
+                                                disableElevation
+                                                color="error"
+                                                disabled={isDeleting}
+                                                onClick={() => handleDelete(pkg)}
+                                                sx={{ minWidth: 32, px: 1, bgcolor: '#FDE8E8', color: '#C81E1E', '&:hover': { bgcolor: '#FBD5D5' } }}
+                                            >
+                                                <DeleteIcon fontSize="small" />
+                                            </Button>
                                         </Stack>
                                     </TableCell>
                                 </TableRow>
@@ -277,147 +372,149 @@ export default function PricingManagement() {
                         )}
                     </TableBody>
                 </Table>
-            </TableContainer>
+            </TableContainer >
 
             {/* Edit Dialog */}
-            {openEdit && currentPkg && (
-                <Box sx={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    bgcolor: 'rgba(0,0,0,0.5)', zIndex: 9999,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2
-                }}>
-                    <Paper sx={{ width: '100%', maxWidth: 600, maxHeight: '90vh', overflowY: 'auto', p: 4, borderRadius: 3 }}>
-                        <Typography variant="h5" fontWeight={700} gutterBottom>
-                            Chỉnh sửa Gói Cước
-                        </Typography>
+            {
+                openEdit && currentPkg && (
+                    <Box sx={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        bgcolor: 'rgba(0,0,0,0.5)', zIndex: 9999,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2
+                    }}>
+                        <Paper sx={{ width: '100%', maxWidth: 600, maxHeight: '90vh', overflowY: 'auto', p: 4, borderRadius: 3 }}>
+                            <Typography variant="h5" fontWeight={700} gutterBottom>
+                                {currentPkg.is_new ? 'Thêm Gói Cước Mới' : 'Chỉnh sửa Gói Cước'}
+                            </Typography>
 
-                        <Stack spacing={3} mt={4}>
-                            <TextField
-                                label="Tên hiển thị"
-                                fullWidth
-                                value={currentPkg.display_name}
-                                onChange={(e) => setCurrentPkg({ ...currentPkg, display_name: e.target.value })}
-                            />
-
-
-                            <FormControl fullWidth>
-                                <InputLabel>Loại gói (Billing Cycle)</InputLabel>
-                                <Select
-                                    label="Loại gói (Billing Cycle)"
-                                    value={currentPkg.category || 'month'}
-                                    onChange={(e) => setCurrentPkg({ ...currentPkg, category: e.target.value })}
-                                    MenuProps={{ style: { zIndex: 10000 } }}
-                                >
-                                    <MenuItem value="month">Gói Tháng (Monthly)</MenuItem>
-                                    <MenuItem value="year">Gói Năm (Yearly)</MenuItem>
-                                    <MenuItem value="credit">Gói Credit (One-time)</MenuItem>
-                                </Select>
-                            </FormControl>
-
-                            <Stack direction="row" spacing={2}>
+                            <Stack spacing={3} mt={4}>
                                 <TextField
-                                    label="Giá bán (VNĐ)"
-                                    type="number"
+                                    label="Tên hiển thị"
                                     fullWidth
-                                    value={currentPkg.price_vnd}
-                                    onChange={(e) => setCurrentPkg({ ...currentPkg, price_vnd: e.target.value })}
-                                />
-                                <TextField
-                                    label="Giá gốc (VNĐ)"
-                                    type="number"
-                                    fullWidth
-                                    value={currentPkg.original_price_vnd}
-                                    onChange={(e) => setCurrentPkg({ ...currentPkg, original_price_vnd: e.target.value })}
-                                />
-                            </Stack>
-
-                            <Stack direction="row" spacing={2}>
-                                <TextField
-                                    label="Credits"
-                                    type="number"
-                                    fullWidth
-                                    value={currentPkg.credits_included}
-                                    onChange={(e) => setCurrentPkg({ ...currentPkg, credits_included: e.target.value })}
-                                />
-                                <TextField
-                                    label="Giảm giá (%)"
-                                    type="number"
-                                    fullWidth
-                                    value={currentPkg.discount_percent || 0}
-                                    onChange={(e) => setCurrentPkg({ ...currentPkg, discount_percent: e.target.value })}
-                                />
-                            </Stack>
-
-                            <TextField
-                                label="Mô tả / Đối tượng sử dụng"
-                                fullWidth
-                                multiline
-                                rows={2}
-                                value={currentPkg.description}
-                                onChange={(e) => setCurrentPkg({ ...currentPkg, description: e.target.value })}
-                            />
-
-                            <Stack direction="row" spacing={2} alignItems="center">
-                                <TextField
-                                    label="Thứ tự hiển thị"
-                                    type="number"
-                                    sx={{ width: 150 }}
-                                    value={currentPkg.sort_order || 0}
-                                    onChange={(e) => setCurrentPkg({ ...currentPkg, sort_order: Number(e.target.value) })}
+                                    value={currentPkg.display_name}
+                                    onChange={(e) => setCurrentPkg({ ...currentPkg, display_name: e.target.value })}
                                 />
 
-                                <Stack direction="row" spacing={1} alignItems="center" sx={{ border: '1px solid #ccc', borderRadius: 1, px: 2, py: 1 }}>
-                                    <input
-                                        type="checkbox"
-                                        id="popularCheck"
-                                        checked={currentPkg.is_popular || false}
-                                        onChange={(e) => setCurrentPkg({ ...currentPkg, is_popular: e.target.checked })}
-                                        style={{ width: 20, height: 20, cursor: 'pointer' }}
+
+                                <FormControl fullWidth>
+                                    <InputLabel>Loại gói (Billing Cycle)</InputLabel>
+                                    <Select
+                                        label="Loại gói (Billing Cycle)"
+                                        value={currentPkg.category || 'month'}
+                                        onChange={(e) => setCurrentPkg({ ...currentPkg, category: e.target.value })}
+                                        MenuProps={{ style: { zIndex: 10000 } }}
+                                    >
+                                        <MenuItem value="month">Gói Tháng (Monthly)</MenuItem>
+                                        <MenuItem value="year">Gói Năm (Yearly)</MenuItem>
+                                        <MenuItem value="credit">Gói Credit (One-time)</MenuItem>
+                                    </Select>
+                                </FormControl>
+
+                                <Stack direction="row" spacing={2}>
+                                    <TextField
+                                        label="Giá bán (VNĐ)"
+                                        type="number"
+                                        fullWidth
+                                        value={currentPkg.price_vnd}
+                                        onChange={(e) => setCurrentPkg({ ...currentPkg, price_vnd: e.target.value })}
                                     />
-                                    <label htmlFor="popularCheck" style={{ cursor: 'pointer', fontWeight: 500 }}>
-                                        Nổi bật (Popular)
-                                    </label>
+                                    <TextField
+                                        label="Giá gốc (VNĐ)"
+                                        type="number"
+                                        fullWidth
+                                        value={currentPkg.original_price_vnd}
+                                        onChange={(e) => setCurrentPkg({ ...currentPkg, original_price_vnd: e.target.value })}
+                                    />
                                 </Stack>
 
-                                <Stack direction="row" spacing={1} alignItems="center" sx={{ border: '1px solid #ccc', borderRadius: 1, px: 2, py: 1 }}>
-                                    <input
-                                        type="checkbox"
-                                        id="activeCheck"
-                                        checked={currentPkg.is_active !== false} // Default true if undefined
-                                        onChange={(e) => setCurrentPkg({ ...currentPkg, is_active: e.target.checked })}
-                                        style={{ width: 20, height: 20, cursor: 'pointer' }}
+                                <Stack direction="row" spacing={2}>
+                                    <TextField
+                                        label="Credits"
+                                        type="number"
+                                        fullWidth
+                                        value={currentPkg.credits_included}
+                                        onChange={(e) => setCurrentPkg({ ...currentPkg, credits_included: e.target.value })}
                                     />
-                                    <label htmlFor="activeCheck" style={{ cursor: 'pointer', fontWeight: 500 }}>
-                                        Kích hoạt (Active)
-                                    </label>
+                                    <TextField
+                                        label="Giảm giá (%)"
+                                        type="number"
+                                        fullWidth
+                                        value={currentPkg.discount_percent || 0}
+                                        onChange={(e) => setCurrentPkg({ ...currentPkg, discount_percent: e.target.value })}
+                                    />
+                                </Stack>
+
+                                <TextField
+                                    label="Mô tả / Đối tượng sử dụng"
+                                    fullWidth
+                                    multiline
+                                    rows={2}
+                                    value={currentPkg.description}
+                                    onChange={(e) => setCurrentPkg({ ...currentPkg, description: e.target.value })}
+                                />
+
+                                <Stack direction="row" spacing={2} alignItems="center">
+                                    <TextField
+                                        label="Thứ tự hiển thị"
+                                        type="number"
+                                        sx={{ width: 150 }}
+                                        value={currentPkg.sort_order || 0}
+                                        onChange={(e) => setCurrentPkg({ ...currentPkg, sort_order: Number(e.target.value) })}
+                                    />
+
+                                    <Stack direction="row" spacing={1} alignItems="center" sx={{ border: '1px solid #ccc', borderRadius: 1, px: 2, py: 1 }}>
+                                        <input
+                                            type="checkbox"
+                                            id="popularCheck"
+                                            checked={currentPkg.is_popular || false}
+                                            onChange={(e) => setCurrentPkg({ ...currentPkg, is_popular: e.target.checked })}
+                                            style={{ width: 20, height: 20, cursor: 'pointer' }}
+                                        />
+                                        <label htmlFor="popularCheck" style={{ cursor: 'pointer', fontWeight: 500 }}>
+                                            Nổi bật (Popular)
+                                        </label>
+                                    </Stack>
+
+                                    <Stack direction="row" spacing={1} alignItems="center" sx={{ border: '1px solid #ccc', borderRadius: 1, px: 2, py: 1 }}>
+                                        <input
+                                            type="checkbox"
+                                            id="activeCheck"
+                                            checked={currentPkg.is_active !== false} // Default true if undefined
+                                            onChange={(e) => setCurrentPkg({ ...currentPkg, is_active: e.target.checked })}
+                                            style={{ width: 20, height: 20, cursor: 'pointer' }}
+                                        />
+                                        <label htmlFor="activeCheck" style={{ cursor: 'pointer', fontWeight: 500 }}>
+                                            Kích hoạt (Active)
+                                        </label>
+                                    </Stack>
+                                </Stack>
+
+                                <TextField
+                                    label="Tính năng (Mỗi dòng 1 tính năng)"
+                                    multiline
+                                    rows={5}
+                                    fullWidth
+                                    value={currentPkg.features_text}
+                                    onChange={(e) => setCurrentPkg({ ...currentPkg, features_text: e.target.value })}
+                                    placeholder="500 credits miễn phí&#10;Hỗ trợ cơ bản&#10;Tốc độ tiêu chuẩn"
+                                />
+
+                                <Stack direction="row" justifyContent="flex-end" spacing={2} mt={2}>
+                                    <Button onClick={handleCloseEdit} color="inherit" disabled={isSaving}>Hủy</Button>
+                                    <Button
+                                        onClick={handleSavePackage}
+                                        variant="contained"
+                                        color="primary"
+                                        disabled={isSaving}
+                                    >
+                                        {isSaving ? <><CircularProgress size={16} sx={{ mr: 1 }} /> Đang lưu...</> : (currentPkg.is_new ? 'Tạo mới' : 'Lưu thay đổi')}
+                                    </Button>
                                 </Stack>
                             </Stack>
-
-                            <TextField
-                                label="Tính năng (Mỗi dòng 1 tính năng)"
-                                multiline
-                                rows={5}
-                                fullWidth
-                                value={currentPkg.features_text}
-                                onChange={(e) => setCurrentPkg({ ...currentPkg, features_text: e.target.value })}
-                                placeholder="500 credits miễn phí&#10;Hỗ trợ cơ bản&#10;Tốc độ tiêu chuẩn"
-                            />
-
-                            <Stack direction="row" justifyContent="flex-end" spacing={2} mt={2}>
-                                <Button onClick={handleCloseEdit} color="inherit" disabled={isSaving}>Hủy</Button>
-                                <Button
-                                    onClick={handleSavePackage}
-                                    variant="contained"
-                                    color="primary"
-                                    disabled={isSaving}
-                                >
-                                    {isSaving ? <><CircularProgress size={16} sx={{ mr: 1 }} /> Đang lưu...</> : 'Lưu thay đổi'}
-                                </Button>
-                            </Stack>
-                        </Stack>
-                    </Paper>
-                </Box>
-            )}
-        </Box>
+                        </Paper>
+                    </Box>
+                )
+            }
+        </Box >
     );
 }

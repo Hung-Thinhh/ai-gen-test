@@ -442,6 +442,9 @@ const getAccessToken = async () => {
  * Returns the new balance or -1 if deduction failed (e.g. insufficient funds).
  */
 const getFreshClient = (accessToken?: string) => {
+    // If no token provided, return the global instance which manages its own session
+    if (!accessToken) return supabase;
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
     // Dynamic import to avoid circular dependencies if any
@@ -453,13 +456,11 @@ const getFreshClient = (accessToken?: string) => {
         }
     };
 
-    if (accessToken) {
-        options.global = {
-            headers: {
-                Authorization: `Bearer ${accessToken}`
-            }
-        };
-    }
+    options.global = {
+        headers: {
+            Authorization: `Bearer ${accessToken}`
+        }
+    };
 
     return createClient(supabaseUrl, supabaseAnonKey, options);
 }
@@ -844,7 +845,7 @@ export const updateTool = async (toolId: string | number, updates: any, token?: 
         const result = await executeWithRetry('updateTool', async (client) => {
             // Internal timeout just for the DB call part to catch network hangs
             const timeoutPromise = new Promise<{ data: any, error: any }>((_, reject) =>
-                setTimeout(() => reject(new Error("DB Update Timed Out")), 10000)
+                setTimeout(() => reject(new Error(`DB Update Timed Out after 30s for Tool ID: ${toolId}`)), 30000)
             );
 
             return Promise.race([
@@ -984,38 +985,74 @@ export const updatePackage = async (packageId: string | number, updates: any, to
     try {
         console.log(`[Storage] updatePackage called for ID: ${packageId}`, updates);
 
-        const dbOperation = async (client: any) => {
-            const { data, error } = await client
-                .from('packages')
-                .update(updates)
-                .eq('package_id', packageId)
-                .select();
+        // USE SERVER API (Bypass Client RLS)
+        const response = await fetch('/api/packages', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ packageId, updates })
+        });
 
-            if (!error && data && data.length === 0) {
-                return { data: false, error: new Error(`Update executed but package not found (RLS or bad ID). ID: ${packageId}`) };
-            }
+        const result = await response.json();
 
-            return { data: !error, error };
-        };
-
-        const result = await executeWithRetry('updatePackage', async (client) => {
-            const timeoutPromise = new Promise<{ data: any, error: any }>((_, reject) =>
-                setTimeout(() => reject(new Error("DB Update Timed Out")), 10000)
-            );
-
-            return Promise.race([
-                dbOperation(client),
-                timeoutPromise
-            ]);
-        }, token);
-
-        if (result.error) {
-            throw result.error;
+        if (!result.success) {
+            throw new Error(result.error || 'API Update failed');
         }
 
         return true;
     } catch (error) {
-        console.error("Error updating package:", error);
+        console.error("[Storage] Error updating package:", error);
+        return false;
+    }
+};
+
+/**
+ * Creates a new pricing package via Server API.
+ */
+export const createPackage = async (packageData: any, token?: string) => {
+    try {
+        console.log(`[Storage] createPackage called`, packageData);
+
+        // USE SERVER API (Bypass Client RLS)
+        const response = await fetch('/api/packages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ packageData })
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+            throw new Error(result.error || 'API Create failed');
+        }
+
+        return true;
+    } catch (error) {
+        console.error("[Storage] Error creating package:", error);
+        return false;
+    }
+};
+
+/**
+ * Deletes a package via Server API.
+ */
+export const deletePackage = async (packageId: number) => {
+    try {
+        console.log(`[Storage] deletePackage called for ID: ${packageId}`);
+
+        // USE SERVER API (Bypass Client RLS)
+        const response = await fetch(`/api/packages?id=${packageId}`, {
+            method: 'DELETE',
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+            throw new Error(result.error || 'API Delete failed');
+        }
+
+        return true;
+    } catch (error) {
+        console.error("[Storage] Error deleting package:", error);
         return false;
     }
 };

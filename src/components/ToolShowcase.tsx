@@ -25,14 +25,14 @@ const ToolCard = ({
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.6 }}
-            className={`flex flex-col ${reverse ? 'md:flex-row-reverse' : 'md:flex-row'} gap-8 md:gap-16 items-center py-20 px-20 border border-white/20 hover:border-orange-400/70 transition-all duration-300 rounded-3xl bg-black/80 backdrop-blur-xl shadow-2xl`}
+            className={`flex flex-col ${reverse ? 'md:flex-row-reverse' : 'md:flex-row'} gap-8 md:gap-16 items-center md:p-20 p-10 border border-white/20 hover:border-orange-400/70 transition-all duration-300 rounded-3xl bg-black/80 backdrop-blur-xl shadow-2xl`}
         >
             {/* Context/Text Section */}
             <div className="w-full md:flex-[35] text-left">
                 <h3 className="text-4xl leading-[1.5] md:text-7xl  font-magesta bg-gradient-to-r from-[#eb5a01] to-[#eb5a00] bg-clip-text text-transparent">
                     {big_title}
                 </h3>
-                <h3 className="text-3xl  mt-[-40px] mb-5  md:text-4xl  bg-clip-text text-white">
+                <h3 className="text-3xl  md:mt-[-40px] mt-[-10px] mb-5  md:text-4xl  bg-clip-text text-white">
                     {title}
                 </h3>
                 <p className="text-lg text-gray-400 leading-relaxed max-w-lg">
@@ -40,7 +40,7 @@ const ToolCard = ({
                 </p>
                 <button
                     onClick={onClick}
-                    className="group cursor-pointer relative px-8 py-3 mt-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full text-white font-medium hover:shadow-lg hover:shadow-orange-500/30 transition-all duration-300 hover:-translate-y-1 overflow-hidden"
+                    className="group cursor-pointer text-sm md:text-base relative px-8 py-3 mt-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full text-white font-medium hover:shadow-lg hover:shadow-orange-500/30 transition-all duration-300 hover:-translate-y-1 overflow-hidden"
                 >
                     <span className="relative z-10 flex items-center gap-2">
                         {btnText}
@@ -54,9 +54,9 @@ const ToolCard = ({
 
             {/* Image/Visual Section */}
             <div className="w-full md:flex-[65] relative">
-                <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl group">
+                <div className="relative rounded-2xl overflow-hidden  shadow-2xl group">
                     {/* Glassmorphism Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-white/0 z-10 pointer-events-none" />
+                    <div className="absolute inset-0  z-10 pointer-events-none" />
 
                     <img
                         src={image}
@@ -81,7 +81,7 @@ export const ToolShowcase = () => {
     const router = useRouter();
 
     return (
-        <section className="relative py-20 bg-black overflow-x-hidden">
+        <section className="relative py-20 pb-0 bg-black overflow-x-hidden">
             {/* Background Decorations */}
             <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
@@ -91,7 +91,7 @@ export const ToolShowcase = () => {
                     title="ảnh mỹ phẩm"
                     big_title="Studio"
                     description="Thử nghiệm các ý tưởng thiết kế giúp chuyển đổi concept chỉ bằng một cú nhấp chuột."
-                    image="/img/showcase1.jpg"
+                    image="/img/showcase1.webp"
                     onClick={() => router.push('/tool/poster-creator')}
                 />
 
@@ -104,7 +104,7 @@ export const ToolShowcase = () => {
                     title="Social Media"
                     big_title="Poster"
                     description="Thiết kế poster sản phẩm đơn giản, không cần biết thiết kế."
-                    image="/img/showcase2.jpg"
+                    image="/img/showcase2.webp"
                     btnText="Khám phá ngay"
                     onClick={() => router.push('/tool/poster-creator')}
                 />
@@ -117,7 +117,7 @@ export const ToolShowcase = () => {
                     title="trong tầm tay"
                     big_title="Thời trang"
                     description="Ghép quần áo và trang sức của bạn lên các mô hình do Ai tạo ra, giữ nguyên hoạ tiết và logo."
-                    image="/img/thoitrang.webp"
+                    image="/img/showcase3.webp"
                     btnText="Khám phá ngay"
                     onClick={() => router.push('/tool/poster-creator')}
                 />
@@ -131,7 +131,7 @@ export const ToolShowcase = () => {
                     title="ảnh cho bé"
                     big_title="Studio"
                     description="Tiết kiệm thời ghian và chi phí chụp ảnh cho bé"
-                    image="/img/baby.webp"
+                    image="/img/showcase4.webp"
                     btnText="Khám phá ngay"
                     onClick={() => router.push('/tool/baby-photo-creator')}
                 />
@@ -144,7 +144,7 @@ export const ToolShowcase = () => {
                     title="dành cho người bận rộn"
                     big_title="Ảnh thẻ"
                     description="Phòng chụp ảnh thẻ nhanh gọn và xuất file in ấn tiện lợi"
-                    image="/img/swapstyle.webp"
+                    image="/img/showcase5.webp"
                     btnText="Khám phá ngay"
                     onClick={() => router.push('/tool/id-photo-creator')}
                 />

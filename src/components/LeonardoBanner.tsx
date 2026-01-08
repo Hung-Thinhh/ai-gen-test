@@ -79,7 +79,7 @@ export const LeonardoBanner = () => {
             {/* Top Left */}
             <motion.div
                 style={{ y: y1, x: x1, rotate: -16 }}
-                className="absolute origin-bottom top-20 left-10 md:left-[20%] z-10"
+                className="absolute origin-bottom top-60 md:top-30 left-10 md:left-[20%] z-10"
             >
                 <motion.div
                     animate={{ y: [-10, 10, -10] }}
@@ -96,13 +96,13 @@ export const LeonardoBanner = () => {
 
             {/* Bottom Left */}
             <motion.div
-                style={{ y: y2, x: x2, rotate: -8 }}
-                className="absolute origin-bottom md:top-120 md:bottom-70 left-10 md:left-[20%] z-99"
+                style={{ y: y2, x: x2, rotate: 8 }}
+                className="absolute  bottom-60 md:bottom-70 left-10 md:left-[20%] z-99"
             >
                 <motion.div
                     animate={{ y: [-12, 12, -12] }}
                     transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-                    className="w-36 h-44 md:w-52 md:h-64 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20"
+                    className="w-20 h-24 md:w-52 md:h-64 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20"
                 >
                     <img
                         src="/img/thoitrang.webp"
@@ -115,12 +115,12 @@ export const LeonardoBanner = () => {
             {/* Top Right */}
             <motion.div
                 style={{ y: y3, x: x3, rotate: 12 }}
-                className="absolute origin-center top-32 right-10 md:right-[20%] z-10"
+                className="absolute origin-center top-70 md:top-30 right-10 md:right-[20%] z-10"
             >
                 <motion.div
                     animate={{ y: [-8, 8, -8] }}
                     transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                    className="w-40 h-48 md:w-56 md:h-72 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20"
+                    className="w-20 h-38 md:w-56 md:h-72 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20"
                 >
                     <img
                         src="/img/doanhnhan.webp"
@@ -132,8 +132,8 @@ export const LeonardoBanner = () => {
 
             {/* Bottom Right */}
             <motion.div
-                style={{ y: y4, x: x4, rotate: 8 }}
-                className="absolute origin-center top-120 md:bottom-85 right-10 md:right-[20%] z-99"
+                style={{ y: y4, x: x4, rotate: -8 }}
+                className="absolute origin-center bottom-50 md:bottom-85 right-5 md:right-[20%] z-99"
             >
                 <motion.div
                     animate={{ y: [-15, 15, -15] }}
@@ -149,7 +149,7 @@ export const LeonardoBanner = () => {
             </motion.div>
 
             {/* Center Content - Fixed */}
-            <div className="relative z-20 w-full px-6 pb-40 text-center">
+            <div className="relative z-20 w-full px-6 pb-40 text-center top-[-50px] md:top-10">
                 {/* Badge */}
                 {/* <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -235,7 +235,7 @@ export const LeonardoBanner = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.8 }}
-                className="benefit relative z-20 container max-w-[1300px] mx-auto px-6 mt-10 z-999"
+                className="benefit relative z-20 container max-w-[1300px] mx-auto px-6 mt-10 z-999 hidden md:block"
             >
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-[1300px] mx-auto">
                     {/* Item 1 */}

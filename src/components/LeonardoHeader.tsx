@@ -41,7 +41,7 @@ export const LeonardoHeader = () => {
                     onClick={() => router.push('/')}
                     className="flex items-center gap-3 group cursor-pointer"
                 >
-                    <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-orange-500/30 group-hover:shadow-orange-500/50 transition-all duration-300">
+                    <div className="w-12 h-12 p-2 rounded-xl overflow-hidden shadow-lg shadow-orange-500/30 group-hover:shadow-orange-500/50 transition-all duration-300">
                         <img
                             src="/img/logo_site.webp"
                             alt="Duky AI Logo"

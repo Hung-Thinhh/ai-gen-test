@@ -27,7 +27,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (!cached) return null;
 
             const { role, timestamp } = JSON.parse(cached);
-            const TTL = 10 * 60 * 1000; // 10 minutes
+            const TTL = 24 * 60 * 60 * 1000; // 24h
 
             if (Date.now() - timestamp < TTL) {
                 console.log('✅ Using cached role:', role);
@@ -85,7 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
                 return prev;
             });
-        }, 1000);  // ← Increased from 2000ms to 8000ms for slow networks
+        }, 8000);  // Increased to 8000ms to prevent premature logout state on slow networks
 
         // Get initial session and start role fetch in parallel
         supabase.auth.getSession().then(({ data: { session } }) => {

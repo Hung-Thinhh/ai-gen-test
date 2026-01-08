@@ -36,14 +36,14 @@ export const ZaloCTA: React.FC = () => {
                         rel="noopener noreferrer"
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className="flex-shrink-0 flex items-center gap-3 px-8 py-4 bg-white text-orange-600 font-bold rounded-full shadow-lg hover:shadow-xl transition-all"
+                        className="flex-shrink-0 flex items-center gap-3 px-8 py-4 mt-10 md:0 bg-white text-orange-600 font-bold rounded-full shadow-lg hover:shadow-xl transition-all"
                     >
                         <img
                             src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Icon_of_Zalo.svg/1200px-Icon_of_Zalo.svg.png"
                             alt="Zalo"
                             className="w-8 h-8 object-contain"
                         />
-                        <span className="text-lg">
+                        <span className="md:text-lg">
                             {language === 'vi' ? 'Tham gia Zalo Group' : 'Join Zalo Group'}
                         </span>
                     </motion.a>

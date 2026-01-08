@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Paper,
     Typography,
@@ -24,14 +24,18 @@ import {
     ArrowForward,
     Image as ImageIcon
 } from '@mui/icons-material';
+import toast from 'react-hot-toast';
 
-// --- MOCK COMPONENTS FOR CHARTS ---
+// --- MOCK COMPONENTS FOR CHARTS (Modified to accept props) ---
 
 const SparkLine = ({ data, color, height = 40 }: { data: number[], color: string, height?: number }) => {
+    // Basic normalization for sparkline
+    if (!data || data.length === 0) return <Box sx={{ height }} />;
+
     const min = Math.min(...data);
     const max = Math.max(...data);
     const range = max - min;
-    const stepX = 100 / (data.length - 1);
+    const stepX = 100 / (data.length - 1 || 1);
 
     const points = data.map((d, i) => {
         const x = i * stepX;
@@ -56,66 +60,62 @@ const SparkLine = ({ data, color, height = 40 }: { data: number[], color: string
     );
 };
 
-const AreaChartMock = () => {
+// Simplified Area Chart for demo - in real app use Recharts
+const AreaChartMock = ({ data = [], labels = [] }: { data: number[], labels: string[] }) => {
     return (
         <Box sx={{ width: '100%', height: 250, position: 'relative' }}>
-            <svg viewBox="0 0 500 150" preserveAspectRatio="none" style={{ width: '100%', height: '100%' }}>
-                <defs>
-                    <linearGradient id="gradientBlue" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#0F6CBD" stopOpacity={0.2} />
-                        <stop offset="100%" stopColor="#0F6CBD" stopOpacity={0.0} />
-                    </linearGradient>
-                </defs>
-                <line x1="0" y1="30" x2="500" y2="30" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="5,5" />
-                <line x1="0" y1="70" x2="500" y2="70" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="5,5" />
-                <line x1="0" y1="110" x2="500" y2="110" stroke="#f0f0f0" strokeWidth="1" strokeDasharray="5,5" />
-
-                <path
-                    d="M0,120 C50,110 100,130 150,90 C200,50 250,80 300,60 C350,40 400,20 450,40 L500,30 L500,150 L0,150 Z"
-                    fill="url(#gradientBlue)"
-                />
-                <path
-                    d="M0,120 C50,110 100,130 150,90 C200,50 250,80 300,60 C350,40 400,20 450,40 L500,30"
-                    fill="none"
-                    stroke="#0F6CBD"
-                    strokeWidth="3"
-                />
-            </svg>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1, color: 'text.secondary', fontSize: '0.75rem' }}>
-                <span>01 Th4</span>
-                <span>05 Th4</span>
-                <span>10 Th4</span>
-                <span>15 Th4</span>
-                <span>20 Th4</span>
-                <span>25 Th4</span>
-            </Box>
+            {/* Simple Placeholder Visualization */}
+            <div style={{ display: 'flex', alignItems: 'flex-end', height: '80%', justifyContent: 'space-between', padding: '0 10px' }}>
+                {data.map((val, i) => {
+                    const max = Math.max(...data, 1);
+                    const h = (val / max) * 100;
+                    return (
+                        <div key={i} style={{ width: '10%', height: `${h}%`, backgroundColor: 'rgba(15, 108, 189, 0.2)', borderTop: '2px solid #0F6CBD', position: 'relative' }}>
+                            <div style={{ position: 'absolute', bottom: -25, left: '50%', transform: 'translateX(-50%)', fontSize: '10px', color: '#666' }}>
+                                {labels[i]?.split('-').slice(1).join('/') || ''}
+                            </div>
+                        </div>
+                    )
+                })}
+            </div>
         </Box>
     )
 }
 
-const BarChartMock = () => {
-    // Model usage data
-    const data = [80, 65, 45, 30, 20];
-    const labels = ['Flux.1', 'SDXL', 'MJ v6', 'Dall-E', 'SD 1.5'];
+const BarChartMock = ({ data = [] }: { data: { name: string, count: number }[] }) => {
+    const max = Math.max(...data.map(d => d.count), 1);
 
     return (
         <Box sx={{ width: '100%', height: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-around', gap: 1, pt: 4 }}>
-            {data.map((val, i) => (
-                <Box key={i} sx={{ width: '15%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, height: '100%' }}>
+            {data.map((item, i) => (
+                <Box key={i} sx={{ width: '18%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, height: '100%' }}>
                     <Box sx={{ width: '60%', bgcolor: '#EBF5FF', borderRadius: 1, height: '100%', position: 'relative', display: 'flex', alignItems: 'flex-end' }}>
                         <Box sx={{
                             width: '100%',
-                            height: `${val}%`,
-                            bgcolor: i === 0 ? '#FF6600' : '#0F6CBD', // Highlight top model brand color
+                            height: `${(item.count / max) * 100}%`,
+                            bgcolor: i === 0 ? '#FF6600' : '#0F6CBD',
                             borderRadius: 1,
-                            transition: 'height 1s ease'
-                        }} />
+                            transition: 'height 1s ease',
+                            position: 'relative'
+                        }}>
+                            <Typography variant="caption" sx={{
+                                position: 'absolute',
+                                top: -22,
+                                width: '100%',
+                                textAlign: 'center',
+                                fontWeight: 700,
+                                color: i === 0 ? '#FF6600' : '#0F6CBD'
+                            }}>
+                                {item.count}
+                            </Typography>
+                        </Box>
                     </Box>
-                    <Typography variant="caption" color="text.secondary" fontWeight={600} noWrap>
-                        {labels[i]}
+                    <Typography variant="caption" color="text.secondary" fontWeight={600} noWrap sx={{ maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {item.name}
                     </Typography>
                 </Box>
             ))}
+            {data.length === 0 && <Typography variant="caption">Chưa có dữ liệu</Typography>}
         </Box>
     )
 }
@@ -165,13 +165,13 @@ const DetailRow = ({ user, plan, totalGen, credits, lastActive }: any) => (
         </TableCell>
         <TableCell>
             <Chip
-                label={plan}
+                label={plan || 'Free'}
                 size="small"
                 sx={{
                     height: 24,
                     fontWeight: 600,
-                    bgcolor: plan === 'Pro' ? '#E1EFFE' : '#F3F4F6',
-                    color: plan === 'Pro' ? '#1E429F' : '#374151',
+                    bgcolor: plan === 'Admin' ? '#E1EFFE' : '#F3F4F6',
+                    color: plan === 'Admin' ? '#1E429F' : '#374151',
                     borderRadius: 1
                 }}
             />
@@ -179,12 +179,84 @@ const DetailRow = ({ user, plan, totalGen, credits, lastActive }: any) => (
         <TableCell>{totalGen}</TableCell>
         <TableCell>{credits}</TableCell>
         <TableCell>
-            <Typography variant="body2" color="text.secondary">{lastActive}</Typography>
+            <Typography variant="body2" color="text.secondary">
+                {lastActive ? new Date(lastActive).toLocaleDateString() : 'N/A'}
+            </Typography>
         </TableCell>
     </TableRow>
-)
+);
+
+const TransactionRow = ({ amount, status, date, user }: any) => (
+    <TableRow hover>
+        <TableCell sx={{ py: 2 }}>
+            <Stack direction="row" alignItems="center" gap={1}>
+                <Avatar sx={{ width: 24, height: 24, fontSize: '0.75rem' }} src={user?.avatar_url}>
+                    {user?.full_name?.charAt(0) || '?'}
+                </Avatar>
+                <Box>
+                    <Typography variant="body2" fontWeight={500}>{user?.full_name || 'Unknown'}</Typography>
+                    <Typography variant="caption" color="text.secondary">{user?.email}</Typography>
+                </Box>
+            </Stack>
+        </TableCell>
+        <TableCell>
+            <Typography variant="body2" fontWeight={600} color="text.primary">
+                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount)}
+            </Typography>
+        </TableCell>
+        <TableCell>
+            <Chip
+                label={status === 'completed' ? 'Thành công' : status}
+                size="small"
+                sx={{
+                    height: 24,
+                    fontWeight: 600,
+                    bgcolor: status === 'completed' ? '#DEF7EC' : '#FDE8E8',
+                    color: status === 'completed' ? '#03543F' : '#9B1C1C',
+                    borderRadius: 1
+                }}
+            />
+        </TableCell>
+        <TableCell>
+            <Typography variant="body2" color="text.secondary">
+                {new Date(date).toLocaleDateString('vi-VN')}
+            </Typography>
+        </TableCell>
+    </TableRow>
+);
 
 export default function DashboardOverview() {
+    const [stats, setStats] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchDashboardData();
+    }, []);
+
+    const fetchDashboardData = async () => {
+        try {
+            const res = await fetch('/api/admin/dashboard');
+            const data = await res.json();
+            if (data.success) {
+                setStats(data);
+            } else {
+                toast.error('Không thể tải dữ liệu dashboard');
+            }
+        } catch (error) {
+            console.error('FETCH ERROR', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (loading) {
+        return <Box sx={{ display: 'flex', justifyContent: 'center', p: 10 }}><CircularProgress /></Box>;
+    }
+
+    if (!stats) return null;
+
+    const { stats: metrics, charts, recentUsers, recentTransactions } = stats;
+
     return (
         <Box>
             {/* Top Header */}
@@ -197,66 +269,62 @@ export default function DashboardOverview() {
                         Dashboard
                     </Typography>
                 </Box>
+                <Button variant="outlined" onClick={fetchDashboardData} size="small">
+                    Làm mới
+                </Button>
             </Stack>
 
             {/* Stats Row */}
             <Stack direction={{ xs: 'column', lg: 'row' }} spacing={3} mb={4}>
-                <Box sx={{ flex: { lg: '1 1 25%' } }}>
+                <Box sx={{ flex: { lg: '1 1 20%' } }}>
                     <StatCard
-                        title="Người dùng mới"
-                        value="1,245"
-                        badgeLabel="+25%"
+                        title="Người dùng"
+                        value={metrics.totalUsers}
+                        badgeLabel="Total"
                         badgeColor="success"
                         chartColor="#31C48D" // Green
-                        data={[20, 40, 30, 50, 40, 60, 50, 70, 60, 80]}
+                        data={[metrics.totalUsers]}
                     />
                 </Box>
-                <Box sx={{ flex: { lg: '1 1 25%' } }}>
+                <Box sx={{ flex: { lg: '1 1 20%' } }}>
                     <StatCard
-                        title="Credit tiêu thụ"
-                        value="325k"
-                        badgeLabel="-12%"
-                        badgeColor="error"
+                        title="Doanh thu"
+                        value={metrics.totalRevenue ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(metrics.totalRevenue) : '0 ₫'}
+                        badgeLabel="30 days"
+                        badgeColor={metrics.totalRevenue > 0 ? "success" : "warning"}
                         chartColor="#F05252" // Red
-                        data={[80, 70, 60, 50, 40, 30, 20, 10, 20]}
+                        data={charts.revenue || []}
                     />
                 </Box>
-                <Box sx={{ flex: { lg: '1 1 25%' } }}>
+                <Box sx={{ flex: { lg: '1 1 20%' } }}>
                     <StatCard
                         title="Tổng ảnh tạo"
-                        value="48.2k"
-                        badgeLabel="+5%"
+                        value={metrics.totalImages}
+                        badgeLabel="30 days"
                         badgeColor="success"
                         chartColor="#9CA3AF" // Grey
-                        data={[20, 25, 22, 30, 35, 32, 28, 30, 40]}
+                        data={charts.data || []}
                     />
                 </Box>
-                <Box sx={{ flex: { lg: '1 1 25%' } }}>
-                    <Paper sx={{ p: 3, height: '100%', bgcolor: 'background.paper', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                        <Stack direction="row" justifyContent="space-between" mb={2}>
-                            <Box>
-                                <Typography variant="h6" fontWeight={700}>Báo cáo lỗi</Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                    Tỉ lệ fail generation thấp
-                                </Typography>
-                            </Box>
-                            <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-                                <CircularProgress variant="determinate" value={100} sx={{ color: '#E5E7EB' }} size={50} thickness={4} />
-                                <CircularProgress variant="determinate" value={2.5} color="success" sx={{ position: 'absolute', left: 0 }} size={50} thickness={4} />
-                                <Box sx={{ top: 0, left: 0, bottom: 0, right: 0, position: 'absolute', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Typography variant="caption" component="div" color="text.secondary" fontWeight={700}>2.5%</Typography>
-                                </Box>
-                            </Box>
-                        </Stack>
-                        <Button
-                            variant="outlined"
-                            size="small"
-                            color="inherit"
-                            sx={{ borderRadius: 2, borderColor: '#E5E7EB' }}
-                        >
-                            Xem log lỗi
-                        </Button>
-                    </Paper>
+                <Box sx={{ flex: { lg: '1 1 20%' } }}>
+                    <StatCard
+                        title="Credit đã dùng"
+                        value={metrics.creditsConsumed ? metrics.creditsConsumed.toLocaleString() : '0'}
+                        badgeLabel="30 days"
+                        badgeColor="info"
+                        chartColor="#7E3AF2" // Purple
+                        data={charts.credits || []}
+                    />
+                </Box>
+                <Box sx={{ flex: { lg: '1 1 20%' } }}>
+                    <StatCard
+                        title="Tỷ lệ thành công"
+                        value={`${metrics.successRate ? metrics.successRate.toFixed(1) : '100'}%`}
+                        badgeLabel="Generated"
+                        badgeColor="success"
+                        chartColor="#1A56DB" // Blue
+                        data={[metrics.successRate || 100, 100, 100]}
+                    />
                 </Box>
             </Stack>
 
@@ -268,13 +336,12 @@ export default function DashboardOverview() {
                             <Box>
                                 <Typography variant="h6" fontWeight={700}>Lượt tạo ảnh</Typography>
                                 <Stack direction="row" alignItems="center" gap={1} mt={0.5}>
-                                    <Typography variant="h4" fontWeight={700}>13,277</Typography>
-                                    <Chip label="+35%" size="small" sx={{ bgcolor: '#DEF7EC', color: '#03543F', fontWeight: 700, height: 24, borderRadius: 1 }} />
+                                    <Typography variant="h4" fontWeight={700}>{metrics.totalImages}</Typography>
                                 </Stack>
-                                <Typography variant="caption" color="text.secondary">Số lượng ảnh tạo mỗi ngày (30 ngày gần nhất)</Typography>
+                                <Typography variant="caption" color="text.secondary">Số lượng ảnh tạo mỗi ngày (7 ngày gần nhất)</Typography>
                             </Box>
                         </Stack>
-                        <AreaChartMock />
+                        <AreaChartMock data={charts.data} labels={charts.labels} />
                     </Paper>
                 </Box>
                 <Box sx={{ flex: { md: '5' } }}>
@@ -283,37 +350,87 @@ export default function DashboardOverview() {
                             <Typography variant="h6" fontWeight={700}>Top Mô hình AI</Typography>
                             <Typography variant="caption" color="text.secondary">Model được sử dụng nhiều nhất</Typography>
                         </Box>
-                        <BarChartMock />
+                        <BarChartMock data={charts.topModels} />
                     </Paper>
                 </Box>
             </Stack>
 
-            {/* Details Table */}
-            <Box>
-                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-                    <Typography variant="h6" color="text.primary" fontWeight={700}>Người dùng tiêu biểu</Typography>
-                    <Button size="small">Xem tất cả</Button>
-                </Stack>
-                <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #E5E7EB', borderRadius: 2 }}>
-                    <Table>
-                        <TableHead sx={{ bgcolor: '#F9FAFB' }}>
-                            <TableRow>
-                                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Người dùng</TableCell>
-                                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Gói cước</TableCell>
-                                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Tổng ảnh tạo</TableCell>
-                                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Credits dư</TableCell>
-                                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Hoạt động cuối</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            <DetailRow user="nguyenvan_a@gmail.com" plan="Pro" totalGen="12,423" credits="500" lastActive="2 phút trước" />
-                            <DetailRow user="design.studio@agency.vn" plan="Enterprise" totalGen="8,653" credits="Unlimited" lastActive="15 phút trước" />
-                            <DetailRow user="khachvanglai_99" plan="Free" totalGen="45" credits="5" lastActive="1 giờ trước" />
-                            <DetailRow user="content_creator_x" plan="Pro" totalGen="2,543" credits="120" lastActive="3 giờ trước" />
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-            </Box>
+            {/* Details Tables Grid */}
+            <Stack direction={{ xs: 'column', xl: 'row' }} spacing={3}>
+                {/* Recent Users Table */}
+                <Box sx={{ flex: 1 }}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+                        <Typography variant="h6" color="text.primary" fontWeight={700}>Người dùng mới nhất</Typography>
+                    </Stack>
+                    <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #E5E7EB', borderRadius: 2 }}>
+                        <Table>
+                            <TableHead sx={{ bgcolor: '#F9FAFB' }}>
+                                <TableRow>
+                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Người dùng</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Gói cước</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Tổng ảnh (30d)</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Credits</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Tham gia</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {recentUsers?.length > 0 ? (
+                                    recentUsers.map((u: any) => (
+                                        <DetailRow
+                                            key={u.user_id}
+                                            user={u.email || u.full_name || 'No Name'}
+                                            plan={u.plan}
+                                            totalGen={u.total_gen}
+                                            credits={u.current_credits}
+                                            lastActive={u.created_at}
+                                        />
+                                    ))
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={5} align="center">Chưa có dữ liệu</TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                </Box>
+
+                {/* Recent Transactions Table */}
+                <Box sx={{ flex: 1 }}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+                        <Typography variant="h6" color="text.primary" fontWeight={700}>Giao dịch gần đây</Typography>
+                    </Stack>
+                    <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #E5E7EB', borderRadius: 2 }}>
+                        <Table>
+                            <TableHead sx={{ bgcolor: '#F9FAFB' }}>
+                                <TableRow>
+                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Người dùng</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Số tiền</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Trạng thái</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Ngày</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {recentTransactions?.length > 0 ? (
+                                    recentTransactions.map((tx: any) => (
+                                        <TransactionRow
+                                            key={tx.id}
+                                            amount={tx.amount}
+                                            status={tx.status}
+                                            date={tx.created_at}
+                                            user={tx.user}
+                                        />
+                                    ))
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={4} align="center">Chưa có giao dịch</TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                </Box>
+            </Stack>
         </Box>
     );
 }

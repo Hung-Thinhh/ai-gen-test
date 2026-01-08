@@ -38,19 +38,19 @@ const concepts: Concept[] = [
 
 export const StudioConcept = () => {
     return (
-        <section className="py-20 bg-black text-white relative overflow-hidden">
+        <section className="py-20 pt-0 bg-black text-white relative overflow-hidden">
             {/* Background Glow */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full max-w-4xl max-h-[500px] bg-orange-500/10 blur-[100px] rounded-full pointer-events-none" />
 
             <div className="container mx-auto max-w-[1300px] text-center relative z-10">
-                <h3 className="text-xl md:text-2xl text-start font-bold mb-6  bg-clip-text text-white">
+                <h3 className="text-sm md:text-2xl text-start font-bold mb-6  bg-clip-text text-white">
                     Không gian sáng tạo hiện đại, kết hợp công nghệ & cảm xúc - nơi ý tưởng được kích hoạt.
                 </h3>
                 <motion.h2
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className="text-4xl leading-[1.1] md:text-8xl  font-magesta w-[50%] text-start mb-12 bg-gradient-to-r from-[#eb5a01] to-[#eb5a00] bg-clip-text text-transparent"
+                    className="!text-4xl leading-[1.1] md:text-8xl  font-magesta md:w-[50%] w-[70%] text-start mb-12 bg-gradient-to-r from-[#eb5a01] to-[#eb5a00] bg-clip-text text-transparent"
                 >
                     Studio concept sáng tạo
                 </motion.h2>
@@ -92,7 +92,7 @@ export const StudioConcept = () => {
                 >
                     <Link
                         href="/studio"
-                        className="inline-flex items-center justify-center px-8 py-3 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full text-white font-medium hover:shadow-lg hover:shadow-orange-500/30 transition-all duration-300 hover:-translate-y-1"
+                        className="inline-flex items-center justify-center px-8 py-3 text-sm md:text-base bg-gradient-to-r from-orange-500 to-orange-600 rounded-full text-white font-medium hover:shadow-lg hover:shadow-orange-500/30 transition-all duration-300 hover:-translate-y-1"
                     >
                         Xem thêm
                     </Link>
