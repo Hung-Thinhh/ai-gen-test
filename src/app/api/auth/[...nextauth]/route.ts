@@ -66,22 +66,18 @@ export const authOptions: NextAuthOptions = {
                         console.log('[NextAuth] Creating new user:', user.email);
 
                         // Create new user with default credits
-                        const { error: insertError } = await supabaseAdmin
-                            .from('users')
-                            .insert({
-                                user_id: user.id,
-                                email: user.email,
-                                display_name: user.name || user.email?.split('@')[0],
-                                avatar_url: user.image,
-                                user_type: 'registered',
-                                current_credits: 10,
-                                role: 'user',
-                                created_at: new Date().toISOString()
-                            });
+                        const newUser = await createUser({
+                            user_id: user.id,
+                            email: user.email!,
+                            display_name: user.name || user.email?.split('@')[0],
+                            avatar_url: user.image || undefined,
+                            user_type: 'registered',
+                            current_credits: 10,
+                            role: 'user'
+                        });
 
-                        if (insertError) {
-                            console.error('[NextAuth] Error creating user:', insertError);
-                            // Don't block login, just log the error
+                        if (!newUser) {
+                            console.error('[NextAuth] Failed to create user (result is null)');
                         } else {
                             console.log('[NextAuth] ✅ User created successfully');
                         }
