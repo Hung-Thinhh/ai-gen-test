@@ -7,20 +7,24 @@ import { SidebarProvider } from '../contexts/SidebarContext';
 import { ThemeProvider } from '../contexts/ThemeContext';
 import { AppControlProvider, ImageEditorProvider } from './uiContexts';
 
+import { SessionProvider } from "next-auth/react";
+
 export function Providers({ children }: { children: React.ReactNode }) {
     return (
-        <AuthProvider>
-            <ThemeProvider>
-                <SidebarProvider>
-                    <AppControlProvider>
-                        <ImageEditorProvider>
-                            <Toaster position="top-center" />
+        <SessionProvider>
+            <AuthProvider>
+                <ThemeProvider>
+                    <SidebarProvider>
+                        <AppControlProvider>
+                            <ImageEditorProvider>
+                                <Toaster position="top-center" />
 
-                            {children}
-                        </ImageEditorProvider>
-                    </AppControlProvider>
-                </SidebarProvider>
-            </ThemeProvider>
-        </AuthProvider>
+                                {children}
+                            </ImageEditorProvider>
+                        </AppControlProvider>
+                    </SidebarProvider>
+                </ThemeProvider>
+            </AuthProvider>
+        </SessionProvider>
     );
 }

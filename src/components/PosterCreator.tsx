@@ -931,17 +931,9 @@ ${aspectRatioPrompt}
 
         const imageCount = appState.options.imageCount || 1;
 
-        // Check credits for TOTAL images FIRST (before UI changes)
+        // Server-side credit validation will handle this
+        // We catch the 402 error in the try/catch block below
         const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
-        const totalCost = imageCount * creditCostPerImage;
-        console.log('CHECK CREDITTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT');
-
-        if (!await checkCredits(totalCost)) {
-            // Credits insufficient - stay in current state, popup will show
-            console.log('CHECK CREDITTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT loi');
-
-            return;
-        }
 
         // Set generating flag
         setIsGenerating(true);

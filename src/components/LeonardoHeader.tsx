@@ -5,13 +5,15 @@ import { useRouter, usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAppControls } from './uiUtils';
 import { useAuth } from '../contexts/AuthContext';
+import { useSession } from 'next-auth/react';
 
 export const LeonardoHeader = () => {
     const [scrolled, setScrolled] = useState(false);
     const router = useRouter();
     const pathname = usePathname();
-    const { t, userCredits, guestCredits } = useAppControls();
+    const { t, guestCredits } = useAppControls();
     const { user, isLoggedIn, loginGoogle, logout } = useAuth();
+    const { data: session } = useSession();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     useEffect(() => {
@@ -23,7 +25,9 @@ export const LeonardoHeader = () => {
     }, []);
 
     // Determine credits to display
-    const displayCredits = isLoggedIn ? userCredits : guestCredits;
+    // Get credits from NextAuth session if logged in, otherwise use guest credits
+    const userCreditsFromSession = (session?.user as any)?.credits;
+    const displayCredits = isLoggedIn ? (userCreditsFromSession ?? 0) : guestCredits;
 
     return (
         <header

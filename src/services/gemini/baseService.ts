@@ -363,14 +363,16 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
             // Validate that the response contains an image.
             const imagePart = data.candidates?.[0]?.content?.parts?.find((part: any) => part.inlineData);
             if (imagePart?.inlineData) {
-                // SUCCESS: Refresh credits in UI
+                // SUCCESS: Refresh NextAuth session to update credits in UI
                 try {
-                    if (typeof window !== 'undefined' && (window as any).__refreshCredits) {
-                        await (window as any).__refreshCredits();
-                        devLog('[baseService] Credits refreshed in UI after generation');
+                    if (typeof window !== 'undefined') {
+                        // Trigger NextAuth session refresh
+                        const event = new CustomEvent('refresh-session');
+                        window.dispatchEvent(event);
+                        devLog('[baseService] NextAuth session refresh triggered after generation');
                     }
                 } catch (refreshError) {
-                    devWarn('[baseService] Failed to refresh credits:', refreshError);
+                    devWarn('[baseService] Failed to trigger session refresh:', refreshError);
                 }
                 return data;
             }

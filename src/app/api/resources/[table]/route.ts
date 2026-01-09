@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { sql } from '@/lib/neon/client';
+import { getUserByEmail } from '@/lib/neon/queries';
+import { getServerSession } from "next-auth";
+import { authOptions } from "../../auth/[...nextauth]/route";
 
-// Initialize Supabase Admin Client
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-// Whylist of allowed tables to prevent arbitrary access
+// Whitelist of allowed tables to prevent arbitrary access
 const ALLOWED_TABLES = [
     'hero_banners',
     'tools',
@@ -19,7 +16,7 @@ const ALLOWED_TABLES = [
 
 export async function GET(
     request: NextRequest,
-    context: { params: Promise<{ table: string }> } // Correct type for Next.js 15+ Params
+    context: { params: Promise<{ table: string }> }
 ) {
     const { table } = await context.params;
 
@@ -29,37 +26,145 @@ export async function GET(
     }
 
     try {
-        console.log(`[API] Fetching resource: ${table}`);
+        console.log(`[API] Fetching resource from Neon: ${table}`);
 
-        let query = supabaseAdmin.from(table).select('*');
-
-        // Optional: Apply default sorting based on table
-        if (['hero_banners', 'tools', 'studio', 'prompts'].includes(table)) {
-            // Check if sort_order column exists or just try sorting? 
-            // Safer to just fetch and let client sort, OR assuming 'sort_order' exists if your schema is consistent.
-            // For now, let's just fetch all. Simple is robust.
-            // Actually, prompts might be huge, but 'getAllPrompts' fetches all... so it's fine.
-        }
-
-        // Special sorting for specific tables if known columns exist
-        if (table === 'hero_banners' || table === 'packages') {
-            query = query.order('sort_order', { ascending: true });
-        } else if (table === 'tools' || table === 'studio') {
-            query = query.order('sort_order', { ascending: true });
+        // Execute Neon SQL query
+        // Table name is safe because it's validated against ALLOWED_TABLES whitelist
+        // Use sql.query() for dynamic queries as per Neon documentation
+        let query;
+        if (['hero_banners', 'packages', 'tools', 'studio'].includes(table)) {
+            query = `SELECT * FROM ${table} ORDER BY sort_order ASC`;
         } else {
-            query = query.order('created_at', { ascending: false });
+            query = `SELECT * FROM ${table} ORDER BY created_at DESC`;
         }
 
-        const { data, error } = await query;
+        const data = await sql.query(query);
 
-        if (error) {
-            console.error(`[API] Error fetching ${table}:`, error);
-            return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-        }
+        console.log(`[API] Neon returned:`, Array.isArray(data) ? `${data.length} rows` : typeof data, data);
 
-        return NextResponse.json({ success: true, data: data });
-    } catch (error) {
+        return NextResponse.json({ success: true, data: Array.isArray(data) ? data : [] });
+    } catch (error: any) {
         console.error('[API] Server error:', error);
-        return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ success: false, error: error.message || 'Internal Server Error' }, { status: 500 });
+    }
+}
+
+async function verifyAdmin(request: NextRequest) {
+    // Try NextAuth Session
+    const session = await getServerSession(authOptions);
+    if (session?.user?.email) {
+        console.log(`[API] Verifying NextAuth User: ${session.user.email}`);
+        const userType = await getUserByEmail(session.user.email);
+
+        if (userType && (userType.role === 'admin' || userType.role === 'editor')) {
+            return {
+                id: userType.user_id,
+                email: userType.email,
+                role: userType.role
+            };
+        }
+        console.log(`[API] NextAuth User unauthorized or not found`);
+    }
+
+    return null;
+}
+
+export async function POST(
+    request: NextRequest,
+    context: { params: Promise<{ table: string }> }
+) {
+    const { table } = await context.params;
+    if (!ALLOWED_TABLES.includes(table)) return NextResponse.json({ success: false, error: 'Invalid resource table' }, { status: 400 });
+
+    const user = await verifyAdmin(request);
+    if (!user) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+
+    try {
+        const body = await request.json();
+
+        // Build INSERT query
+        const columns = Object.keys(body);
+        const values = Object.values(body);
+        const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+
+        const insertQuery = `INSERT INTO ${table} (${columns.join(', ')}) VALUES (${placeholders}) RETURNING *`;
+        const result = await sql([insertQuery, ...values] as any);
+
+        return NextResponse.json({ success: true, data: Array.isArray(result) ? result[0] : result });
+    } catch (error: any) {
+        console.error('[API POST] Error:', error);
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+}
+
+export async function PUT(
+    request: NextRequest,
+    context: { params: Promise<{ table: string }> }
+) {
+    const { table } = await context.params;
+    if (!ALLOWED_TABLES.includes(table)) return NextResponse.json({ success: false, error: 'Invalid resource table' }, { status: 400 });
+
+    const user = await verifyAdmin(request);
+    if (!user) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+
+    try {
+        const body = await request.json();
+        const { id, config_key, tool_id, ...updates } = body;
+
+        // Handle different ID columns
+        let matchColumn = 'id';
+        let matchValue = id;
+
+        if (table === 'tools') {
+            matchColumn = 'tool_id';
+            matchValue = tool_id;
+        } else if (table === 'system_configs') {
+            matchColumn = 'config_key';
+            matchValue = config_key;
+        }
+
+        if (!matchValue) return NextResponse.json({ success: false, error: 'Missing ID' }, { status: 400 });
+
+        // Build UPDATE query
+        const entries = Object.entries(updates);
+        const setClause = entries.map(([key], i) => `${key} = $${i + 1}`).join(', ');
+        const values = [...entries.map(([, value]) => value), matchValue];
+
+        const updateQuery = `UPDATE ${table} SET ${setClause} WHERE ${matchColumn} = $${values.length}`;
+        await sql([updateQuery, ...values] as any);
+
+        return NextResponse.json({ success: true });
+    } catch (error: any) {
+        console.error('[API PUT] Error:', error);
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+}
+
+export async function DELETE(
+    request: NextRequest,
+    context: { params: Promise<{ table: string }> }
+) {
+    const { table } = await context.params;
+    if (!ALLOWED_TABLES.includes(table)) return NextResponse.json({ success: false, error: 'Invalid resource table' }, { status: 400 });
+
+    const user = await verifyAdmin(request);
+    if (!user) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+
+    try {
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+        if (!id) return NextResponse.json({ success: false, error: 'Missing ID' }, { status: 400 });
+
+        let matchColumn = 'id';
+        if (table === 'tools') matchColumn = 'tool_id';
+        if (table === 'system_configs') matchColumn = 'config_key';
+
+        const deleteQuery = `DELETE FROM ${table} WHERE ${matchColumn} = $1`;
+        await sql([deleteQuery, id] as any);
+
+        return NextResponse.json({ success: true });
+    } catch (error: any) {
+        console.error('[API DELETE] Error:', error);
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 }

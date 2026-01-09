@@ -118,13 +118,16 @@ export default function PromptManagement() {
                 avt_url: currentPrompt.avt_url,
                 category_ids: currentPrompt.category_ids || []
             };
-
+            console.log(payload);
             let success = false;
             // Assuming CRUD functions return true/false like others in storageService
             if (currentPrompt.id) {
+                console.log("Calling updatePrompt...");
                 success = await updatePrompt(currentPrompt.id, payload);
             } else {
+                console.log("Calling createPrompt...");
                 success = await createPrompt(payload);
+                console.log("createPrompt returned:", success);
             }
 
             if (success) {

@@ -3,11 +3,40 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import { signIn } from 'next-auth/react';
 
 export default function LoginPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+
+    const handleCredentialsLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError(null);
+
+        try {
+            const result = await signIn('credentials', {
+                email,
+                password,
+                redirect: false
+            });
+
+            if (result?.error) {
+                throw new Error(result.error);
+            }
+
+            router.push('/');
+            router.refresh();
+        } catch (error: any) {
+            console.error('Login error:', error);
+            setError(error.message || 'Đăng nhập thất bại');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // Check if already logged in
     useEffect(() => {
@@ -25,18 +54,11 @@ export default function LoginPage() {
             setLoading(true);
             setError(null);
 
-            const { data, error } = await supabase.auth.signInWithOAuth({
-                provider: 'google',
-                options: {
-                    redirectTo: `${window.location.origin}/auth/callback`,
-                    queryParams: {
-                        access_type: 'offline',
-                        prompt: 'consent',
-                    }
-                }
+            await signIn('google', {
+                callbackUrl: '/',
+                redirect: true,
             });
 
-            if (error) throw error;
         } catch (error: any) {
             console.error('Login error:', error);
             setError(error.message || 'Đã xảy ra lỗi khi đăng nhập');
@@ -64,6 +86,45 @@ export default function LoginPage() {
                             <p className="text-red-400 text-sm">{error}</p>
                         </div>
                     )}
+
+                    <form onSubmit={handleCredentialsLogin} className="space-y-4 mb-6">
+                        <div>
+                            <input
+                                type="email"
+                                placeholder="Email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full bg-neutral-900 border border-neutral-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-yellow-400"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <input
+                                type="password"
+                                placeholder="Mật khẩu"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full bg-neutral-900 border border-neutral-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-yellow-400"
+                                required
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            disabled={loading || !email || !password}
+                            className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-3 px-6 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {loading ? 'Đang xử lý...' : 'Đăng nhập'}
+                        </button>
+                    </form>
+
+                    <div className="relative mb-6">
+                        <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-neutral-700"></div>
+                        </div>
+                        <div className="relative flex justify-center text-sm">
+                            <span className="px-2 bg-neutral-800 text-neutral-500">Hoặc tiếp tục với</span>
+                        </div>
+                    </div>
 
                     <button
                         onClick={handleGoogleLogin}

@@ -29,6 +29,9 @@ export const metadata: Metadata = {
   },
 };
 
+const IS_MAINTENANCE_MODE = process.env.NEXT_PUBLIC_MAINTENANCE_MODE === 'true';
+import MaintenanceOverlay from "@/components/MaintenanceOverlay";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -38,6 +41,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${beVietnamPro.className} ${inter.variable}`} suppressHydrationWarning>
         <Providers>
+          {IS_MAINTENANCE_MODE && <MaintenanceOverlay />}
           {children}
           {/* DEV ONLY: Mock login button */}
           {process.env.NODE_ENV === 'development' && (

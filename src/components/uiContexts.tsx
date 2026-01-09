@@ -359,52 +359,22 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }, [translations]);
 
     const checkCredits = useCallback(async (amount: number = 1) => {
-        const { getGuestCredits, getUserCredits } = await import('../services/storageService');
+        // ✅ SERVER-SIDE VALIDATION ONLY
+        // Credit checking is now handled by /api/gemini/generate-image
+        // Server will return 402 INSUFFICIENT_CREDITS if user doesn't have enough
+        // This function now just returns true to allow the request to proceed
 
-        if (isLoggedIn && user) {
-            // READ-ONLY CHECK (server will deduct after generation)
-            const currentBalance = await getUserCredits(user.id, token || undefined);
-            console.log(`[User Check] Current: ${currentBalance}, Required: ${amount}`);
+        console.log(`[Credit Check] Skipping client-side check. Server will validate.`);
 
-            if (currentBalance < amount) {
-                setIsOutOfCreditsModalOpen(true);
-                console.log("User insufficient credits");
-                return false;
-            }
-
-            console.log("User has enough credits");
-            return true;
-        }
-
-        // Guest Flow
-        if (!guestId) {
-            console.warn("Guest ID not initialized.");
-            toast.error("Vui lòng tải lại trang (Lỗi xác thực Guest).");
+        // Still check if user is authenticated or has guest ID
+        if (!isLoggedIn && !guestId) {
+            console.warn("No user or guest ID - cannot proceed");
+            toast.error("Vui lòng tải lại trang để khởi tạo phiên.");
             return false;
         }
 
-        try {
-            console.log("Checking guest credits for", guestId);
-            // READ-ONLY CHECK (server will deduct after generation)
-            const currentBalance = await getGuestCredits(guestId);
-            console.log(`[Guest Check] Current: ${currentBalance}, Required: ${amount}`);
-
-            if (currentBalance < amount) {
-                console.log("[Guest Check] Insufficient credits! Opening OutOfCredits Modal.");
-                setIsOutOfCreditsModalOpen(true);
-                return false;
-            }
-
-            console.log(`[Guest Check] Has enough credits`);
-            return true;
-
-
-        } catch (e) {
-            console.error("Guest check failed", e);
-            toast.error("Lỗi khi kiểm tra tín dụng. Vui lòng thử lại.");
-            return false;
-        }
-    }, [isLoggedIn, guestId, user, t, token]);
+        return true; // Let server handle the actual credit validation
+    }, [isLoggedIn, guestId]);
 
 
 

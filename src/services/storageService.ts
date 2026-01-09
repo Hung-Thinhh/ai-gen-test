@@ -2,6 +2,21 @@ import { log } from 'console';
 import { supabase } from '../lib/supabase/client';
 import { uploadToCloudinary } from './cloudinaryService';
 import { cacheService, CACHE_KEYS, CACHE_TTL } from './cacheService';
+import { getSession } from "next-auth/react";
+// Helper to get user role
+// Helper to get user role
+export const getUserRole = async (userId: string): Promise<string | null> => {
+    try {
+        const res = await fetch('/api/user/me');
+        if (!res.ok) return null;
+        const data = await res.json();
+        return data.role;
+    } catch (e) {
+        console.error("Error fetching user role:", e);
+        return null;
+    }
+};
+
 const USERS_TABLE = "users";
 const PROFILES_TABLE = "profiles";
 const GUESTS_TABLE = "guest_sessions";
@@ -10,6 +25,35 @@ const GUESTS_TABLE = "guest_sessions";
 interface GuestHistoryItem {
     url: string;
     timestamp: number;
+}
+
+// Helper to get access token safely (NextAuth -> Supabase -> LocalStorage)
+// Helper to get access token safely (NextAuth only)
+const getAccessToken = async () => {
+    try {
+        // 1. Try NextAuth Session first (and only)
+        const session = await getSession();
+        if (session && (session as any).accessToken) {
+            return (session as any).accessToken;
+        }
+
+        // Just return undefined if no session
+        return undefined;
+
+    } catch (error) {
+        console.error("[Storage] getAccessToken failed:", error);
+        return undefined;
+    }
+};
+
+const getFreshClient = (accessToken?: string) => {
+    if (!accessToken) return supabase;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const { createClient } = require('@supabase/supabase-js');
+    const options: any = { auth: { persistSession: false } };
+    options.global = { headers: { Authorization: `Bearer ${accessToken}` } };
+    return createClient(supabaseUrl, supabaseAnonKey, options);
 }
 
 // Helper for timeouts
@@ -122,29 +166,11 @@ export const uploadAsset = async (file: File): Promise<string> => {
 export const addMultipleImagesToCloudGallery = async (userId: string, imageUrls: string[], token?: string) => {
     try {
         if (!imageUrls.length) return;
-
-        // 1. Get current gallery
-        const currentGallery = await getUserCloudGallery(userId, true, token);
-
-        // 2. Add new images
-        const newGallery = [...currentGallery, ...imageUrls];
-        console.log(`[Storage] Saving gallery for user ${userId}, count: ${newGallery.length}`);
-
-        // 3. Upsert with Retry
-        await executeWithRetry(
-            'addMultipleImagesToCloudGallery',
-            async (client) => client
-                .from(PROFILES_TABLE)
-                .upsert({
-                    id: userId,
-                    gallery: newGallery,
-                    last_updated: new Date().toISOString()
-                }, { onConflict: 'id' }),
-            token
-        );
-
-        console.log("[Storage] Save success.");
-
+        await fetch('/api/user/gallery', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ urls: imageUrls })
+        });
     } catch (error) {
         console.error("Error adding images to cloud gallery:", error);
         throw error;
@@ -156,35 +182,10 @@ export const addMultipleImagesToCloudGallery = async (userId: string, imageUrls:
  */
 export const getUserCloudGallery = async (userId: string, useFreshClient: boolean = false, token?: string): Promise<string[]> => {
     try {
-        const fetchOp = async (client: any) => client
-            .from(PROFILES_TABLE)
-            .select('gallery')
-            .eq('id', userId)
-            .maybeSingle();
-
-        let data, error;
-
-        if (useFreshClient) {
-            const result = await executeWithRetry('getUserCloudGallery', fetchOp, token);
-            data = result.data;
-            error = result.error;
-        } else {
-            const result = await fetchOp(supabase);
-            data = result.data;
-            error = result.error;
-        }
-
-        if (error) {
-            if (error.code === 'PGRST116') return [];
-            console.error("Error fetching cloud gallery:", error);
-            return [];
-        }
-
-        if (data && data.gallery) {
-            return Array.isArray(data.gallery) ? [...data.gallery].reverse() : [];
-        }
-        return [];
-
+        const res = await fetch('/api/user/gallery');
+        if (!res.ok) return [];
+        const data = await res.json();
+        return data.gallery || [];
     } catch (error) {
         console.error("Error fetching cloud gallery:", error);
         return [];
@@ -196,38 +197,9 @@ export const getUserCloudGallery = async (userId: string, useFreshClient: boolea
  */
 export const removeImageFromCloudGallery = async (userId: string, imageUrl: string, token?: string) => {
     try {
-        // Fetch current gallery with retry
-        const fetchResult = await executeWithRetry(
-            'removeImageFromCloudGallery_Fetch',
-            async (client) => client
-                .from(PROFILES_TABLE)
-                .select('gallery')
-                .eq('id', userId)
-                .maybeSingle(),
-            token
-        );
-
-        if (fetchResult.error) throw fetchResult.error;
-        const data = fetchResult.data as { gallery: string[] } | null; // Cast for TS
-
-        const rawGallery: string[] = Array.isArray(data?.gallery) ? data.gallery : [];
-        const filteredRAWGallery = rawGallery.filter(url => url !== imageUrl);
-
-        // Update with retry
-        const updateResult = await executeWithRetry(
-            'removeImageFromCloudGallery_Update',
-            async (client) => client
-                .from(PROFILES_TABLE)
-                .update({
-                    gallery: filteredRAWGallery,
-                    last_updated: new Date().toISOString()
-                })
-                .eq('id', userId),
-            token
-        );
-
-        if (updateResult.error) throw updateResult.error;
-
+        await fetch(`/api/user/gallery?url=${encodeURIComponent(imageUrl)}`, {
+            method: 'DELETE'
+        });
     } catch (error) {
         console.error("Error removing image from cloud gallery:", error);
         throw error;
@@ -301,12 +273,17 @@ export const saveGuestSessionBatch = async (guestId: string, ip: string, imageUr
         };
 
         // UPSERT using FRESH CLIENT
+        // [MODIFIED] Client-side guest session saving disabled request from user.
+        // History is ostensibly not saved to DB from client anymore to avoid RLS/connection issues.
+        /*
         const { error } = await client
             .from(GUESTS_TABLE)
             .upsert(updateData, { onConflict: 'guest_id' });
 
         if (error) throw error;
         console.log(`[Storage] Guest session updated for ${guestId}, history count: ${currentHistory.length}`);
+        */
+        console.log(`[Storage] Skipped saving guest session (Client-side disabled)`);
 
     } catch (error) {
         console.error("Error saving guest session:", error);
@@ -324,31 +301,22 @@ export const saveGuestSessionBatch = async (guestId: string, ip: string, imageUr
  */
 export const getUserCredits = async (userId: string, token?: string): Promise<number> => {
     try {
-        const client = token ? getFreshClient(token) : supabase;
-        const { data, error } = await client
-            .from(USERS_TABLE)
-            .select('current_credits')
-            .eq('user_id', userId)
-            .maybeSingle(); // Use maybeSingle to handle new users
+        // [MODIFIED] Use Server API instead of direct Supabase (NextAuth Only)
+        // Note: 'userId' arg is actually redundant if we trust the session, 
+        // but kept for signature compatibility. API uses session user.
 
-        if (error) {
-            console.error("[getUserCredits] Error fetching user credits:", error);
-            // Return 0 instead of throwing to prevent UI crashes
+        const res = await fetch('/api/user/me');
+        if (!res.ok) {
+            console.warn(`[getUserCredits] API request failed: ${res.status}`);
             return 0;
         }
 
-        if (!data) {
-            console.warn("[getUserCredits] No user data found for userId:", userId, "- User may be newly created");
-            // Return 0 for new users instead of throwing error
-            return 0;
-        }
+        const data = await res.json();
+        console.log(`[getUserCredits] User credits from API: ${data.current_credits}`);
+        return data.current_credits ?? 0;
 
-        const credits = data.current_credits ?? 0;
-        console.log(`[getUserCredits] User ${userId}: ${credits} credits`);
-        return credits;
     } catch (error: any) {
         console.error("[getUserCredits] Exception:", error);
-        // Return 0 instead of throwing to prevent UI crashes
         return 0;
     }
 };
@@ -404,9 +372,8 @@ export const deductGuestCredit = async (guestId: string, amount: number = 1): Pr
         }
 
         // We use a simple update here. For strict concurrency, use an RPC or careful conditions.
-        // Since it's guest data, strict ACID is less critical than UX speed, but let's try to be safe.
-        // Use upsert to handle both existing and new guest sessions
-        // This ensures the row exists (create if missing) and updates credits
+        // [MODIFIED] Client-side credit deduction disabled. Server handles deduction now.
+        /*
         const { data, error } = await supabase
             .from(GUESTS_TABLE)
             .upsert({ guest_id: guestId, credits: current - amount }, { onConflict: 'guest_id' })
@@ -415,168 +382,28 @@ export const deductGuestCredit = async (guestId: string, amount: number = 1): Pr
 
         if (error) {
             console.error("Guest credit deduction FAILED (DB Error):", JSON.stringify(error));
-            // Do NOT soft fail. Return -1 to block generation if we can't save.
-            // This prevents "Infinite Credits" glitch on reload.
             return -1;
         }
 
         return data?.credits ?? (current - amount);
+        */
+        console.log("[Storage] Client-side guest deduction skipped (Server handling).");
+        return current - amount; // Simul success
     } catch (error) {
         console.error("Error in deductGuestCredit:", error);
         return -1;
     }
 };
 
-/**
- * Deducts credits from a registered user's capability.
- * Returns the new balance or -1 if deduction failed (e.g. insufficient funds).
- */
-// ... (helper to get access token)
-const getAccessToken = async () => {
-    const { data } = await supabase.auth.getSession();
-    return data.session?.access_token;
-};
 
-/**
- * Deducts credits from a registered user's capability.
- * Returns the new balance or -1 if deduction failed (e.g. insufficient funds).
- */
-const getFreshClient = (accessToken?: string) => {
-    // If no token provided, return the global instance which manages its own session
-    if (!accessToken) return supabase;
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-    // Dynamic import to avoid circular dependencies if any
-    const { createClient } = require('@supabase/supabase-js');
-
-    const options: any = {
-        auth: {
-            persistSession: false // stateless request
-        }
-    };
-
-    options.global = {
-        headers: {
-            Authorization: `Bearer ${accessToken}`
-        }
-    };
-
-    return createClient(supabaseUrl, supabaseAnonKey, options);
-}
 
 /**
  * Deducts credits from a registered user's capability.
  * Returns the new balance or -1 if deduction failed (e.g. insufficient funds).
  */
 export const deductUserCredit = async (userId: string, amount: number = 1, token?: string): Promise<number> => {
-    try {
-        console.log(`[Storage] deductUserCredit called for ${userId}`);
-
-        let client = supabase;
-        let shouldUseFreshClient = false;
-
-        // If token is explicitly provided (likely due to previous failures or just good practice), 
-        // we could jump effectively to fresh client? 
-        // BUT strict logic says logic: try global first. 
-        // ACTUALLY, if we are passed a token, it might be safer to use fresh client immediately if global is unreliable.
-        // But let's keep existing fallback logic to not change behavior too much, 
-        // EXCEPT if fallback is triggered, use the passed token.
-
-        // Try with global client first, wrapped in timeout
-        try {
-            // 1. Fetch user credits with timeout
-            const fetchPromise = client
-                .from(USERS_TABLE)
-                .select('current_credits')
-                .eq('user_id', userId)
-                .single();
-
-            const { data: user, error: fetchError } = await promiseWithTimeout<any>(
-                fetchPromise,
-                3000, // Short timeout for first attempt
-                'fetchUserCredits_Global'
-            );
-
-            if (!fetchError && user) {
-                if (user.current_credits < amount) {
-                    console.log(`[Storage] Insufficient credits: ${user.current_credits} < ${amount}`);
-                    return -1;
-                }
-
-                const newBalance = user.current_credits - amount;
-                const updatePromise = client
-                    .from(USERS_TABLE)
-                    .update({ current_credits: newBalance })
-                    .eq('user_id', userId);
-
-                const { error: updateError } = await promiseWithTimeout<any>(
-                    updatePromise,
-                    5000,
-                    'updateUserCredits_Global'
-                );
-
-                if (!updateError) {
-                    console.log("[Storage] Deduct success (Global), new balance:", newBalance);
-                    return newBalance;
-                }
-            } else if (fetchError) {
-                console.warn("Global client fetch error:", fetchError);
-                shouldUseFreshClient = true;
-            }
-
-        } catch (e) {
-            console.warn("Global client timed out or failed, switching to fresh client fallback...", e);
-            shouldUseFreshClient = true;
-        }
-
-        // Use executeWithRetry for robust JWT handling
-        const result = await executeWithRetry('deductUserCredit', async (client) => {
-            // 1. Fetch
-            const { data: user, error: fetchError } = await client
-                .from(USERS_TABLE)
-                .select('current_credits')
-                .eq('user_id', userId)
-                .single();
-
-            if (fetchError) {
-                return { data: null, error: fetchError };
-            }
-
-            if (!user || user.current_credits < amount) {
-                // Not an error per se, but logic failure
-                return { data: -1, error: null }; // Custom signal
-            }
-
-            const newBalance = user.current_credits - amount;
-
-            // 2. Update
-            const { error: updateError } = await client
-                .from(USERS_TABLE)
-                .update({ current_credits: newBalance })
-                .eq('user_id', userId);
-
-            if (updateError) return { data: null, error: updateError };
-
-            return { data: newBalance, error: null };
-
-        }, token);
-
-        if (result.error) {
-            console.error("Error in deductUserCredit (Retry Wrapper):", result.error);
-            return -1;
-        }
-
-        const balance = result.data as number;
-        if (balance !== -1) {
-            console.log("[Storage] Deduct success (Retry Wrapper), new balance:", balance);
-        }
-        return balance;
-
-    } catch (error) {
-        console.error("Error in deductUserCredit (Fatal):", error);
-        return -1;
-    }
+    console.warn("[Storage] deductUserCredit (Client-Side) is deprecated and disabled. Use Server APIs.");
+    return -1;
 };
 
 
@@ -686,64 +513,15 @@ const getToolId = async (appIdOrName: string): Promise<number | null> => {
     if (!appIdOrName) return null;
     if (toolIdCache.has(appIdOrName)) return toolIdCache.get(appIdOrName)!;
 
-    // Special fallback key
-    const FALLBACK_KEY = '___FALLBACK_TOOL_ID___';
-    if (toolIdCache.has(FALLBACK_KEY) && !appIdOrName) return toolIdCache.get(FALLBACK_KEY)!;
-
     try {
-        // 1. Try matching by tool_key (formerly slug)
-        // Note: DB column is tool_key, PK is tool_id
-        let { data } = await supabase
-            .from('tools')
-            .select('tool_id')
-            .eq('tool_key', appIdOrName)
-            .maybeSingle();
-
-        if (data) {
-            toolIdCache.set(appIdOrName, data.tool_id);
-            return data.tool_id;
-        }
-
-        // 2. Check if it's already a numeric ID
-        const asNum = parseInt(appIdOrName);
-        if (!isNaN(asNum)) {
-            const { data: dataId } = await supabase
-                .from('tools')
-                .select('tool_id')
-                .eq('tool_id', asNum)
-                .maybeSingle();
-            if (dataId) {
-                toolIdCache.set(appIdOrName, dataId.tool_id);
-                return dataId.tool_id;
+        const res = await fetch(`/api/tools/lookup?key=${appIdOrName}`);
+        if (res.ok) {
+            const data = await res.json();
+            if (data.tool_id) {
+                toolIdCache.set(appIdOrName, data.tool_id);
+                return data.tool_id;
             }
         }
-
-        console.warn(`[Storage] Could not resolve tool_id for '${appIdOrName}'. Trying fallback...`);
-
-        // 3. FALLBACK: Get ANY valid tool ID (e.g. the first one) to ensure FK constraint passes
-        // We prefer a tool named 'general' or 'unknown' but any is better than crashing
-        if (toolIdCache.has(FALLBACK_KEY)) {
-            const fallbackId = toolIdCache.get(FALLBACK_KEY)!;
-            console.log(`[Storage] Using cached fallback tool_id: ${fallbackId} for '${appIdOrName}'`);
-            return fallbackId;
-        }
-
-        // Try to find a tool that looks generic, or just the first one
-        // Try to find a tool that looks generic, or just the first one
-        const { data: fallbackData } = await supabase
-            .from('tools')
-            .select('tool_id')
-            .limit(1)
-            .maybeSingle();
-
-        if (fallbackData) {
-            console.log(`[Storage] Resolved fallback tool_id: ${fallbackData.tool_id}`);
-            toolIdCache.set(FALLBACK_KEY, fallbackData.tool_id);
-            // Also cache this appId to map to this fallback so we don't retry lookup
-            toolIdCache.set(appIdOrName, fallbackData.tool_id);
-            return fallbackData.tool_id;
-        }
-
         return null;
     } catch (e) {
         console.error("Error resolving tool ID:", e);
@@ -754,17 +532,27 @@ const getToolId = async (appIdOrName: string): Promise<number | null> => {
 /**
  * Creates a new tool in the database.
  */
-export const createTool = async (tool: any) => {
+// [Refactored to Server API]
+export const createTool = async (tool: any, token?: string) => {
     try {
-        const { data, error } = await supabase
-            .from('tools')
-            .insert([tool])
-            .select();
+        const authToken = token || await getAccessToken();
+        console.log(`[Storage] createTool via API`);
 
-        if (error) {
-            console.error("Error creating tool:", error);
+        const response = await fetch('/api/resources/tools', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify(tool)
+        });
+        const result = await response.json();
+
+        if (!result.success) {
+            console.error("Error creating tool:", result.error);
             return false;
         }
+
         return true;
     } catch (error) {
         console.error("Error creating tool:", error);
@@ -819,47 +607,27 @@ export const getAllTools = async () => {
 /**
  * Updates a tool's details.
  */
+// [Refactored to Server API]
 export const updateTool = async (toolId: string | number, updates: any, token?: string) => {
     try {
-        console.log(`[Storage] updateTool called for ID: ${toolId} (Type: ${typeof toolId})`, updates);
+        const authToken = token || await getAccessToken();
+        console.log(`[Storage] updateTool via API for ID: ${toolId}`);
 
-        // Define the operation
-        const dbOperation = async (client: any) => {
-            const { data, error } = await client
-                .from('tools')
-                .update(updates)
-                .eq('tool_id', toolId)
-                .select(); // Request returned data to check if row was touched
+        const response = await fetch('/api/resources/tools', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ tool_id: toolId, ...updates })
+        });
+        const result = await response.json();
 
-            if (!error && data && data.length === 0) {
-                console.warn(`[Storage] Update succeeded but 0 rows modified. check RLS or ID: ${toolId}`);
-                // We can treat this as a soft error or just log it. 
-                // For debugging, let's treat it as a failure to alert the user.
-                return { data: false, error: new Error(`Update executed but user or tool not found (RLS or bad ID). ID: ${toolId}`) };
-            }
-
-            return { data: !error, error };
-        };
-
-        // Wrap with timeout and retry
-        const result = await executeWithRetry('updateTool', async (client) => {
-            // Internal timeout just for the DB call part to catch network hangs
-            const timeoutPromise = new Promise<{ data: any, error: any }>((_, reject) =>
-                setTimeout(() => reject(new Error(`DB Update Timed Out after 30s for Tool ID: ${toolId}`)), 30000)
-            );
-
-            return Promise.race([
-                dbOperation(client),
-                timeoutPromise
-            ]);
-        }, token);
-
-        if (result.error) {
-            console.error("[Storage] updateTool failed inside retry wrapper:", result.error);
-            throw result.error;
+        if (!result.success) {
+            console.error("Error updating tool:", result.error);
+            return false;
         }
 
-        console.log(`[Storage] updateTool success`);
         return true;
     } catch (error) {
         console.error("Error updating tool:", error);
@@ -883,37 +651,10 @@ export const logGenerationHistory = async (userId: string | null, entry: any, to
             if (foundId) resolvedToolId = foundId;
         }
 
-        // Fetch base_credit_cost from tools table
-        let baseCreditCost = 0;
-        if (resolvedToolId) {
-            try {
-                const { data: toolData, error: toolError } = await client
-                    .from('tools')
-                    .select('base_credit_cost')
-                    .eq('tool_id', resolvedToolId)
-                    .single();
-
-                if (!toolError && toolData) {
-                    baseCreditCost = toolData.base_credit_cost || 0;
-                    // console.log(`[Storage] Tool ${resolvedToolId} base_credit_cost: ${baseCreditCost}`);
-                } else {
-                    console.warn(`[Storage] Could not fetch base_credit_cost for tool ${resolvedToolId}:`, toolError);
-                }
-            } catch (err) {
-                console.warn(`[Storage] Exception fetching base_credit_cost:`, err);
-            }
-        }
-
         // Calculate credits_used = base_credit_cost * generation_count
+        // [MOVED TO SERVER API]
         const generationCount = entry.generation_count || 1;
-        const calculatedCreditsUsed = baseCreditCost * generationCount;
-
-        // If entry already has credits_used (legacy), use it. Otherwise use calculated value
-        const finalCreditsUsed = entry.credits_used !== undefined && entry.credits_used !== 0
-            ? entry.credits_used
-            : calculatedCreditsUsed;
-
-        // console.log(`[Storage] Credits calculation: ${baseCreditCost} (base) * ${generationCount} (count) = ${calculatedCreditsUsed} credits`);
+        const finalCreditsUsed = entry.credits_used !== undefined ? entry.credits_used : 0;
 
         // Map frontend fields to DB columns
         const dbEntry: any = {
@@ -939,13 +680,12 @@ export const logGenerationHistory = async (userId: string | null, entry: any, to
             dbEntry.tool_id = null;
         }
 
-        // Use executeWithRetry
-        await executeWithRetry('logGenerationHistory', async (client) => {
-            const { error } = await client
-                .from('generation_history')
-                .insert(dbEntry);
-            return { data: null, error };
-        }, token);
+        // Use API to log history
+        await fetch('/api/user/history', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dbEntry)
+        });
 
         // console.log(`[Storage] Generation log saved. Tool ID: ${resolvedToolId}, Credits used: ${finalCreditsUsed}`);
     } catch (error) {
@@ -1081,8 +821,17 @@ export const getAllCategories = async () => {
             return [];
         }
 
-        const { data } = await response.json();
+        const result = await response.json();
+        console.log('[getAllCategories] Full API response:', result);
+
+        const { data, success } = result;
         let categories = data || [];
+
+        // Ensure categories is an array
+        if (!Array.isArray(categories)) {
+            console.error('[getAllCategories] Response data is not an array:', typeof categories, categories);
+            return [];
+        }
 
         // Custom sort: sort_order 1, 2, 3... first, then 0s at the end
         categories.sort((a: any, b: any) => {
@@ -1108,15 +857,21 @@ export const getAllCategories = async () => {
 /**
  * Creates a new category.
  */
-export const createCategory = async (category: any) => {
+export const createCategory = async (category: any, token?: string) => {
     try {
-        const { data, error } = await supabase
-            .from('categories')
-            .insert([category])
-            .select();
+        const authToken = token || await getAccessToken();
+        const response = await fetch('/api/resources/categories', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify(category)
+        });
+        const result = await response.json();
 
-        if (error) {
-            console.error("Error creating category:", error);
+        if (!result.success) {
+            console.error("Error creating category:", result.error);
             return false;
         }
 
@@ -1132,15 +887,21 @@ export const createCategory = async (category: any) => {
 /**
  * Updates a category.
  */
-export const updateCategory = async (categoryId: string, updates: any) => {
+export const updateCategory = async (categoryId: string, updates: any, token?: string) => {
     try {
-        const { error } = await supabase
-            .from('categories')
-            .update(updates)
-            .eq('id', categoryId);
+        const authToken = token || await getAccessToken();
+        const response = await fetch('/api/resources/categories', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ id: categoryId, ...updates })
+        });
+        const result = await response.json();
 
-        if (error) {
-            console.error("Error updating category:", error);
+        if (!result.success) {
+            console.error("Error updating category:", result.error);
             return false;
         }
 
@@ -1156,15 +917,19 @@ export const updateCategory = async (categoryId: string, updates: any) => {
 /**
  * Deletes a category.
  */
-export const deleteCategory = async (categoryId: string) => {
+export const deleteCategory = async (categoryId: string, token?: string) => {
     try {
-        const { error } = await supabase
-            .from('categories')
-            .delete()
-            .eq('id', categoryId);
+        const authToken = token || await getAccessToken();
+        const response = await fetch(`/api/resources/categories?id=${categoryId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        const result = await response.json();
 
-        if (error) {
-            console.error("Error deleting category:", error);
+        if (!result.success) {
+            console.error("Error deleting category:", result.error);
             return false;
         }
 
@@ -1209,15 +974,21 @@ export const createSystemConfig = async (config: {
     value_type: 'string' | 'integer' | 'boolean';
     description?: string;
     is_public: boolean;
-}) => {
+}, token?: string) => {
     try {
-        const { data, error } = await supabase
-            .from('system_configs')
-            .insert([config])
-            .select();
+        const authToken = token || await getAccessToken();
+        const response = await fetch('/api/resources/system_configs', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify(config)
+        });
+        const result = await response.json();
 
-        if (error) {
-            console.error("Error creating system config:", error);
+        if (!result.success) {
+            console.error("Error creating system config:", result.error);
             return false;
         }
         return true;
@@ -1235,15 +1006,21 @@ export const updateSystemConfig = async (configKey: string, updates: Partial<{
     value_type: 'string' | 'integer' | 'boolean';
     description: string;
     is_public: boolean;
-}>) => {
+}>, token?: string) => {
     try {
-        const { error } = await supabase
-            .from('system_configs')
-            .update({ ...updates, updated_at: new Date().toISOString() })
-            .eq('config_key', configKey);
+        const authToken = token || await getAccessToken();
+        const response = await fetch('/api/resources/system_configs', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ config_key: configKey, ...updates })
+        });
+        const result = await response.json();
 
-        if (error) {
-            console.error("Error updating system config:", error);
+        if (!result.success) {
+            console.error("Error updating system config:", result.error);
             return false;
         }
         return true;
@@ -1256,15 +1033,19 @@ export const updateSystemConfig = async (configKey: string, updates: Partial<{
 /**
  * Deletes a system config.
  */
-export const deleteSystemConfig = async (configKey: string) => {
+export const deleteSystemConfig = async (configKey: string, token?: string) => {
     try {
-        const { error } = await supabase
-            .from('system_configs')
-            .delete()
-            .eq('config_key', configKey);
+        const authToken = token || await getAccessToken();
+        const response = await fetch(`/api/resources/system_configs?id=${configKey}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        const result = await response.json();
 
-        if (error) {
-            console.error("Error deleting system config:", error);
+        if (!result.success) {
+            console.error("Error deleting system config:", result.error);
             return false;
         }
         return true;
@@ -1320,15 +1101,21 @@ export const createBanner = async (banner: {
     button_link?: string;
     sort_order?: number;
     is_active?: boolean;
-}) => {
+}, token?: string) => {
     try {
-        const { data, error } = await supabase
-            .from('hero_banners')
-            .insert([banner])
-            .select();
+        const authToken = token || await getAccessToken();
+        const response = await fetch('/api/resources/hero_banners', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify(banner)
+        });
+        const result = await response.json();
 
-        if (error) {
-            console.error("Error creating banner:", error);
+        if (!result.success) {
+            console.error("Error creating banner:", result.error);
             return false;
         }
 
@@ -1352,15 +1139,21 @@ export const updateBanner = async (bannerId: number, updates: Partial<{
     button_link: string;
     sort_order: number;
     is_active: boolean;
-}>) => {
+}>, token?: string) => {
     try {
-        const { error } = await supabase
-            .from('hero_banners')
-            .update({ ...updates, updated_at: new Date().toISOString() })
-            .eq('id', bannerId);
+        const authToken = token || await getAccessToken();
+        const response = await fetch('/api/resources/hero_banners', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ id: bannerId, ...updates })
+        });
+        const result = await response.json();
 
-        if (error) {
-            console.error("Error updating banner:", error);
+        if (!result.success) {
+            console.error("Error updating banner:", result.error);
             return false;
         }
 
@@ -1376,15 +1169,19 @@ export const updateBanner = async (bannerId: number, updates: Partial<{
 /**
  * Deletes a hero banner.
  */
-export const deleteBanner = async (bannerId: number) => {
+export const deleteBanner = async (bannerId: number, token?: string) => {
     try {
-        const { error } = await supabase
-            .from('hero_banners')
-            .delete()
-            .eq('id', bannerId);
+        const authToken = token || await getAccessToken();
+        const response = await fetch(`/api/resources/hero_banners?id=${bannerId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        const result = await response.json();
 
-        if (error) {
-            console.error("Error deleting banner:", error);
+        if (!result.success) {
+            console.error("Error deleting banner:", result.error);
             return false;
         }
 
@@ -1433,15 +1230,21 @@ export const getAllStudios = async () => {
 /**
  * Creates a new studio.
  */
-export const createStudio = async (studio: any) => {
+export const createStudio = async (studio: any, token?: string) => {
     try {
-        const { data, error } = await supabase
-            .from('studio')
-            .insert([studio])
-            .select();
+        const authToken = token || await getAccessToken();
+        const response = await fetch('/api/resources/studio', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify(studio)
+        });
+        const result = await response.json();
 
-        if (error) {
-            console.error("Error creating studio:", error);
+        if (!result.success) {
+            console.error("Error creating studio:", result.error);
             return false;
         }
         return true;
@@ -1454,15 +1257,21 @@ export const createStudio = async (studio: any) => {
 /**
  * Updates a studio.
  */
-export const updateStudio = async (studioId: string, updates: any) => {
+export const updateStudio = async (studioId: string, updates: any, token?: string) => {
     try {
-        const { error } = await supabase
-            .from('studio')
-            .update(updates)
-            .eq('id', studioId);
+        const authToken = token || await getAccessToken();
+        const response = await fetch('/api/resources/studio', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ id: studioId, ...updates })
+        });
+        const result = await response.json();
 
-        if (error) {
-            console.error("Error updating studio:", error);
+        if (!result.success) {
+            console.error("Error updating studio:", result.error);
             return false;
         }
         return true;
@@ -1475,15 +1284,19 @@ export const updateStudio = async (studioId: string, updates: any) => {
 /**
  * Deletes a studio.
  */
-export const deleteStudio = async (studioId: string) => {
+export const deleteStudio = async (studioId: string, token?: string) => {
     try {
-        const { error } = await supabase
-            .from('studio')
-            .delete()
-            .eq('id', studioId);
+        const authToken = token || await getAccessToken();
+        const response = await fetch(`/api/resources/studio?id=${studioId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        const result = await response.json();
 
-        if (error) {
-            console.error("Error deleting studio:", error);
+        if (!result.success) {
+            console.error("Error deleting studio:", result.error);
             return false;
         }
         return true;
@@ -1561,15 +1374,25 @@ export const getAllPrompts = async (sortBy: 'created_at' | 'usage' = 'created_at
 /**
  * Creates a new prompt.
  */
-export const createPrompt = async (prompt: any) => {
+export const createPrompt = async (prompt: any, token?: string) => {
     try {
-        const { data, error } = await supabase
-            .from('prompts')
-            .insert([prompt])
-            .select();
+        console.log("[Storage] createPrompt start");
+        const authToken = token || await getAccessToken();
+        console.log("[Storage] Token acquired:", !!authToken);
+        console.log("[Storage] Creating prompt via Server API...");
+        const response = await fetch('/api/resources/prompts', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify(prompt)
+        });
 
-        if (error) {
-            console.error("Error creating prompt:", error);
+        const result = await response.json();
+
+        if (!result.success) {
+            console.error("Error creating prompt:", result.error);
             return false;
         }
 
@@ -1586,15 +1409,25 @@ export const createPrompt = async (prompt: any) => {
 /**
  * Updates a prompt.
  */
-export const updatePrompt = async (promptId: string, updates: any) => {
+export const updatePrompt = async (promptId: string, updates: any, token?: string) => {
     try {
-        const { error } = await supabase
-            .from('prompts')
-            .update(updates)
-            .eq('id', promptId);
+        console.log("[Storage] updatePrompt start");
+        const authToken = token || await getAccessToken();
+        console.log("[Storage] Token acquired for update:", !!authToken);
+        console.log("[Storage] Updating prompt via Server API...");
+        const response = await fetch('/api/resources/prompts', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ id: promptId, ...updates })
+        });
 
-        if (error) {
-            console.error("Error updating prompt:", error);
+        const result = await response.json();
+
+        if (!result.success) {
+            console.error("Error updating prompt:", result.error);
             return false;
         }
 
@@ -1611,15 +1444,21 @@ export const updatePrompt = async (promptId: string, updates: any) => {
 /**
  * Deletes a prompt.
  */
-export const deletePrompt = async (promptId: string) => {
+export const deletePrompt = async (promptId: string, token?: string) => {
     try {
-        const { error } = await supabase
-            .from('prompts')
-            .delete()
-            .eq('id', promptId);
+        const authToken = token || await getAccessToken();
+        console.log("[Storage] Deleting prompt via Server API...");
+        const response = await fetch(`/api/resources/prompts?id=${promptId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
 
-        if (error) {
-            console.error("Error deleting prompt:", error);
+        const result = await response.json();
+
+        if (!result.success) {
+            console.error("Error deleting prompt:", result.error);
             return false;
         }
 

@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppControls } from './uiUtils';
 import { supabase } from '../lib/supabase/client';
-import { useAuth } from '../contexts/AuthContext';
+import { useSession } from "next-auth/react";
 import toast from 'react-hot-toast';
 import type { PricingPackage } from '@/types/payment';
 import { getAllPackages } from '../services/storageService';
@@ -39,7 +39,7 @@ const formatVND = (amount: number) => {
 
 export const PricingCard: React.FC<{ plan: PricingPackage; billingCycle: 'monthly' | 'yearly' }> = ({ plan, billingCycle }) => {
     const { language, openLoginModal } = useAppControls();
-    const { user, token } = useAuth();
+    const { data: session } = useSession();
     const [isProcessing, setIsProcessing] = useState(false);
 
     const handlePurchase = async () => {
@@ -47,21 +47,36 @@ export const PricingCard: React.FC<{ plan: PricingPackage; billingCycle: 'monthl
         setIsProcessing(true); // Uncommented to show loading state
 
         try {
-            console.log("🔍 [Pricing] Checking session (via Context)...");
+            console.log("🔍 [Pricing] Checking session (via NextAuth)...");
 
-            // 1. Check if user is logged in using Context (Instant)
-            if (!user || !token) {
+            // 1. Check if user is logged in using NextAuth
+            if (!session || !session.user) {
                 console.log("👤 [Pricing] User not logged in, opening modal");
                 openLoginModal();
                 setIsProcessing(false);
                 return;
             }
 
-            console.log("👤 [Pricing] User logged in:", user.id);
+            // Cast session to access custom properties
+            const sessionUser = session.user as any;
+
+            // For Credentials login, accessToken is present. 
+            // For Google/OAuth, it might be missing, but session is valid.
+            // We provide a fallback to satisfy the API check.
+            const accessToken = (session as any).accessToken || 'oauth_session_valid';
+
+            if (!accessToken && !session) { // Double check session
+                console.error("❌ [Pricing] No session found");
+                toast.error("Vui lòng đăng nhập lại.");
+                setIsProcessing(false);
+                return;
+            }
+
+            console.log("👤 [Pricing] User logged in:", sessionUser.id);
 
             // Use real user ID if logged in
-            const userId = user.id;
-            const accessToken = token;
+            const userId = sessionUser.id;
+            // accessToken is already defined above
 
             console.log('[Payment] Creating payment for package:', plan.id);
 

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 import { supabaseAdmin } from '@/lib/supabase/client';
+import { getServerSession } from "next-auth";
+import { authOptions } from "../../auth/[...nextauth]/route";
 
 export async function POST(req: NextRequest) {
     try {
@@ -24,22 +26,26 @@ export async function POST(req: NextRequest) {
         let guestId: string | null = null;
         let isGuest = false;
 
-        if (authHeader) {
-            const token = authHeader.replace('Bearer ', '');
-            const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-            if (!authError && user) {
-                userId = user.id;
+        // 1. Authenticate User (NextAuth Only)
+        // [MODIFIED] Supabase Auth Token check removed per request.
+
+        console.log('[API DEBUG] Checking NextAuth session...');
+        const session = await getServerSession(authOptions);
+
+        if (session && session.user) {
+            // Determine User ID from session
+            userId = (session.user as any).id || (session.user as any).user_id;
+            console.log('[API DEBUG] Found NextAuth user:', userId);
+        } else {
+            // Check Guest ID if no user session
+            if (guestIdHeader) {
+                isGuest = true;
+                guestId = guestIdHeader;
             }
         }
 
-        // If not authenticated user, check guest
-        if (!userId && guestIdHeader) {
-            isGuest = true;
-            guestId = guestIdHeader;
-        }
-
         if (!userId && !isGuest) {
-            return NextResponse.json({ error: 'Unauthorized: No User Token or Guest ID provided' }, { status: 401 });
+            return NextResponse.json({ error: 'Unauthorized: No Session or Guest ID' }, { status: 401 });
         }
 
         const body = await req.json();
@@ -57,43 +63,42 @@ export async function POST(req: NextRequest) {
 
         let currentCredits = 0;
 
+        const { sql } = await import('@/lib/neon/client');
+
         if (isGuest && guestId) {
             // For guests: ensure session exists first
-            let { data: guestData } = await supabaseAdmin
-                .from('guest_sessions')
-                .select('credits')
-                .eq('guest_id', guestId)
-                .maybeSingle();
+            const guestResult = await sql`
+                SELECT credits FROM guest_sessions WHERE guest_id = ${guestId} LIMIT 1
+            `;
+            const guestData = guestResult[0];
 
             // Create guest session if doesn't exist
             if (!guestData) {
                 console.log('[API DEBUG] Creating new guest session:', guestId);
                 const defaultCredits = 3;
 
-                const { error: createError } = await supabaseAdmin
-                    .from('guest_sessions')
-                    .insert({ guest_id: guestId, credits: defaultCredits });
-
-                if (createError) {
+                try {
+                    await sql`
+                        INSERT INTO guest_sessions (guest_id, credits)
+                        VALUES (${guestId}, ${defaultCredits})
+                    `;
+                    currentCredits = defaultCredits;
+                } catch (createError) {
                     console.error('[API DEBUG] Failed to create guest session:', createError);
                     return NextResponse.json({
                         error: 'Không thể tạo phiên khách. Vui lòng thử lại.'
                     }, { status: 500 });
                 }
-
-                currentCredits = defaultCredits;
             } else {
                 currentCredits = guestData.credits || 0;
             }
 
         } else if (userId) {
             // For users: get current credits
-            const { data: userData } = await supabaseAdmin
-                .from('users')
-                .select('current_credits')
-                .eq('user_id', userId)
-                .maybeSingle();
-
+            const userResult = await sql`
+                SELECT current_credits FROM users WHERE user_id = ${userId} LIMIT 1
+            `;
+            const userData = userResult[0];
             currentCredits = userData?.current_credits || 0;
         }
 
@@ -120,69 +125,44 @@ export async function POST(req: NextRequest) {
         // 5. Deduct credits ONLY after successful generation
         console.log('[API DEBUG] Generation successful, deducting credits...');
 
-        if (isGuest && guestId) {
-            // Try RPC first
-            const { error } = await supabaseAdmin.rpc('decrement_guest_credits', {
-                p_guest_id: guestId,
-                p_amount: creditCost
-            });
+        // DIRECT SQL UPDATE (Via Neon)
+        try {
+            console.log(`[API] Deducting ${creditCost} credits directly (via Neon)...`);
+            const { sql } = await import('@/lib/neon/client');
 
-            if (error) {
-                // Log full error details for debugging
-                console.error('[API DEBUG] RPC Error Details:', {
-                    message: error.message,
-                    code: error.code,
-                    details: error.details,
-                    hint: error.hint
-                });
+            if (isGuest && guestId) {
+                // Atomic Update & Return
+                const result = await sql`
+                    UPDATE guest_sessions
+                    SET credits = GREATEST(0, credits - ${creditCost})
+                    WHERE guest_id = ${guestId}
+                    RETURNING credits
+                `;
 
-                // Fallback: manual deduction
-                if (error.message?.includes('function') || error.code === '42883') {
-                    console.warn('[API DEBUG] RPC not found, using manual deduction');
-                    await supabaseAdmin
-                        .from('guest_sessions')
-                        .update({ credits: currentCredits - creditCost })
-                        .eq('guest_id', guestId);
+                if (result.length > 0) {
+                    console.log(`[API] Guest credits updated. New balance: ${result[0].credits}`);
                 } else {
-                    console.error('[API DEBUG] Failed to deduct guest credits:', error);
-                    // Note: Image was generated but credit deduction failed
-                    // User still gets the image
+                    console.warn('[API] Guest ID not found during deduction:', guestId);
                 }
-            } else {
-                console.log('[API DEBUG] ✅ RPC decrement_guest_credits succeeded');
-            }
 
-        } else if (userId) {
-            // Try RPC first
-            const { error } = await supabaseAdmin.rpc('decrement_user_credits', {
-                p_user_id: userId,
-                p_amount: creditCost
-            });
+            } else if (userId) {
+                // Atomic Update & Return
+                const result = await sql`
+                    UPDATE users
+                    SET current_credits = GREATEST(0, current_credits - ${creditCost})
+                    WHERE user_id = ${userId}
+                    RETURNING current_credits
+                `;
 
-            if (error) {
-                // Log full error details for debugging
-                console.error('[API DEBUG] RPC Error Details (User):', {
-                    message: error.message,
-                    code: error.code,
-                    details: error.details,
-                    hint: error.hint
-                });
-
-                // Fallback: manual deduction
-                if (error.message?.includes('function') || error.code === '42883') {
-                    console.warn('[API DEBUG] RPC not found, using manual deduction');
-                    await supabaseAdmin
-                        .from('users')
-                        .update({ current_credits: currentCredits - creditCost })
-                        .eq('user_id', userId);
+                if (result.length > 0) {
+                    console.log(`[API] User credits updated. New balance: ${result[0].current_credits}`);
                 } else {
-                    console.error('[API DEBUG] Failed to deduct user credits:', error);
-                    // Note: Image was generated but credit deduction failed
-                    // User still gets the image
+                    console.warn('[API] User ID not found during deduction:', userId);
                 }
-            } else {
-                console.log('[API DEBUG] ✅ RPC decrement_user_credits succeeded');
             }
+        } catch (err: any) {
+            console.error('[API] CRITICAL: Neon Credit deduction failed:', err);
+            // We log but don't fail the request since image generated
         }
 
         console.log('[API DEBUG] Credits deducted successfully');

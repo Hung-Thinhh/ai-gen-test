@@ -40,7 +40,7 @@ import {
 } from '@mui/icons-material';
 import toast from 'react-hot-toast';
 import { handleFileUpload } from '../uiFileUtilities';
-import { uploadImageToCloud, getAllTools, updateTool } from '../../services/storageService';
+import { uploadImageToCloud, getAllTools, updateTool, createTool } from '../../services/storageService';
 
 export default function ToolManagement() {
     const [tools, setTools] = useState<any[]>([]);
@@ -140,6 +140,19 @@ export default function ToolManagement() {
         setOpenEdit(true);
     };
 
+    const handleCreateClick = () => {
+        setCurrentTool({
+            name: '',
+            description: '',
+            version: '1.0',
+            sort_order: 0,
+            tool_key: '',
+            is_active: true
+        });
+        setEditAvatarFile(null);
+        setOpenEdit(true);
+    };
+
     const handleCloseEdit = () => {
         setOpenEdit(false);
         setCurrentTool(null);
@@ -170,15 +183,22 @@ export default function ToolManagement() {
                 name: currentTool.name,      // Send both to be safe or check schema
                 description: currentTool.description,
                 preview_image_url: finalAvatarUrl,
-                sort_order: parseInt(currentTool.sort_order) || 0
+                sort_order: parseInt(currentTool.sort_order) || 0,
+                version: currentTool.version,
+                tool_key: currentTool.tool_key // Important for creation
             };
 
-            const success = await updateTool(currentTool.id, updates);
+            let success = false;
+            if (currentTool.id) {
+                success = await updateTool(currentTool.id, updates);
+            } else {
+                success = await createTool(updates);
+            }
 
             if (success) {
-                toast.success('Đã cập nhật thông tin công cụ');
-                // Update local state to reflect changes immediately
-                setTools(tools.map(t => t.id === currentTool.id ? { ...currentTool, avatar: finalAvatarUrl } : t));
+                toast.success(currentTool.id ? 'Đã cập nhật thông tin công cụ' : 'Đã tạo công cụ mới');
+                // Reload tools to get fresh list
+                fetchTools();
                 handleCloseEdit();
             } else {
                 toast.error('Lỗi khi lưu vào cơ sở dữ liệu');
@@ -230,6 +250,7 @@ export default function ToolManagement() {
                         variant="contained"
                         color="primary"
                         startIcon={<AddIcon />}
+                        onClick={handleCreateClick}
                         sx={{ borderRadius: 2, height: 40, px: 3, textTransform: 'none', fontWeight: 600 }}
                     >
                         Thêm công cụ
@@ -461,6 +482,15 @@ export default function ToolManagement() {
                                     InputProps={{ readOnly: true }}
                                 />
                             </Stack>
+
+                            <TextField
+                                label="Tool Key (Mã định danh)"
+                                fullWidth
+                                value={currentTool.tool_key || ''}
+                                onChange={(e) => setCurrentTool({ ...currentTool, tool_key: e.target.value })}
+                                disabled={!!currentTool.id} // Only editable on creation
+                                helperText="Mã duy nhất dùng để gọi API (vd: text-to-image)"
+                            />
                         </Box>
                     )}
                 </DialogContent>
