@@ -456,7 +456,7 @@ const AvatarCreator: React.FC<AvatarCreatorProps> = (props) => {
     }
 
     return (
-        <div className="flex flex-col items-center justify-center w-full h-full flex-1 min-h-0">
+        <div className="flex flex-col items-center justify-center w-full h-full flex-1 min-h-screen">
             <AnimatePresence>
                 {(appState.stage === 'idle' || appState.stage === 'configuring') && (
                     <AppScreenHeader {...headerProps} />
@@ -532,7 +532,7 @@ const AvatarCreator: React.FC<AvatarCreatorProps> = (props) => {
                                                         key={p}
                                                         onClick={() => handleIdeaSelect(p)}
                                                         className={`base-font font-bold p-2 rounded-sm text-sm transition-all duration-200 ${isSelected
-                                                            ? 'bg-yellow-400 text-black ring-2 ring-yellow-300 scale-105'
+                                                            ? 'bg-orange-400 text-black ring-2 ring-orange-300 scale-105'
                                                             : 'bg-white/10 text-neutral-300 hover:bg-white/20'
                                                             } ${!isSelected && appState.selectedIdeas.length === maxIdeas ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                         disabled={!isSelected && appState.selectedIdeas.length === maxIdeas}

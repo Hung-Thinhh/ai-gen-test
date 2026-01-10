@@ -46,7 +46,7 @@ const Photoshoot: React.FC<PhotoshootProps> = (props) => {
 
     const isLoading = appState.stage === 'generating';
 
-    return (<div className="flex flex-col items-center justify-center w-full h-full flex-1 min-h-0"><AnimatePresence>{appState.stage === 'configuring' && <AppScreenHeader {...headerProps} />}</AnimatePresence>{appState.stage === 'configuring' && (<motion.div className="flex flex-col items-center gap-6 w-full max-w-screen-xl py-6 overflow-y-auto" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+    return (<div className="flex flex-col items-center justify-center w-full h-full flex-1 min-h-screen"><AnimatePresence>{appState.stage === 'configuring' && <AppScreenHeader {...headerProps} />}</AnimatePresence>{appState.stage === 'configuring' && (<motion.div className="flex flex-col items-center gap-6 w-full max-w-screen-xl py-6 overflow-y-auto" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         {/* Input images grid */}
         <div className="w-full pb-4 max-w-4xl">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 w-full max-w-7xl mx-auto px-4">

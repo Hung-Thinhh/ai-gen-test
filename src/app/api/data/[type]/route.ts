@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase/client';
+import { sql } from '@/lib/neon/client';
 
 /**
  * GET /api/data/[type] - Get static data (tools, prompts, categories)
@@ -10,7 +10,6 @@ export async function GET(
     { params }: { params: Promise<{ type: string }> }
 ) {
     try {
-        // Await params in Next.js 15+
         const { type } = await params;
 
         // Validate type
@@ -19,15 +18,21 @@ export async function GET(
             return NextResponse.json({ error: 'Invalid data type' }, { status: 400 });
         }
 
-        // Get data from appropriate table
-        const { data, error } = await supabaseAdmin
-            .from(type)
-            .select('*')
-            .order('created_at', { ascending: false });
+        let data: any[] = [];
 
-        if (error) {
-            console.error(`[API] Error fetching ${type}:`, error);
-            return NextResponse.json({ [type]: [] });
+        // Safe query execution based on type
+        // Note: Neon sql helper parameters are for values, not table names.
+        // We use explicit queries for each table for safety.
+        switch (type) {
+            case 'tools':
+                data = await sql`SELECT * FROM tools ORDER BY created_at DESC`;
+                break;
+            case 'prompts':
+                data = await sql`SELECT * FROM prompts ORDER BY created_at DESC`;
+                break;
+            case 'categories':
+                data = await sql`SELECT * FROM categories ORDER BY created_at DESC`;
+                break;
         }
 
         return NextResponse.json({ [type]: data || [] });

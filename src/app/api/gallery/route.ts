@@ -1,40 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase/client';
+import { sql } from '@/lib/neon/client';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 /**
  * GET /api/gallery - Get user's gallery images
  */
 export async function GET(req: NextRequest) {
     try {
-        // Get auth token
-        const authHeader = req.headers.get('Authorization');
-        if (!authHeader) {
+        const session = await getServerSession(authOptions);
+
+        if (!session?.user?.email) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const token = authHeader.replace('Bearer ', '');
-        const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-
-        if (authError || !user) {
-            return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+        const userCheck = await sql`SELECT user_id FROM users WHERE email = ${session.user.email} LIMIT 1`;
+        if (!userCheck || userCheck.length === 0) {
+            return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
+        const userId = userCheck[0].user_id;
 
         // Get gallery images
-        const { data, error } = await supabaseAdmin
-            .from('user_gallery')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false });
-
-        if (error) {
-            console.error('[API] Error fetching gallery:', error);
-            return NextResponse.json({ images: [] });
-        }
+        const data = await sql`
+            SELECT * FROM user_gallery 
+            WHERE user_id = ${userId} 
+            ORDER BY created_at DESC
+        `;
 
         return NextResponse.json({ images: data || [] });
 
     } catch (error: any) {
         console.error('[API] Error in GET /api/gallery:', error);
+        // If table doesn't exist, return empty array instead of 500? No, stick to error logging.
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -44,54 +41,56 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
     try {
-        // Get auth token
-        const authHeader = req.headers.get('Authorization');
-        if (!authHeader) {
+        const session = await getServerSession(authOptions);
+
+        if (!session?.user?.email) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const token = authHeader.replace('Bearer ', '');
-        const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-
-        if (authError || !user) {
-            return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+        const userCheck = await sql`SELECT user_id FROM users WHERE email = ${session.user.email} LIMIT 1`;
+        if (!userCheck || userCheck.length === 0) {
+            return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
+        const userId = userCheck[0].user_id;
 
         const body = await req.json();
-        const { images } = body; // Array of { image_url, thumbnail_url?, metadata? }
+        const { images } = body;
 
         if (!images || !Array.isArray(images) || images.length === 0) {
             return NextResponse.json({ error: 'Images array required' }, { status: 400 });
         }
 
-        // Prepare records
-        const records = images.map(img => ({
-            user_id: user.id,
-            image_url: img.image_url,
-            thumbnail_url: img.thumbnail_url || img.image_url,
-            metadata: img.metadata || {}
-        }));
+        // Insert images loop (Neon doesn't support bulk insert with json mapping easily in tagged template without helper)
+        // Check if we can use VALUES (...), (...), ...
+        // We can construct the query dynamically.
 
-        // Insert images
-        const { data, error } = await supabaseAdmin
-            .from('user_gallery')
-            .insert(records)
-            .select();
+        const insertedImages = [];
 
-        if (error) {
-            console.error('[API] Error adding to gallery:', error);
-            return NextResponse.json({ error: 'Failed to add images' }, { status: 500 });
+        for (const img of images) {
+            const result = await sql`
+                INSERT INTO user_gallery (
+                    user_id, image_url, thumbnail_url, metadata, created_at
+                ) VALUES (
+                    ${userId},
+                    ${img.image_url},
+                    ${img.thumbnail_url || img.image_url},
+                    ${JSON.stringify(img.metadata || {})}::jsonb,
+                    NOW()
+                )
+                RETURNING *
+            `;
+            if (result.length > 0) insertedImages.push(result[0]);
         }
 
         return NextResponse.json({
             success: true,
-            images: data,
-            count: data?.length || 0
+            images: insertedImages,
+            count: insertedImages.length
         }, { status: 201 });
 
     } catch (error: any) {
         console.error('[API] Error in POST /api/gallery:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 });
     }
 }
 
@@ -100,37 +99,37 @@ export async function POST(req: NextRequest) {
  */
 export async function DELETE(req: NextRequest) {
     try {
-        // Get auth token
-        const authHeader = req.headers.get('Authorization');
-        if (!authHeader) {
+        const session = await getServerSession(authOptions);
+
+        if (!session?.user?.email) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const token = authHeader.replace('Bearer ', '');
-        const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-
-        if (authError || !user) {
-            return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+        const userCheck = await sql`SELECT user_id FROM users WHERE email = ${session.user.email} LIMIT 1`;
+        if (!userCheck || userCheck.length === 0) {
+            return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
+        const userId = userCheck[0].user_id;
 
         const body = await req.json();
-        const { imageIds } = body; // Array of image IDs to delete
+        const { imageIds } = body;
 
         if (!imageIds || !Array.isArray(imageIds) || imageIds.length === 0) {
             return NextResponse.json({ error: 'Image IDs array required' }, { status: 400 });
         }
 
-        // Delete images (only user's own images)
-        const { error } = await supabaseAdmin
-            .from('user_gallery')
-            .delete()
-            .in('id', imageIds)
-            .eq('user_id', user.id);
+        // Delete loop or WHERE IN
+        // For simplicity and safety with varying array length, loop or explicit query construction.
+        // Let's use simple loop for now as batch delete is rare or small numbers.
+        // OR: WHERE id = ANY(${imageIds}) if imageIds is string[].
 
-        if (error) {
-            console.error('[API] Error deleting from gallery:', error);
-            return NextResponse.json({ error: 'Failed to delete images' }, { status: 500 });
-        }
+        // Ensure imageIds are strictly strings/uuids to prevent injection if not parameterized properly by driver (Neon driver handles arrays usually?)
+        // Neon driver: `WHERE id = ANY(${imageIds})` works for Postgres arrays.
+
+        await sql`
+            DELETE FROM user_gallery 
+            WHERE user_id = ${userId} AND id = ANY(${imageIds}::uuid[])
+        `;
 
         return NextResponse.json({
             success: true,

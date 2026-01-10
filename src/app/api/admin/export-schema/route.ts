@@ -1,25 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// Initialize Supabase Admin Client
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { sql } from '@/lib/neon/client';
 
 // List of tables to export schema
-const TABLES_TO_EXPORT = [
-    'users',
-    'categories',
-    'tools',
-    'studio',
-    'prompts',
-    'hero_banners',
-    'system_configs',
-    'generation_history',
-    'payment_transactions',
-    'guest_sessions'
-];
+
+// Map of tables to explicit query functions for schema inference
+const SCHEMA_QUERIES: Record<string, () => Promise<any[]>> = {
+    users: () => sql`SELECT * FROM users LIMIT 1`,
+    categories: () => sql`SELECT * FROM categories LIMIT 1`,
+    tools: () => sql`SELECT * FROM tools LIMIT 1`,
+    studio: () => sql`SELECT * FROM studio LIMIT 1`,
+    prompts: () => sql`SELECT * FROM prompts LIMIT 1`,
+    hero_banners: () => sql`SELECT * FROM hero_banners LIMIT 1`,
+    system_configs: () => sql`SELECT * FROM system_configs LIMIT 1`,
+    generation_history: () => sql`SELECT * FROM generation_history LIMIT 1`,
+    payment_transactions: () => sql`SELECT * FROM payment_transactions LIMIT 1`,
+    guest_sessions: () => sql`SELECT * FROM guest_sessions LIMIT 1`,
+    packages: () => sql`SELECT * FROM packages LIMIT 1`,
+    user_gallery: () => sql`SELECT * FROM user_gallery LIMIT 1`,
+    guest_gallery: () => sql`SELECT * FROM guest_gallery LIMIT 1`
+};
 
 function inferDataType(value: any): string {
     if (value === null || value === undefined) return 'text';
@@ -45,9 +44,9 @@ function inferDataType(value: any): string {
 
 export async function GET(request: NextRequest) {
     try {
-        console.log('[Export Schema] Starting schema export...');
+        console.log('[Export Schema] Starting schema export from Neon...');
 
-        let sqlOutput = `-- Supabase Database Schema Export
+        let sqlOutput = `-- Neon Database Schema Export
 -- Generated: ${new Date().toISOString()}
 -- Compatible with PostgreSQL (Neon, Supabase, etc.)
 -- NOTE: Schema inferred from sample data. Please verify column types and add constraints.
@@ -58,22 +57,12 @@ SET standard_conforming_strings = on;
 `;
 
         // Fetch schema for each table by sampling data
-        for (const tableName of TABLES_TO_EXPORT) {
+        for (const [tableName, queryFn] of Object.entries(SCHEMA_QUERIES)) {
             try {
                 // Get a sample row to infer schema
-                const { data: sampleData, error } = await supabaseAdmin
-                    .from(tableName)
-                    .select('*')
-                    .limit(1)
-                    .maybeSingle();
+                const sampleData = await queryFn();
 
-                if (error) {
-                    console.error(`[Export Schema] Error for ${tableName}:`, error);
-                    sqlOutput += `-- Could not fetch schema for ${tableName}: ${error.message}\n\n`;
-                    continue;
-                }
-
-                if (!sampleData) {
+                if (!sampleData || sampleData.length === 0) {
                     sqlOutput += `-- Table ${tableName} is empty, cannot infer schema\n`;
                     sqlOutput += `-- CREATE TABLE ${tableName} (\n`;
                     sqlOutput += `--     id serial PRIMARY KEY,\n`;
@@ -82,17 +71,19 @@ SET standard_conforming_strings = on;
                     continue;
                 }
 
+                const row = sampleData[0];
+
                 // Generate CREATE TABLE statement
                 sqlOutput += `-- Table: ${tableName}\n`;
                 sqlOutput += `DROP TABLE IF EXISTS ${tableName} CASCADE;\n`;
                 sqlOutput += `CREATE TABLE ${tableName} (\n`;
 
                 // Infer columns from sample data
-                const columns = Object.keys(sampleData);
+                const columns = Object.keys(row);
                 const columnDefs: string[] = [];
 
                 for (const colName of columns) {
-                    const dataType = inferDataType(sampleData[colName]);
+                    const dataType = inferDataType(row[colName]);
                     let colDef = `    ${colName} ${dataType}`;
 
                     // Add NOT NULL for id columns
@@ -136,7 +127,7 @@ SET standard_conforming_strings = on;
         sqlOutput += `-- 5. Add DEFAULT values for columns as needed\n\n`;
 
         // Return as downloadable SQL file
-        const filename = `supabase_schema_${new Date().toISOString().replace(/[:.]/g, '-')}.sql`;
+        const filename = `neon_schema_${new Date().toISOString().replace(/[:.]/g, '-')}.sql`;
 
         return new NextResponse(sqlOutput, {
             status: 200,

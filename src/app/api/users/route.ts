@@ -1,61 +1,81 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase/client';
+import { sql } from '@/lib/neon/client';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 /**
- * GET /api/users - Get current user profile
+ * GET /api/users - Get all users (admin only) or current user profile
  * GET /api/users?userId=xxx - Get specific user (admin only)
+ * GET /api/users?all=true - Get all users (admin only)
  */
 export async function GET(req: NextRequest) {
     try {
-        // Get auth token
-        const authHeader = req.headers.get('Authorization');
-        if (!authHeader) {
+        // Get session from NextAuth
+        const session = await getServerSession(authOptions);
+
+        if (!session?.user?.email) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const token = authHeader.replace('Bearer ', '');
-        const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+        const userEmail = session.user.email;
 
-        if (authError || !user) {
-            return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-        }
+        // Get current user data from Neon
+        const currentUserData = await sql`
+            SELECT * FROM users WHERE email = ${userEmail} LIMIT 1
+        `;
 
-        // Check if requesting specific user (admin only)
-        const { searchParams } = new URL(req.url);
-        const requestedUserId = searchParams.get('userId');
-
-        if (requestedUserId && requestedUserId !== user.id) {
-            // Check if user is admin
-            const { data: userData } = await supabaseAdmin
-                .from('users')
-                .select('role')
-                .eq('user_id', user.id)
-                .single();
-
-            if (userData?.role !== 'admin') {
-                return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-            }
-        }
-
-        const targetUserId = requestedUserId || user.id;
-
-        // Get user data
-        const { data, error } = await supabaseAdmin
-            .from('users')
-            .select('*')
-            .eq('user_id', targetUserId)
-            .single();
-
-        if (error) {
-            console.error('[API] Error fetching user:', error);
+        if (!currentUserData || currentUserData.length === 0) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
-        return NextResponse.json({ user: data });
+        const currentUser = currentUserData[0];
+
+        // Check if requesting all users (admin only)
+        const { searchParams } = new URL(req.url);
+        const getAllUsers = searchParams.get('all') === 'true';
+        const requestedUserId = searchParams.get('userId');
+
+        if (getAllUsers) {
+            // Check if user is admin
+            if (currentUser.role !== 'admin') {
+                return NextResponse.json({ error: 'Forbidden - Admin only' }, { status: 403 });
+            }
+
+            // Get all users for admin
+            const allUsers = await sql`
+                SELECT * FROM users 
+                ORDER BY created_at DESC
+            `;
+
+            return NextResponse.json({ users: allUsers });
+        }
+
+        if (requestedUserId && requestedUserId !== currentUser.user_id) {
+            // Check if user is admin for accessing other user data
+            if (currentUser.role !== 'admin') {
+                return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+            }
+
+            // Get specific user
+            const userData = await sql`
+                SELECT * FROM users 
+                WHERE user_id = ${requestedUserId}
+                LIMIT 1
+            `;
+
+            if (!userData || userData.length === 0) {
+                return NextResponse.json({ error: 'User not found' }, { status: 404 });
+            }
+
+            return NextResponse.json({ user: userData[0] });
+        }
+
+        // Return current user data
+        return NextResponse.json({ user: currentUser });
 
     } catch (error: any) {
         console.error('[API] Error in GET /api/users:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 });
     }
 }
 
@@ -64,68 +84,56 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
     try {
-        // Get auth token
-        const authHeader = req.headers.get('Authorization');
-        if (!authHeader) {
+        const session = await getServerSession(authOptions);
+
+        if (!session?.user?.email) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const token = authHeader.replace('Bearer ', '');
-        const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-
-        if (authError || !user) {
-            return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-        }
-
         const body = await req.json();
-        const { email, full_name } = body;
+        const { email, full_name, user_id } = body;
 
         // Validate input
-        if (!email) {
-            return NextResponse.json({ error: 'Email is required' }, { status: 400 });
+        if (!email || !user_id) {
+            return NextResponse.json({ error: 'Email and user_id are required' }, { status: 400 });
         }
 
         // Check if user already exists
-        const { data: existingUser } = await supabaseAdmin
-            .from('users')
-            .select('user_id')
-            .eq('user_id', user.id)
-            .maybeSingle();
+        const existingUser = await sql`
+            SELECT * FROM users WHERE user_id = ${user_id} LIMIT 1
+        `;
 
-        if (existingUser) {
+        if (existingUser && existingUser.length > 0) {
             // User exists, return existing data
-            const { data } = await supabaseAdmin
-                .from('users')
-                .select('*')
-                .eq('user_id', user.id)
-                .single();
-
-            return NextResponse.json({ user: data, created: false });
+            return NextResponse.json({ user: existingUser[0], created: false });
         }
 
         // Create new user with default credits
-        const { data: newUser, error: createError } = await supabaseAdmin
-            .from('users')
-            .insert({
-                user_id: user.id,
-                email: email,
-                full_name: full_name || null,
-                current_credits: 10, // Default credits for new users
-                role: 'user'
-            })
-            .select()
-            .single();
+        const newUser = await sql`
+            INSERT INTO users (
+                user_id, 
+                email, 
+                display_name, 
+                current_credits, 
+                role,
+                created_at
+            )
+            VALUES (
+                ${user_id},
+                ${email},
+                ${full_name || email.split('@')[0]},
+                10,
+                'user',
+                NOW()
+            )
+            RETURNING *
+        `;
 
-        if (createError) {
-            console.error('[API] Error creating user:', createError);
-            return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
-        }
-
-        return NextResponse.json({ user: newUser, created: true }, { status: 201 });
+        return NextResponse.json({ user: newUser[0], created: true }, { status: 201 });
 
     } catch (error: any) {
         console.error('[API] Error in POST /api/users:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 });
     }
 }
 
@@ -134,43 +142,66 @@ export async function POST(req: NextRequest) {
  */
 export async function PATCH(req: NextRequest) {
     try {
-        // Get auth token
-        const authHeader = req.headers.get('Authorization');
-        if (!authHeader) {
+        const session = await getServerSession(authOptions);
+
+        if (!session?.user?.email) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const token = authHeader.replace('Bearer ', '');
-        const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+        // Get current user
+        const currentUserData = await sql`
+            SELECT * FROM users WHERE email = ${session.user.email} LIMIT 1
+        `;
 
-        if (authError || !user) {
-            return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+        if (!currentUserData || currentUserData.length === 0) {
+            return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
+        const currentUser = currentUserData[0];
         const body = await req.json();
-        const { full_name, avatar_url } = body;
+        const { user_id, role, current_credits, plan } = body;
 
-        // Update user
-        const { data, error } = await supabaseAdmin
-            .from('users')
-            .update({
-                full_name: full_name,
-                avatar_url: avatar_url,
-                updated_at: new Date().toISOString()
-            })
-            .eq('user_id', user.id)
-            .select()
-            .single();
+        // If updating another user, check admin permission
+        if (user_id && user_id !== currentUser.user_id) {
+            if (currentUser.role !== 'admin') {
+                return NextResponse.json({ error: 'Forbidden - Admin only' }, { status: 403 });
+            }
 
-        if (error) {
-            console.error('[API] Error updating user:', error);
-            return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
+            // Admin updating another user
+            const updateData = await sql`
+                UPDATE users
+                SET 
+                    role = COALESCE(${role}, role),
+                    current_credits = COALESCE(${current_credits !== undefined ? current_credits : null}, current_credits),
+                    updated_at = NOW()
+                WHERE user_id = ${user_id}
+                RETURNING *
+            `;
+
+            if (!updateData || updateData.length === 0) {
+                return NextResponse.json({ error: 'User not found' }, { status: 404 });
+            }
+
+            return NextResponse.json({ user: updateData[0] });
         }
 
-        return NextResponse.json({ user: data });
+        // User updating their own profile (limited fields)
+        const { display_name, avatar_url } = body;
+
+        const updatedUser = await sql`
+            UPDATE users
+            SET 
+                display_name = COALESCE(${display_name}, display_name),
+                avatar_url = COALESCE(${avatar_url}, avatar_url),
+                updated_at = NOW()
+            WHERE user_id = ${currentUser.user_id}
+            RETURNING *
+        `;
+
+        return NextResponse.json({ user: updatedUser[0] });
 
     } catch (error: any) {
         console.error('[API] Error in PATCH /api/users:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 });
     }
 }

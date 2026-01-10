@@ -449,10 +449,10 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ stage, originalImage, 
                     <h3 className="text-2xl font-bold text-yellow-400 base-font">Kết quả</h3>
                 </div>
 
-                {/* Results grid - 2 cols mobile, 3 cols tablet, 4 cols desktop */}
+                {/* Results grid - 1 col mobile (fullscreen), 3 cols tablet, 4 cols desktop */}
                 <motion.div
                     layout
-                    className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 px-4 md:px-8 w-full max-w-screen-2xl mx-auto"
+                    className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 px-4 md:px-8 w-full max-w-screen-2xl mx-auto justify-items-center"
                 >
                     {children}
                 </motion.div>
@@ -466,13 +466,6 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ stage, originalImage, 
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.5, duration: 0.5 }}
                     >
-                        <button
-                            className="btn btn-secondary"
-                            onClick={() => downloadJson({ viewId: currentView.viewId, state: getExportableState(currentView.state) }, `Duky-${currentView.viewId}-settings.json`)}
-                            title={t('common_exportSettings_tooltip')}
-                        >
-                            {t('common_exportSettings')}
-                        </button>
                         {actions}
                     </motion.div>
                 )}

@@ -33,17 +33,52 @@ export const handleFileUpload = (
         const reader = new FileReader();
         reader.onloadend = () => {
             if (typeof reader.result === 'string') {
-                // 2. Check resolution
+                // 2. Check resolution and auto-scale if needed
                 const img = new Image();
                 img.onload = () => {
                     const MAX_DIMENSION = 2600; // Limit below 4K (3840px)
+
+                    // If image exceeds max dimension, scale it down
                     if (img.width > MAX_DIMENSION || img.height > MAX_DIMENSION) {
-                        toast.error(`Độ phân giải quá cao (>${MAX_DIMENSION}px). Vui lòng giảm kích thước ảnh.`);
-                        if (e.target) e.target.value = ''; // Reset
-                        return;
+                        // toast('Đang tự động giảm kích thước ảnh...', { icon: '🔄' });
+
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+
+                        if (!ctx) {
+                            toast.error('Không thể xử lý ảnh.');
+                            if (e.target) e.target.value = '';
+                            return;
+                        }
+
+                        // Calculate new dimensions maintaining aspect ratio
+                        let newWidth = img.width;
+                        let newHeight = img.height;
+
+                        if (img.width > img.height) {
+                            if (img.width > MAX_DIMENSION) {
+                                newWidth = MAX_DIMENSION;
+                                newHeight = (img.height * MAX_DIMENSION) / img.width;
+                            }
+                        } else {
+                            if (img.height > MAX_DIMENSION) {
+                                newHeight = MAX_DIMENSION;
+                                newWidth = (img.width * MAX_DIMENSION) / img.height;
+                            }
+                        }
+
+                        canvas.width = newWidth;
+                        canvas.height = newHeight;
+                        ctx.drawImage(img, 0, 0, newWidth, newHeight);
+
+                        // Convert to data URL with good quality
+                        const scaledDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+                        // toast.success(`Đã giảm kích thước từ ${img.width}x${img.height} xuống ${Math.round(newWidth)}x${Math.round(newHeight)}px`);
+                        callback(scaledDataUrl);
+                    } else {
+                        // Image is within limits, use original
+                        callback(reader.result as string);
                     }
-                    // Valid
-                    callback(reader.result as string);
                 };
                 img.onerror = () => {
                     toast.error('File ảnh lỗi, không thể đọc.');

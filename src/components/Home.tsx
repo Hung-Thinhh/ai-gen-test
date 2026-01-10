@@ -250,7 +250,7 @@ const Home: React.FC<HomeProps> = ({ onSelectApp, title, subtitle, apps: initial
                   variant="h6"
                   component="div"
                   className="themed-text"
-                  sx={{ marginBottom: 1 }}
+                  sx={{ marginBottom: 1, fontWeight: 700 }}
                 >
                   {getLocalizedText(app.title, language)}
                 </Typography>
@@ -263,6 +263,7 @@ const Home: React.FC<HomeProps> = ({ onSelectApp, title, subtitle, apps: initial
                     WebkitBoxOrient: 'vertical',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
+                    opacity: 0.85
                   }}
                 >
                   {getLocalizedText(app.description, language)}

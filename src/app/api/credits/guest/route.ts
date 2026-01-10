@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase/client';
+import { sql } from '@/lib/neon/client';
 
 /**
  * GET /api/credits/guest?guestId=xxx - Get guest credits
@@ -14,35 +14,38 @@ export async function GET(req: NextRequest) {
         }
 
         // Get guest credits
-        const { data, error } = await supabaseAdmin
-            .from('guest_sessions')
-            .select('credits')
-            .eq('guest_id', guestId)
-            .maybeSingle();
-
-        if (error) {
-            console.error('[API] Error fetching guest credits:', error);
-            return NextResponse.json({ credits: 0 });
-        }
+        const result = await sql`
+            SELECT credits FROM guest_sessions 
+            WHERE guest_id = ${guestId} 
+            LIMIT 1
+        `;
 
         // If guest doesn't exist, create with default credits
-        if (!data) {
+        if (!result || result.length === 0) {
             const defaultCredits = 3;
-            const { data: newGuest, error: createError } = await supabaseAdmin
-                .from('guest_sessions')
-                .insert({ guest_id: guestId, credits: defaultCredits })
-                .select('credits')
-                .single();
+            // Use upsert-like logic or just insert since we checked it doesn't exist
+            // But concurrency might be an issue, usage of ON CONFLICT is better if guest_id is PK/Unique
+            // Assuming guest_id is compatible with ON CONFLICT or just try INSERT
 
-            if (createError) {
-                console.error('[API] Error creating guest session:', createError);
-                return NextResponse.json({ credits: 0 });
+            try {
+                const newGuest = await sql`
+                    INSERT INTO guest_sessions (guest_id, credits, last_seen)
+                    VALUES (${guestId}, ${defaultCredits}, NOW())
+                    RETURNING credits
+                `;
+                return NextResponse.json({ credits: newGuest[0].credits });
+            } catch (insertError) {
+                // If concurrent insert happened, fetch again
+                const retryResult = await sql`
+                    SELECT credits FROM guest_sessions 
+                    WHERE guest_id = ${guestId} 
+                    LIMIT 1
+                `;
+                return NextResponse.json({ credits: retryResult[0]?.credits || defaultCredits });
             }
-
-            return NextResponse.json({ credits: newGuest?.credits || defaultCredits });
         }
 
-        return NextResponse.json({ credits: data?.credits || 0 });
+        return NextResponse.json({ credits: result[0].credits || 0 });
 
     } catch (error: any) {
         console.error('[API] Error in GET /api/credits/guest:', error);
@@ -51,7 +54,7 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * POST /api/credits/guest/reserve - Reserve guest credits atomically
+ * POST /api/credits/guest - Reserve guest credits atomically (or create guest)
  */
 export async function POST(req: NextRequest) {
     try {
@@ -67,91 +70,52 @@ export async function POST(req: NextRequest) {
         }
 
         // Ensure guest session exists
-        const { data: guestData } = await supabaseAdmin
-            .from('guest_sessions')
-            .select('credits')
-            .eq('guest_id', guestId)
-            .maybeSingle();
+        const checkGuest = await sql`
+            SELECT credits FROM guest_sessions WHERE guest_id = ${guestId} LIMIT 1
+        `;
 
-        if (!guestData) {
-            // Create guest with default credits
+        if (!checkGuest || checkGuest.length === 0) {
+            // Create guest with default credits - amount?
+            // If they are generating, they need credits. 
+            // Default usually 3. If cost is 1, they have 2 left.
+            // But if cost > 3, they fail immediately.
             const defaultCredits = 3;
-            await supabaseAdmin
-                .from('guest_sessions')
-                .insert({ guest_id: guestId, credits: defaultCredits });
+            await sql`
+                INSERT INTO guest_sessions (guest_id, credits, last_seen)
+                VALUES (${guestId}, ${defaultCredits}, NOW())
+            `;
         }
 
-        // Try atomic reservation
-        const { data, error } = await supabaseAdmin.rpc('reserve_guest_credits', {
-            p_guest_id: guestId,
-            p_amount: amount
-        });
+        // Atomically check and deduct credits
+        const result = await sql`
+            UPDATE guest_sessions 
+            SET credits = credits - ${amount}, last_seen = NOW()
+            WHERE guest_id = ${guestId} AND credits >= ${amount}
+            RETURNING credits
+        `;
 
-        if (error) {
-            // Fallback if function doesn't exist
-            if (error.message?.includes('function') || error.code === '42883') {
-                const { data: currentData } = await supabaseAdmin
-                    .from('guest_sessions')
-                    .select('credits')
-                    .eq('guest_id', guestId)
-                    .single();
-
-                const currentCredits = currentData?.credits || 0;
-
-                if (currentCredits < amount) {
-                    return NextResponse.json({
-                        success: false,
-                        error: 'Insufficient credits',
-                        current: currentCredits,
-                        required: amount
-                    }, { status: 402 });
-                }
-
-                await supabaseAdmin
-                    .from('guest_sessions')
-                    .update({ credits: currentCredits - amount })
-                    .eq('guest_id', guestId);
-
-                return NextResponse.json({
-                    success: true,
-                    reserved: amount,
-                    remaining: currentCredits - amount
-                });
-            }
-
-            console.error('[API] Error reserving guest credits:', error);
-            return NextResponse.json({ error: 'Failed to reserve credits' }, { status: 500 });
-        }
-
-        if (!data) {
-            const { data: currentData } = await supabaseAdmin
-                .from('guest_sessions')
-                .select('credits')
-                .eq('guest_id', guestId)
-                .single();
+        if (!result || result.length === 0) {
+            // Insufficient credits or user issue
+            const currentData = await sql`
+                SELECT credits FROM guest_sessions WHERE guest_id = ${guestId} LIMIT 1
+            `;
 
             return NextResponse.json({
                 success: false,
                 error: 'Insufficient credits',
-                current: currentData?.credits || 0,
+                current: currentData.length > 0 ? currentData[0].credits : 0,
                 required: amount
             }, { status: 402 });
         }
 
-        const { data: updatedData } = await supabaseAdmin
-            .from('guest_sessions')
-            .select('credits')
-            .eq('guest_id', guestId)
-            .single();
-
         return NextResponse.json({
             success: true,
             reserved: amount,
-            remaining: updatedData?.credits || 0
+            remaining: result[0].credits
         });
 
     } catch (error: any) {
-        console.error('[API] Error in POST /api/credits/guest/reserve:', error);
+        console.error('[API] Error in POST /api/credits/guest:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

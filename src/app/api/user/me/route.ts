@@ -13,15 +13,20 @@ export async function GET(req: NextRequest) {
 
         const userId = (session.user as any).id || (session.user as any).user_id;
 
-        // Fetch User Data from Neon
-        // Assuming table 'users' has 'role' and 'current_credits'
-        const users = await sql`SELECT role, current_credits FROM users WHERE user_id = ${userId}`;
+        // Fetch User Data from Neon including subscription info
+        const users = await sql`
+            SELECT role, current_credits, subscription_type, subscription_expires_at 
+            FROM users 
+            WHERE user_id = ${userId}
+        `;
 
         if (users.length === 0) {
             // User might need to be synced/created? Or just return default
             return NextResponse.json({
                 role: 'user',
                 current_credits: 0,
+                subscription_type: null,
+                subscription_expires_at: null,
                 is_fresh: true
             });
         }
@@ -30,7 +35,9 @@ export async function GET(req: NextRequest) {
 
         return NextResponse.json({
             role: user.role,
-            current_credits: user.current_credits
+            current_credits: user.current_credits,
+            subscription_type: user.subscription_type,
+            subscription_expires_at: user.subscription_expires_at
         });
 
     } catch (error: any) {

@@ -1,40 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase/client';
+import { sql } from '@/lib/neon/client';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 /**
  * GET /api/history - Get generation history
  */
 export async function GET(req: NextRequest) {
     try {
-        // Get auth token
-        const authHeader = req.headers.get('Authorization');
-        if (!authHeader) {
+        const session = await getServerSession(authOptions);
+
+        if (!session?.user?.email) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const token = authHeader.replace('Bearer ', '');
-        const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-
-        if (authError || !user) {
-            return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+        // Get user ID
+        const userCheck = await sql`SELECT user_id FROM users WHERE email = ${session.user.email} LIMIT 1`;
+        if (!userCheck || userCheck.length === 0) {
+            return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
+        const userId = userCheck[0].user_id;
 
         const { searchParams } = new URL(req.url);
         const limit = parseInt(searchParams.get('limit') || '50');
         const offset = parseInt(searchParams.get('offset') || '0');
 
         // Get history
-        const { data, error } = await supabaseAdmin
-            .from('generation_history')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .range(offset, offset + limit - 1);
-
-        if (error) {
-            console.error('[API] Error fetching history:', error);
-            return NextResponse.json({ history: [] });
-        }
+        const data = await sql`
+            SELECT * FROM generation_history 
+            WHERE user_id = ${userId} 
+            ORDER BY created_at DESC 
+            LIMIT ${limit} OFFSET ${offset}
+        `;
 
         return NextResponse.json({ history: data || [] });
 
@@ -49,16 +46,6 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
     try {
-        // Get auth token (optional for guest)
-        const authHeader = req.headers.get('Authorization');
-        let userId: string | null = null;
-
-        if (authHeader) {
-            const token = authHeader.replace('Bearer ', '');
-            const { data: { user } } = await supabaseAdmin.auth.getUser(token);
-            userId = user?.id || null;
-        }
-
         const body = await req.json();
         const {
             guestId,
@@ -71,51 +58,75 @@ export async function POST(req: NextRequest) {
             errorMessage
         } = body;
 
+        // Determine user ID if authenticated
+        let userId: string | null = null;
+
+        // Try getting session
+        const session = await getServerSession(authOptions);
+        if (session?.user?.email) {
+            const userCheck = await sql`SELECT user_id FROM users WHERE email = ${session.user.email} LIMIT 1`;
+            if (userCheck.length > 0) {
+                userId = userCheck[0].user_id;
+            }
+        }
+
         // Validate required fields
         if (!toolId) {
             return NextResponse.json({ error: 'Tool ID required' }, { status: 400 });
         }
 
         if (!userId && !guestId) {
+            // Allow logging if we have at least one ID, but prefer Authenticated user
+            // If neither, we can't associate log
             return NextResponse.json({ error: 'User ID or Guest ID required' }, { status: 400 });
         }
 
-        // Create log entry
-        const logEntry: any = {
-            tool_id: toolId,
-            prompt: prompt || null,
-            output_images: outputImages || [],
-            credits_used: creditsUsed || 0,
-            api_model_used: apiModelUsed || null,
-            generation_count: generationCount || 1,
-            error_message: errorMessage || null
-        };
-
-        if (userId) {
-            logEntry.user_id = userId;
-        } else {
-            logEntry.guest_id = guestId;
-        }
+        console.log('[History] Logging generation:', { userId, guestId, toolId });
 
         // Insert log
-        const { data, error } = await supabaseAdmin
-            .from('generation_history')
-            .insert(logEntry)
-            .select()
-            .single();
+        // Note: user_id might be nullable in DB for guest logs, or we need to handle it.
+        // If DB enforces user_id NOT NULL, this will fail for guests if we send NULL.
+        // We act optimistically.
 
-        if (error) {
-            console.error('[API] Error logging generation:', error);
-            return NextResponse.json({ error: 'Failed to log generation' }, { status: 500 });
-        }
+        const result = await sql`
+            INSERT INTO generation_history (
+                history_id,
+                user_id,
+                guest_id,
+                tool_id,
+                prompt,
+                output_images,
+                credits_used,
+                api_model_used,
+                generation_count,
+                error_message,
+                created_at
+            ) VALUES (
+                gen_random_uuid(),
+                ${userId}, -- Can be null
+                ${guestId}, -- Can be null
+                ${toolId},
+                ${prompt || null},
+                ${JSON.stringify(outputImages || [])}::jsonb,
+                ${creditsUsed || 0},
+                ${apiModelUsed || null},
+                ${generationCount || 1},
+                ${errorMessage || null},
+                NOW()
+            )
+            RETURNING *
+        `;
 
         return NextResponse.json({
             success: true,
-            log: data
+            log: result[0]
         }, { status: 201 });
 
     } catch (error: any) {
         console.error('[API] Error in POST /api/history:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return NextResponse.json({
+            error: 'Internal server error',
+            details: error.message
+        }, { status: 500 });
     }
 }

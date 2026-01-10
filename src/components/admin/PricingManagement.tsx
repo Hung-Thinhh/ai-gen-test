@@ -201,26 +201,6 @@ export default function PricingManagement() {
                     >
                         Thêm gói mới
                     </Button>
-                    <Button
-                        variant="outlined"
-                        color="warning"
-                        sx={{ borderRadius: 2, height: 40, px: 2, textTransform: 'none' }}
-                        onClick={async () => {
-                            const { data: { user } } = await import('../../lib/supabase/client').then(m => m.supabase.auth.getUser());
-                            if (!user) { toast.error('Chưa đăng nhập!'); return; }
-
-                            const { data, error } = await import('../../lib/supabase/client').then(m => m.supabase
-                                .from('users')
-                                .select('role')
-                                .eq('user_id', user.id) // Supabase auto-handles uuid->text usually, but let's see result
-                                .single());
-
-                            if (error) toast.error(`Lỗi DB: ${error.message}`);
-                            else toast.success(`DB Role: ${data?.role} (ID: ${user.id.slice(0, 5)}...)`);
-                        }}
-                    >
-                        Check Role
-                    </Button>
                     <TextField
                         placeholder="Tìm kiếm gói..."
                         size="small"
@@ -242,8 +222,8 @@ export default function PricingManagement() {
                             }
                         }}
                     />
-                </Stack >
-            </Stack >
+                </Stack>
+            </Stack>
 
             {/* Table */}
             <TableContainer sx={{ boxShadow: 'none' }}>

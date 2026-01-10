@@ -2,10 +2,11 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppControls } from './uiUtils';
 import { SettingsIcon, LogoutIcon } from './icons';
+import { useRouter } from 'next/navigation';
 
 interface UserProfileProps {
     onClose?: () => void;
@@ -15,9 +16,32 @@ interface UserProfileProps {
 export const UserProfile: React.FC<UserProfileProps> = ({ onClose, onOpenSettings }) => {
     const { isLoggedIn, user, loginGoogle, logout } = useAuth();
     const { t, v2UsageCount, v3UsageCount, guestCredits, userCredits } = useAppControls();
+    const router = useRouter();
+
+    const [subscriptionInfo, setSubscriptionInfo] = useState<{
+        subscription_type: string | null;
+        subscription_expires_at: string | null;
+    }>({ subscription_type: null, subscription_expires_at: null });
 
     // Calculate total credits
     const totalCredits = isLoggedIn ? userCredits : guestCredits;
+
+    // Fetch subscription info for logged-in users
+    useEffect(() => {
+        if (isLoggedIn) {
+            fetch('/api/user/me')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.subscription_type || data.subscription_expires_at) {
+                        setSubscriptionInfo({
+                            subscription_type: data.subscription_type,
+                            subscription_expires_at: data.subscription_expires_at
+                        });
+                    }
+                })
+                .catch(err => console.error('Failed to fetch subscription info:', err));
+        }
+    }, [isLoggedIn]);
 
     const handleLoginClick = async () => {
         try {
@@ -40,6 +64,24 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onClose, onOpenSetting
     const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
     const userPhoto = user?.user_metadata?.avatar_url || null;
     const username = userEmail ? userEmail.split('@')[0] : 'guest';
+
+    // Check if user has active subscription
+    const hasSubscription = subscriptionInfo.subscription_type && subscriptionInfo.subscription_expires_at;
+
+    // Format expiration date
+    const formatExpirationDate = (dateString: string | null) => {
+        if (!dateString) return '';
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('vi-VN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        } catch {
+            return dateString;
+        }
+    };
 
     return (
         <div className="w-full h-full flex flex-col overflow-y-auto" style={{ background: 'linear-gradient(180deg, #2a1810 0%, #1a0f0a 50%, #0d0805 100%)' }}>
@@ -125,18 +167,53 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onClose, onOpenSetting
                     )}
                 </div>
 
-                {/* Upgrade Card */}
-                <div className="w-full bg-neutral-800/60 rounded-2xl p-5 mt-4">
-                    <h3 className="text-lg font-bold text-orange-400 mb-2">
-                        {t('profile_upgrade_title') || 'Nâng cấp lên Premium'}
-                    </h3>
-                    <p className="text-neutral-400 text-sm mb-4">
-                        {t('profile_upgrade_description') || 'Nhận không giới hạn tạo ảnh và truy cập tất cả tính năng cao cấp'}
-                    </p>
-                    <button className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 transition-all">
-                        {t('profile_buy_package') || 'Mua gói'}
-                    </button>
-                </div>
+                {/* Subscription Card - Show subscription info if exists, otherwise show upgrade prompt */}
+                {isLoggedIn && (
+                    <div className="w-full bg-neutral-800/60 rounded-2xl p-5 mt-4">
+                        {hasSubscription ? (
+                            <>
+                                {/* Active Subscription Info */}
+                                <div className="flex items-start gap-3 mb-3">
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center flex-shrink-0">
+                                        <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                        </svg>
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="text-lg font-bold text-orange-400 mb-1">
+                                            Gói {subscriptionInfo.subscription_type}
+                                        </h3>
+                                        <p className="text-neutral-400 text-sm">
+                                            Hết hạn: {formatExpirationDate(subscriptionInfo.subscription_expires_at)}
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => router.push('/pricing')}
+                                    className="w-full bg-neutral-700/50 text-orange-400 px-6 py-3 rounded-full font-semibold hover:bg-neutral-700 transition-all border border-orange-500/20"
+                                >
+                                    Gia hạn hoặc nâng cấp
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                {/* Upgrade Prompt */}
+                                <h3 className="text-lg font-bold text-orange-400 mb-2">
+                                    {t('profile_upgrade_title') || 'Nâng cấp lên Premium'}
+                                </h3>
+                                <p className="text-neutral-400 text-sm mb-4">
+                                    {t('profile_upgrade_description') || 'Nhận không giới hạn tạo ảnh và truy cập tất cả tính năng cao cấp'}
+                                </p>
+                                <button
+                                    onClick={() => router.push('/pricing')}
+                                    className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 transition-all"
+                                >
+                                    {t('profile_buy_package') || 'Mua gói'}
+                                </button>
+                            </>
+                        )}
+                    </div>
+                )}
 
                 {/* Logout Button */}
                 {isLoggedIn && (

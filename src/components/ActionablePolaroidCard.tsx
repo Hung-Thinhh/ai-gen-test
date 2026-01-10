@@ -177,10 +177,12 @@ const ActionablePolaroidCard: React.FC<ActionablePolaroidCardProps> = ({
 
     const handleDownloadClick = useCallback(() => {
         if (mediaUrl) {
-            const filename = `${caption.replace(/[\s()]/g, '-')}`;
+            // Generate random ID: timestamp + random number
+            const randomId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+            const filename = `Duky-AI-${randomId}`;
             downloadImage(mediaUrl, filename);
         }
-    }, [mediaUrl, caption]);
+    }, [mediaUrl]);
 
     const handleOpenGalleryPicker = useCallback(() => {
         setGalleryPickerOpen(true);

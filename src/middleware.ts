@@ -6,7 +6,11 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl;
     const pathname = url.pathname;
 
-    console.log('[Middleware] 🚀 EXECUTING for:', pathname);
+    // Skip logging for static assets to reduce noise
+    const isStaticAsset = pathname.match(/\.(woff2?|ttf|otf|eot|css|js|map|ico|svg|png|jpg|jpeg|gif|webp)$/);
+    if (!isStaticAsset) {
+        console.log('[Middleware] 🚀 EXECUTING for:', pathname);
+    }
 
     // ============================================
     // ADMIN ROUTE PROTECTION - TEMPORARILY DISABLED

@@ -91,7 +91,7 @@ const PhotoBooth: React.FC<PhotoBoothProps> = (props) => {
     };
 
     return (
-        <div className="flex flex-col items-center justify-center w-full h-full flex-1 min-h-0">
+        <div className="flex flex-col items-center justify-center w-full h-full flex-1 min-h-screen">
             <AnimatePresence>
                 {appState.stage === 'configuring' && <AppScreenHeader {...headerProps} />}
             </AnimatePresence>

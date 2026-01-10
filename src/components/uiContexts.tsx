@@ -238,10 +238,9 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         async function loadData() {
             if (isLoggedIn && user) {
                 try {
-                    // Pass token to ensure fresh, authenticated fetch
-                    const credits = await storageService.getUserCredits(user.id, token || undefined);
-                    console.log('[loadData] Fetched user credits:', credits);
-                    setUserCredits(credits);
+                    // Credits are already fetched by AuthContext and dispatched via 'user-credits-updated' event
+                    // No need to call getUserCredits here - listen to the event instead
+                    console.log('[loadData] Skipping getUserCredits (handled by AuthContext)');
 
                     const cloudGallery = await storageService.getUserCloudGallery(user.id);
                     setImageGallery(cloudGallery);
@@ -633,10 +632,9 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         console.log('[refreshCredits] ⚡ Called! isLoggedIn:', isLoggedIn, 'user:', user?.id, 'guestId:', guestId);
         try {
             if (isLoggedIn && user) {
-                console.log('[refreshCredits] Fetching user credits with token...');
-                const credits = await storageService.getUserCredits(user.id, token || undefined);
-                console.log('[refreshCredits] ✅ Updated user credits:', credits);
-                setUserCredits(credits);
+                console.log('[refreshCredits] Triggering AuthContext refresh...');
+                // Trigger AuthContext to refresh user data (which will dispatch user-credits-updated event)
+                window.dispatchEvent(new CustomEvent('refresh-user-data'));
             } else if (guestId) {
                 console.log('[refreshCredits] Fetching guest credits...');
                 const { getGuestCredits } = await import('../services/storageService');

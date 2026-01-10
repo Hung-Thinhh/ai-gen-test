@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase/client';
+import { sql } from '@/lib/neon/client';
 
 /**
  * GET /api/gallery/guest?guestId=xxx - Get guest gallery images
@@ -14,16 +14,11 @@ export async function GET(req: NextRequest) {
         }
 
         // Get guest gallery
-        const { data, error } = await supabaseAdmin
-            .from('guest_gallery')
-            .select('*')
-            .eq('guest_id', guestId)
-            .order('created_at', { ascending: false });
-
-        if (error) {
-            console.error('[API] Error fetching guest gallery:', error);
-            return NextResponse.json({ images: [] });
-        }
+        const data = await sql`
+            SELECT * FROM guest_gallery 
+            WHERE guest_id = ${guestId} 
+            ORDER BY created_at DESC
+        `;
 
         return NextResponse.json({ images: data || [] });
 
@@ -49,29 +44,28 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Images array required' }, { status: 400 });
         }
 
-        // Prepare records
-        const records = images.map(img => ({
-            guest_id: guestId,
-            image_url: img.image_url,
-            thumbnail_url: img.thumbnail_url || img.image_url,
-            metadata: img.metadata || {}
-        }));
+        const insertedImages = [];
 
-        // Insert images
-        const { data, error } = await supabaseAdmin
-            .from('guest_gallery')
-            .insert(records)
-            .select();
-
-        if (error) {
-            console.error('[API] Error adding to guest gallery:', error);
-            return NextResponse.json({ error: 'Failed to add images' }, { status: 500 });
+        for (const img of images) {
+            const result = await sql`
+                INSERT INTO guest_gallery (
+                    guest_id, image_url, thumbnail_url, metadata, created_at
+                ) VALUES (
+                    ${guestId},
+                    ${img.image_url},
+                    ${img.thumbnail_url || img.image_url},
+                    ${JSON.stringify(img.metadata || {})}::jsonb,
+                    NOW()
+                )
+                RETURNING *
+            `;
+            if (result.length > 0) insertedImages.push(result[0]);
         }
 
         return NextResponse.json({
             success: true,
-            images: data,
-            count: data?.length || 0
+            images: insertedImages,
+            count: insertedImages.length
         }, { status: 201 });
 
     } catch (error: any) {

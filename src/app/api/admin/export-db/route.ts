@@ -1,60 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { sql } from '@/lib/neon/client';
 
-// Initialize Supabase Admin Client
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
-// List of tables to export
-const TABLES_TO_EXPORT = [
-    'users',
-    'prompts',
-    'tools',
-    'categories',
-    'studio',
-    'hero_banners',
-    'system_configs',
-    'generation_history',
-    'payment_transactions',
-    'guest_sessions'
-];
+// Map of tables to explicit query functions to avoid dynamic SQL issues
+const EXPORT_QUERIES: Record<string, () => Promise<any[]>> = {
+    users: () => sql`SELECT * FROM users`,
+    prompts: () => sql`SELECT * FROM prompts`,
+    tools: () => sql`SELECT * FROM tools`,
+    categories: () => sql`SELECT * FROM categories`,
+    studio: () => sql`SELECT * FROM studio`,
+    hero_banners: () => sql`SELECT * FROM hero_banners`,
+    system_configs: () => sql`SELECT * FROM system_configs`,
+    generation_history: () => sql`SELECT * FROM generation_history`,
+    payment_transactions: () => sql`SELECT * FROM payment_transactions`,
+    guest_sessions: () => sql`SELECT * FROM guest_sessions`,
+    packages: () => sql`SELECT * FROM packages`,
+    user_gallery: () => sql`SELECT * FROM user_gallery`,
+    guest_gallery: () => sql`SELECT * FROM guest_gallery`
+};
 
 export async function GET(request: NextRequest) {
     try {
-        console.log('[Export] Starting database export...');
+        console.log('[Export] Starting database export from Neon...');
 
         const exportData: Record<string, any> = {
             exportDate: new Date().toISOString(),
+            source: 'Neon Database',
             tables: {}
         };
 
-        // Fetch data from each table
-        for (const tableName of TABLES_TO_EXPORT) {
+        // Fetch data from each table using explicit queries
+        for (const [tableName, queryFn] of Object.entries(EXPORT_QUERIES)) {
             try {
-                const { data, error } = await supabaseAdmin
-                    .from(tableName)
-                    .select('*');
+                const data = await queryFn();
 
-                if (error) {
-                    console.error(`[Export] Error fetching ${tableName}:`, error);
-                    exportData.tables[tableName] = { error: error.message, data: [] };
-                } else {
-                    exportData.tables[tableName] = {
-                        count: data?.length || 0,
-                        data: data || []
-                    };
-                    console.log(`[Export] ✅ Exported ${data?.length || 0} rows from ${tableName}`);
-                }
+                exportData.tables[tableName] = {
+                    count: data?.length || 0,
+                    data: data || []
+                };
+                console.log(`[Export] ✅ Exported ${data?.length || 0} rows from ${tableName}`);
             } catch (err: any) {
                 console.error(`[Export] Exception fetching ${tableName}:`, err);
+                // Don't crash entire export if one table fails (e.g. missing table)
                 exportData.tables[tableName] = { error: err.message, data: [] };
             }
         }
 
         // Return as downloadable JSON
-        const filename = `supabase_backup_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+        const filename = `neon_backup_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
 
         return new NextResponse(JSON.stringify(exportData, null, 2), {
             status: 200,

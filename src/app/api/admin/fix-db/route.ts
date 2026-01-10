@@ -4,6 +4,29 @@ import { sql } from '@/lib/neon/client';
 export async function GET() {
     try {
         console.log('Checking generation_history schema...');
+
+        // 0. Ensure Gallery Tables Exist
+        await sql`
+            CREATE TABLE IF NOT EXISTS user_gallery (
+                id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+                user_id uuid NOT NULL,
+                image_url text NOT NULL,
+                thumbnail_url text,
+                metadata jsonb DEFAULT '{}'::jsonb,
+                created_at timestamp with time zone DEFAULT NOW()
+            )
+        `;
+        await sql`
+            CREATE TABLE IF NOT EXISTS guest_gallery (
+                id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+                guest_id text NOT NULL,
+                image_url text NOT NULL,
+                thumbnail_url text,
+                metadata jsonb DEFAULT '{}'::jsonb,
+                created_at timestamp with time zone DEFAULT NOW()
+            )
+        `;
+
         // 1. Check column type
         const cols = await sql`
             SELECT data_type 

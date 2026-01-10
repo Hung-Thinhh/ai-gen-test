@@ -1,19 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase/client';
+import { sql } from '@/lib/neon/client';
 
 export async function GET(req: NextRequest) {
     try {
-        const { data, error } = await supabaseAdmin
-            .from('categories')
-            .select('*')
-            .order('created_at', { ascending: false });
+        const data = await sql`
+            SELECT * FROM categories 
+            ORDER BY created_at DESC
+        `;
 
-        if (error) {
-            console.error('Error fetching categories:', error);
-            return NextResponse.json({ error: 'Failed to fetch categories' }, { status: 500 });
-        }
-
-        return NextResponse.json({ data });
+        return NextResponse.json({ data: data || [] });
     } catch (error: any) {
         console.error('Server error fetching categories:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

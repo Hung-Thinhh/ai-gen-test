@@ -461,19 +461,18 @@ export const getGuestCloudGallery = async (guestId: string, useFreshClient: bool
  */
 export const getAllUsers = async (token?: string) => {
     try {
-        const client = getFreshClient(token);
+        // Call Neon-based API instead of Supabase
+        const response = await fetch('/api/users?all=true', {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
 
-        // Fetch from 'profiles' table.
-        const { data, error } = await client
-            .from(USERS_TABLE)
-            .select('*')
-            .order('created_at', { ascending: false });
-
-        if (error) {
-            console.error("Error fetching all users:", error);
+        if (!response.ok) {
+            console.error('[StorageService] Failed to fetch all users:', response.statusText);
             return [];
         }
-        return data || [];
+
+        const data = await response.json();
+        return data.users || [];
     } catch (error) {
         console.error("Error fetching all users:", error);
         return [];
@@ -485,13 +484,20 @@ export const getAllUsers = async (token?: string) => {
  */
 export const updateUser = async (userId: string, updates: any, token?: string) => {
     try {
-        const client = getFreshClient(token);
-        const { error } = await client
-            .from(USERS_TABLE)
-            .update(updates)
-            .eq('user_id', userId);
+        // Call Neon-based API instead of Supabase
+        const response = await fetch('/api/users', {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            },
+            body: JSON.stringify({ user_id: userId, ...updates })
+        });
 
-        if (error) throw error;
+        if (!response.ok) {
+            console.error("Error updating user:", response.statusText);
+            return false;
+        }
         return true;
     } catch (error) {
         console.error("Error updating user:", error);
@@ -1308,19 +1314,12 @@ export const deleteStudio = async (studioId: string, token?: string) => {
 
 export const getStudioBySlug = async (slug: string) => {
     try {
-        const { data, error } = await supabase
-            .from('studio')
-            .select(`
-                *,
-                categories:category (name)
-            `)
-            .eq('slug', slug)
-            .single();
-
-        if (error) throw error;
-        return data;
+        // Reuse getAllStudios to leverage existing API logic and caching
+        const studios = await getAllStudios();
+        const found = studios.find((s: any) => s.slug === slug);
+        return found || null;
     } catch (error) {
-        console.error('Error fetching studio by slug:', error);
+        console.error('Error fetching studio by slug (via API):', error);
         return null;
     }
 };
@@ -1512,6 +1511,3 @@ export const incrementPromptUsage = async (promptId: number) => {
         return false;
     }
 };
-
-
-

@@ -723,26 +723,29 @@ body {
 }
 
 .btn-primary {
-    color: #171717;
-    /* neutral-900 */
-    background: linear-gradient(135deg, #ffa11f, #ed4b00);
-    /* bg-yellow-400 */
-    border: 1px solid #FBBF24;
-    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    /* shadow-sm */
+    color: white;
+    background: linear-gradient(135deg, #ff7949, #ff4d00);
+    border: none;
+    border-radius: 9999px;
+    /* fully rounded */
+    box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+    font-weight: 600;
+    transition: all 0.3s ease;
 }
 
 .btn-primary:hover:not(:disabled) {
-    transform: translateY(-2px);
-    background-color: #FCD34D;
-    /* hover:bg-yellow-300 */
-    border-color: #FCD34D;
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    /* shadow-md */
+    transform: translateY(-2px) scale(1.02);
+    background: linear-gradient(135deg, #ff4d00, #ff7949);
+    box-shadow: 0 6px 16px rgba(255, 107, 53, 0.4);
+}
+
+.btn-primary:disabled {
+    background: linear-gradient(135deg, #999, #bbb);
+    box-shadow: none;
 }
 
 .btn-primary:disabled:hover {
-    background-color: #FBBF24;
+    transform: none;
 }
 
 .btn-secondary {
@@ -2659,9 +2662,15 @@ input:checked+.switch-slider:before {
         display: none !important;
     }
 
-    /* Account for bottom nav */
-    .main-content {
-        padding-bottom: 80px;
+    /* Account for bottom nav - increased padding */
+    .main-content,
+    #main-content-scroll {
+        padding-bottom: 120px !important;
+    }
+
+    /* Additional padding for direct children */
+    #main-content-scroll>* {
+        padding-bottom: 20px;
     }
 
     /* Gallery mobile optimization */

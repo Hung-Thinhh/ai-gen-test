@@ -1,13 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { PRICING_PACKAGES } from '@/types/payment';
+import { sql } from '@/lib/neon/client';
 import type { CreatePaymentRequest, CreatePaymentResponse } from '@/types/payment';
-
-// Create Supabase client with service role for admin operations
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 export async function POST(req: NextRequest) {
     try {
@@ -41,32 +34,36 @@ export async function POST(req: NextRequest) {
         }
 
         // 3. Get package details from Database
-
-        let query = supabaseAdmin.from('packages').select('*');
-
-        // Check if packageId is purely numeric to avoid Postgres type errors on 'id' column
+        // Check if packageId is purely numeric
         const isNumericId = /^\d+$/.test(String(packageId));
+        let selectedPackage = null;
 
         if (isNumericId) {
-            // If numeric, it could be either key (unlikely but possible) or ID
-            query = query.or(`package_key.eq.${packageId},id.eq.${packageId}`);
+            const result = await sql`
+                SELECT * FROM packages 
+                WHERE package_key = ${packageId} OR id = ${packageId}
+                LIMIT 1
+             `;
+            if (result.length > 0) selectedPackage = result[0];
         } else {
-            // If string, must be package_key
-            query = query.eq('package_key', packageId);
+            const result = await sql`
+                SELECT * FROM packages 
+                WHERE package_key = ${packageId}
+                LIMIT 1
+             `;
+            if (result.length > 0) selectedPackage = result[0];
         }
 
-        const { data: selectedPackage, error: packageError } = await query.single();
-
-        if (packageError || !selectedPackage) {
-            console.error('[SePay] Package not found:', packageId, packageError);
+        if (!selectedPackage) {
+            console.error('[SePay] Package not found:', packageId);
             return NextResponse.json(
                 { success: false, error: 'Invalid package' } as CreatePaymentResponse,
                 { status: 400 }
             );
         }
 
-        // 4. Skip payment for free packages (check key or price)
-        if (selectedPackage.package_key === 'free' || selectedPackage.price_vnd === 0) {
+        // 4. Skip payment for free packages
+        if (selectedPackage.package_key === 'free' || Number(selectedPackage.price_vnd) === 0) {
             return NextResponse.json(
                 { success: false, error: 'This package does not require payment' } as CreatePaymentResponse,
                 { status: 400 }
@@ -88,40 +85,33 @@ export async function POST(req: NextRequest) {
 
         console.log('[SePay] Generated order ID:', orderId);
 
-        // 6. Create test user in database if in dev mode and user doesn't exist
+        // 6. Create test user in database if in dev mode
         if (isDev && isTestUser) {
             console.log('[SePay] DEV MODE: Checking if test user exists...');
 
-            const { data: existingUser } = await supabaseAdmin
-                .from('users')
-                .select('user_id')
-                .eq('user_id', userId)
-                .single();
+            const existingUser = await sql`
+                SELECT user_id FROM users WHERE user_id = ${userId} LIMIT 1
+            `;
 
-            if (!existingUser) {
+            if (existingUser.length === 0) {
                 console.log('[SePay] DEV MODE: Creating test user in database...');
-
-                const { error: userCreateError } = await supabaseAdmin
-                    .from('users')
-                    .insert({
-                        user_id: userId,
-                        user_type: 'registered', // REQUIRED field
-                        email: `${userId}@test.dev`,
-                        display_name: 'Test User (Dev Mode)',
-                        current_credits: 100,
-                        role: 'user',
-                        is_active: true,
-                        created_at: new Date().toISOString()
-                    });
-
-                if (userCreateError) {
+                try {
+                    await sql`
+                        INSERT INTO users (
+                            user_id, user_type, email, display_name, 
+                            current_credits, role, is_active, created_at
+                        ) VALUES (
+                            ${userId}, 'registered', ${`${userId}@test.dev`}, 
+                            'Test User (Dev Mode)', 100, 'user', true, NOW()
+                        )
+                    `;
+                    console.log('[SePay] ✅ Test user created successfully!');
+                } catch (userCreateError: any) {
                     console.error('[SePay] Failed to create test user:', userCreateError);
                     return NextResponse.json(
-                        { success: false, error: `Test user creation failed: ${userCreateError.message}` } as CreatePaymentResponse,
+                        { success: false, error: `Test user creation failed` } as CreatePaymentResponse,
                         { status: 500 }
                     );
-                } else {
-                    console.log('[SePay] ✅ Test user created successfully!');
                 }
             } else {
                 console.log('[SePay] Test user already exists');
@@ -129,28 +119,45 @@ export async function POST(req: NextRequest) {
         }
 
         // 7. Create pending transaction in database
-        const { data: transaction, error: insertError } = await supabaseAdmin
-            .from('payment_transactions')
-            .insert({
-                user_id: userId,
-                order_id: orderId,
-                package_id: packageId,
-                amount: price,
-                credits: selectedPackage.credits_included || 0,
-                status: 'pending'
-            })
-            .select()
-            .single();
+        // Need to generate UUID for transaction PK since Neon doesn't always auto-gen if not configured? 
+        // Or assume table has gen_random_uuid() default? 
+        // Schema says: id uuid NOT NULL. Usually needs default or explicit value.
+        // I will use gen_random_uuid() in SQL.
 
-        if (insertError) {
-            console.error('[SePay] Database insert error:', insertError);
+        const transactionResult = await sql`
+            INSERT INTO payment_transactions (
+                id,
+                user_id,
+                order_id,
+                package_id,
+                amount,
+                credits,
+                status,
+                transaction_id,
+                created_at
+            ) VALUES (
+                gen_random_uuid(),
+                ${userId},
+                ${orderId},
+                ${packageId},
+                ${price},
+                ${selectedPackage.credits_included || 0},
+                'pending',
+                ${`PENDING_${timestamp}`}, -- Temporary transaction_id, updated on webhook
+                NOW()
+            )
+            RETURNING id
+        `;
+
+        if (!transactionResult || transactionResult.length === 0) {
+            console.error('[SePay] Database insert error');
             return NextResponse.json(
                 { success: false, error: 'Failed to create transaction' } as CreatePaymentResponse,
                 { status: 500 }
             );
         }
 
-        console.log('[SePay] Transaction created:', transaction.id);
+        console.log('[SePay] Transaction created:', transactionResult[0].id);
 
         // 7. Generate VA Payment Info (VietQR)
         const vaAccount = process.env.SEPAY_VA_ACCOUNT || '02627122301';
@@ -166,7 +173,6 @@ export async function POST(req: NextRequest) {
         const qrUrl = `https://qr.sepay.vn/img?acc=${vaAccount}&bank=${vaBankCode}&amount=${price}&des=${encodeURIComponent(paymentContent)}`;
 
         console.log('[SePay VA] Generated QR URL:', qrUrl);
-        console.log('[SePay VA] Payment content:', paymentContent);
 
         return NextResponse.json({
             success: true,
@@ -177,18 +183,17 @@ export async function POST(req: NextRequest) {
                 bank_code: vaBankCode,
                 account: vaAccount,
                 name: vaName,
-                amount: selectedPackage.price,
+                amount: price,
                 content: paymentContent
             },
             order_id: orderId,
             expires_in: 600 // 10 minutes
         } as CreatePaymentResponse);
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('[SePay] Payment creation error:', error);
 
-        // Build detailed error response for client debugging
-        const errorMessage = error instanceof Error ? error.message : 'Payment creation failed';
+        const errorMessage = error.message || 'Payment creation failed';
         const isCloudflareError = errorMessage.includes('403') || errorMessage.includes('Cloudflare');
 
         return NextResponse.json(
@@ -197,8 +202,8 @@ export async function POST(req: NextRequest) {
                 error: errorMessage,
                 details: isCloudflareError ? {
                     type: 'CLOUDFLARE_BLOCKED',
-                    message: 'SePay API is protected by Cloudflare and blocking the request',
-                    solution: 'Contact support@sepay.vn to whitelist server IP: 115.77.125.6',
+                    message: 'SePay API blocked',
+                    solution: 'Contact support checked IP',
                     timestamp: new Date().toISOString()
                 } : undefined
             } as CreatePaymentResponse,

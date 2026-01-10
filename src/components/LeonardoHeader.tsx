@@ -16,6 +16,9 @@ export const LeonardoHeader = () => {
     const { data: session } = useSession();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+    // Local state for credits to allow real-time updates
+    const [currentCredits, setCurrentCredits] = useState<number>(0);
+
     useEffect(() => {
         const handleScroll = () => {
             setScrolled(window.scrollY > 20);
@@ -24,10 +27,28 @@ export const LeonardoHeader = () => {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
+    // Initialize credits from session
+    useEffect(() => {
+        const userCreditsFromSession = (session?.user as any)?.credits;
+        if (isLoggedIn && userCreditsFromSession !== undefined) {
+            setCurrentCredits(userCreditsFromSession);
+        }
+    }, [session, isLoggedIn]);
+
+    // Listen for credit updates from generation
+    useEffect(() => {
+        const handleCreditsUpdate = (event: CustomEvent) => {
+            if (event.detail?.credits !== undefined) {
+                setCurrentCredits(event.detail.credits);
+            }
+        };
+
+        window.addEventListener('user-credits-updated', handleCreditsUpdate as EventListener);
+        return () => window.removeEventListener('user-credits-updated', handleCreditsUpdate as EventListener);
+    }, []);
+
     // Determine credits to display
-    // Get credits from NextAuth session if logged in, otherwise use guest credits
-    const userCreditsFromSession = (session?.user as any)?.credits;
-    const displayCredits = isLoggedIn ? (userCreditsFromSession ?? 0) : guestCredits;
+    const displayCredits = isLoggedIn ? currentCredits : guestCredits;
 
     return (
         <header

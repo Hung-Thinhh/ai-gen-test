@@ -157,20 +157,24 @@ const CloneEffect: React.FC<CloneEffectProps> = (props) => {
                     <div className="flex flex-col md:flex-row items-start justify-center gap-8 w-full px-4">
                         {/* Input Image */}
                         <div className="flex flex-col items-center gap-4">
-                            <ActionablePolaroidCard type="multi-input" caption={uploaderCaption} status="done" mediaUrl={appState.uploadedImage!} placeholderType="person" onImageChange={() => { }} />
+                            <div className="w-80">
+                                <ActionablePolaroidCard type="multi-input" caption={uploaderCaption} status="done" mediaUrl={appState.uploadedImage!} placeholderType="person" onImageChange={() => { }} />
+                            </div>
                             <p className="text-neutral-300 text-center max-w-xs text-sm">{uploaderDescription}</p>
                         </div>
 
                         {/* Loading Result */}
-                        <div className="flex flex-col items-center gap-4">
-                            <ActionablePolaroidCard
-                                type="output"
-                                caption={t('cloneEffect_result')}
-                                status="pending"
-                                mediaUrl={undefined}
-                                placeholderType="magic"
-                                onImageChange={() => { }}
-                            />
+                        <div className="flex flex-col items-center gap-4 md:w-[400px]">
+                            <div className="md:w-[400px] w-[300]">
+                                <ActionablePolaroidCard
+                                    type="output"
+                                    caption={t('cloneEffect_result')}
+                                    status="pending"
+                                    mediaUrl={undefined}
+                                    placeholderType="magic"
+                                    onImageChange={() => { }}
+                                />
+                            </div>
                             <p className="text-yellow-400 text-center max-w-xs text-sm animate-pulse font-semibold">⏳ {t('common_processing')}</p>
                         </div>
                     </div>

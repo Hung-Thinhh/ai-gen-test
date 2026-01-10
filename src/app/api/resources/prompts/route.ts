@@ -1,66 +1,51 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { sql } from '@/lib/neon/client';
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 
-// Initialize Supabase Admin Client (Service Role)
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
 /**
  * Helper to verify Admin access.
- * We use the user's access token to check if they are authenticated and are an admin.
- * For simplicity, we might just check if they are authenticated and trust the App's UI for now,
- * OR we can verify strict admin role equality if your app has an 'is_admin' or role claim.
  */
 async function verifyAdmin(request: NextRequest) {
-    // 1. Try Authorization Header (Supabase Token)
-    const authHeader = request.headers.get('Authorization');
-    if (authHeader) {
-        const token = authHeader.replace('Bearer ', '');
-        const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-        if (user && !error) return user;
-    }
-
-    // 2. Try NextAuth Session
+    // 1. Try NextAuth Session (Preferred)
     const session = await getServerSession(authOptions);
     if (session?.user?.email) {
-        const { data: userType, error } = await supabaseAdmin
-            .from('users')
-            .select('user_id, role, email')
-            .eq('email', session.user.email)
-            .single();
+        const result = await sql`
+            SELECT user_id, role, email FROM users
+            WHERE email = ${session.user.email}
+            LIMIT 1
+        `;
 
-        if (userType && (userType.role === 'admin' || userType.role === 'editor')) {
-            return {
-                id: userType.user_id,
-                email: userType.email,
-                role: userType.role
-            };
+        if (result && result.length > 0) {
+            const userType = result[0];
+            if (userType.role === 'admin' || userType.role === 'editor') {
+                return {
+                    id: userType.user_id,
+                    email: userType.email,
+                    role: userType.role
+                };
+            }
         }
     }
+
+    // 2. Fallback: Authorization Header check (if needed, but without Supabase client it's hard to verify JWT easily)
+    // Assuming we are migrating to full Session-based auth for admin actions.
 
     return null;
 }
 
 export async function GET(request: NextRequest) {
     try {
-        console.log('[API] Fetching prompts (Server-Side)');
-        const { data, error } = await supabaseAdmin
-            .from('prompts')
-            .select('*')
-            .order('created_at', { ascending: false });
+        console.log('[API] Fetching prompts (Server-Side Neon)');
+        const data = await sql`
+            SELECT * FROM prompts
+            ORDER BY created_at DESC
+        `;
 
-        if (error) {
-            console.error('[API] Error fetching prompts:', error);
-            return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-        }
-
-        return NextResponse.json({ success: true, data });
+        return NextResponse.json({ success: true, data: data || [] });
     } catch (error: any) {
+        console.error('[API] Error fetching prompts:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 }
@@ -75,20 +60,26 @@ export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
 
-        // Inject user_id if not present (Service Role bypasses auth.uid())
-        const payload = {
-            ...body,
-            user_id: user.id
-        };
+        // Ensure category_ids is jsonb-ready
+        // Code expects object with fields matching DB columns
+        const { avt_url, content, usage, category_ids } = body;
 
-        const { data, error } = await supabaseAdmin
-            .from('prompts')
-            .insert([payload])
-            .select()
-            .single();
+        // Note: 'prompts' table ID is INTEGER NOT NULL.
+        // Usually it's serial/identity. We assume schema handles auto-increment.
 
-        if (error) throw error;
-        return NextResponse.json({ success: true, data });
+        const result = await sql`
+            INSERT INTO prompts (avt_url, content, usage, category_ids, created_at)
+            VALUES (
+                ${avt_url}, 
+                ${content}, 
+                ${usage}, 
+                ${JSON.stringify(category_ids)}::jsonb, 
+                NOW()
+            )
+            RETURNING *
+        `;
+
+        return NextResponse.json({ success: true, data: result[0] });
     } catch (error: any) {
         console.error('[API] Error creating prompt:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -107,14 +98,36 @@ export async function PUT(request: NextRequest) {
 
         if (!id) return NextResponse.json({ success: false, error: 'Missing ID' }, { status: 400 });
 
-        const { error } = await supabaseAdmin
-            .from('prompts')
-            .update(updates)
-            .eq('id', id);
+        // Construct dynamic update
+        // We handle specific fields to be safe
+        // Or if updates keys match columns exactly:
+        // Neon sql helper doesn't support dynamic object keys easily without helper utility
+        // but we know likely fields: avt_url, content, usage, category_ids
 
-        if (error) throw error;
+        // This is a bit verbose but safe
+        const currentPrompt = await sql`SELECT * FROM prompts WHERE id = ${id} LIMIT 1`;
+        if (currentPrompt.length === 0) return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 });
+
+        const existing = currentPrompt[0];
+
+        // Merge updates
+        const avt_url = updates.avt_url !== undefined ? updates.avt_url : existing.avt_url;
+        const content = updates.content !== undefined ? updates.content : existing.content;
+        const usage = updates.usage !== undefined ? updates.usage : existing.usage;
+        const category_ids = updates.category_ids !== undefined ? JSON.stringify(updates.category_ids) : JSON.stringify(existing.category_ids);
+
+        await sql`
+            UPDATE prompts 
+            SET avt_url = ${avt_url}, 
+                content = ${content}, 
+                usage = ${usage}, 
+                category_ids = ${category_ids}::jsonb
+            WHERE id = ${id}
+        `;
+
         return NextResponse.json({ success: true });
     } catch (error: any) {
+        console.error('[API] Error updating prompt:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 }
@@ -131,12 +144,11 @@ export async function DELETE(request: NextRequest) {
 
         if (!id) return NextResponse.json({ success: false, error: 'Missing ID' }, { status: 400 });
 
-        const { error } = await supabaseAdmin
-            .from('prompts')
-            .delete()
-            .eq('id', id);
+        await sql`
+            DELETE FROM prompts 
+            WHERE id = ${id}
+        `;
 
-        if (error) throw error;
         return NextResponse.json({ success: true });
     } catch (error: any) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });

@@ -165,7 +165,7 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
         }
 
         let finalPrompt = localPrompt;
-        if (shouldEnhancePrompt && !appState.image1) {
+        if (shouldEnhancePrompt) {
             setIsEnhancing(true);
             if (!await checkCredits()) {
                 setIsEnhancing(false);
@@ -183,17 +183,17 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
             } finally {
                 setIsEnhancing(false);
             }
-        } else {
-            // Check credits FIRST before entering generating stage
-            const creditCostPerImage = modelVersion === 'v3' ? 2 * appState.options.numberOfImages : 1 * appState.options.numberOfImages;
-            if (!await checkCredits(creditCostPerImage)) {
-                // Don't change stage - stay in configuring
-                return;
-            }
-
-            // Only set generating stage AFTER credits are confirmed
-            onStateChange({ ...appState, stage: 'generating', error: null, generatedImages: [] });
         }
+
+        // Check credits FIRST before entering generating stage
+        const creditCostPerImage = modelVersion === 'v3' ? 2 * appState.options.numberOfImages : 1 * appState.options.numberOfImages;
+        if (!await checkCredits(creditCostPerImage)) {
+            // Don't change stage - stay in configuring
+            return;
+        }
+
+        // Only set generating stage AFTER credits are confirmed
+        onStateChange({ ...appState, stage: 'generating', error: null, generatedImages: [] });
 
         const preGenState = { ...appState, options: { ...appState.options, prompt: finalPrompt } };
         onStateChange({ ...preGenState, stage: 'generating', error: null, generatedImages: [] });
@@ -353,7 +353,7 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
     const anyImageUploaded = appState.image1 || appState.image2 || appState.image3 || appState.image4;
 
     return (
-        <div className="flex flex-col items-center justify-center w-full h-full flex-1 min-h-0 pt-16 sm:pt-0">
+        <div className="flex flex-col items-center justify-center w-full h-full flex-1 min-h-screen pt-16 sm:pt-0">
             <AnimatePresence>
                 {(appState.stage === 'configuring') && (
                     <AppScreenHeader {...headerProps} titleClassName="text-orange-500" />
@@ -483,12 +483,11 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
                                     {t('common_removeWatermark')}
                                 </label>
                             </div>
-                            <div className={`flex items-center transition-opacity duration-300 ${appState.image1 ? 'opacity-50' : 'opacity-100'}`}>
+                            <div className="flex items-center">
                                 <Switch
                                     id="enhance-prompt-switch"
                                     checked={shouldEnhancePrompt}
                                     onChange={setShouldEnhancePrompt}
-                                    disabled={!!appState.image1}
                                     className="data-[state=checked]:bg-orange-500"
                                 />
                                 <label htmlFor="enhance-prompt-switch" className="ml-3 block text-sm font-medium text-neutral-300 flex items-center gap-1.5">
@@ -502,7 +501,7 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
                             {anyImageUploaded && <button onClick={() => { onStateChange({ ...appState, image1: null, image2: null, image3: null, image4: null }) }} className="btn btn-secondary">
                                 {t('common_deleteImages')}
                             </button>}
-                            <button onClick={handleGenerate} className="btn bg-[#996600] hover:bg-[#b37700] text-white border-none" disabled={isLoading || !localPrompt.trim()}>
+                            <button onClick={handleGenerate} className="btn btn-primary" disabled={isLoading || !localPrompt.trim()}>
                                 {getButtonText()}
                             </button>
                         </div >

@@ -1107,7 +1107,7 @@ ${aspectRatioPrompt}
     }, [hasResults]);
 
     return (
-        <div className="flex flex-col items-center justify-center w-full h-full flex-1 min-h-0">
+        <div className="flex flex-col items-center justify-center w-full h-full flex-1 min-h-screen">
             <AnimatePresence>
                 {!isLoading && (<AppScreenHeader {...headerProps} />)}
             </AnimatePresence>
@@ -1148,7 +1148,7 @@ ${aspectRatioPrompt}
                                             }
                                         }}
                                     />
-                                    <p className="text-xs text-yellow-400 text-center font-bold">
+                                    <p className="text-xs text-orange-500 text-center font-bold">
                                         {t('posterCreator_productImagesLabel') || 'Ảnh sản phẩm'}
                                     </p>
                                 </div>
@@ -1204,7 +1204,7 @@ ${aspectRatioPrompt}
                     {/* Loading State */}
                     {isLoading && (
                         <motion.div className="flex flex-col items-center justify-center gap-4 py-12" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                            <div className="w-16 h-16 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+                            <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
                             <p className="text-neutral-300">{t('common_processing') || 'Đang tạo poster...'}</p>
                             <button
                                 onClick={() => onStateChange({ ...appState, stage: 'configuring', error: null })}
@@ -1220,9 +1220,9 @@ ${aspectRatioPrompt}
                         <div className="w-full max-w-4xl" ref={resultsRef}>
                             <div className="themed-card backdrop-blur-md rounded-2xl p-4 md:p-6">
                                 <div className="flex items-center justify-between mb-4">
-                                    <h3 className="base-font font-bold text-xl text-yellow-400">{t('common_result') || 'Kết quả'}</h3>
+                                    <h3 className="base-font font-bold text-xl text-orange-500">{t('common_result') || 'Kết quả'}</h3>
                                     <div className="flex gap-2">
-                                        <button onClick={() => setShowOptions(!showOptions)} className="px-4 py-2 bg-yellow-400/20 text-yellow-400 border border-yellow-400/50 rounded-full hover:bg-yellow-400/30 transition-colors text-sm">
+                                        <button onClick={() => setShowOptions(!showOptions)} className="px-4 py-2 bg-orange-500/20 text-orange-500 border border-orange-500/50 rounded-full hover:bg-orange-500/30 transition-colors text-sm">
                                             {showOptions ? (t('posterCreator_hideOptions') || 'Ẩn tùy chọn') : (t('posterCreator_editOptions') || 'Sửa tùy chọn')}
                                         </button>
                                         <button
@@ -1267,16 +1267,16 @@ ${aspectRatioPrompt}
                                         {Array.from({ length: pendingImageSlots }).map((_, index) => (
                                             <div
                                                 key={`pending-${index}`}
-                                                className="aspect-[4/5] rounded-2xl bg-gradient-to-br from-neutral-800 to-neutral-900 border-2 border-yellow-400/40 flex flex-col items-center justify-center gap-4"
+                                                className="aspect-[4/5] rounded-2xl bg-gradient-to-br from-neutral-800 to-neutral-900 border-2 border-orange-500/40 flex flex-col items-center justify-center gap-4"
                                             >
                                                 {/* Spinning loader */}
                                                 <div className="relative">
                                                     <div className="w-16 h-16 rounded-full border-4 border-neutral-700" />
-                                                    <div className="absolute inset-0 w-16 h-16 rounded-full border-4 border-transparent border-t-yellow-400 border-r-yellow-400 animate-spin" />
+                                                    <div className="absolute inset-0 w-16 h-16 rounded-full border-4 border-transparent border-t-orange-500 border-r-orange-500 animate-spin" />
                                                 </div>
 
                                                 <div className="text-center">
-                                                    <p className="text-yellow-400 font-bold text-sm">
+                                                    <p className="text-orange-500 font-bold text-sm">
                                                         {t('common_creating') || 'Đang tạo...'}
                                                     </p>
                                                     <p className="text-neutral-400 text-xs mt-1">
@@ -1293,7 +1293,7 @@ ${aspectRatioPrompt}
                                         <button onClick={handleDownloadAll} className="px-6 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-400 transition-colors">
                                             {t('common_downloadAll') || 'Tải về tất cả'}
                                         </button>
-                                        <button onClick={executeInitialGeneration} disabled={!canGenerate} className="px-6 py-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-bold rounded-full hover:from-yellow-300 hover:to-orange-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                                        <button onClick={executeInitialGeneration} disabled={!canGenerate} className="px-6 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold rounded-full hover:from-orange-400 hover:to-red-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                                             {t('posterCreator_generateMore') || 'Tạo thêm'}
                                         </button>
                                     </div>
@@ -1307,7 +1307,7 @@ ${aspectRatioPrompt}
                         {!isLoading && (showOptions || !hasResults) && (
                             <motion.div className="w-full max-w-4xl" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.3 }}>
                                 <div className="themed-card backdrop-blur-md rounded-2xl p-4 md:p-6">
-                                    <h2 className="base-font font-bold text-2xl text-yellow-400 border-b border-yellow-400/20 pb-2 mb-4">
+                                    <h2 className="base-font font-bold text-2xl text-orange-500 border-b border-orange-500/20 pb-2 mb-4">
                                         {t('posterCreator_optionsTitle') || 'Tùy chọn Poster'}
                                     </h2>
 
@@ -1332,7 +1332,7 @@ ${aspectRatioPrompt}
                                         </label>
                                         <input
                                             type="text"
-                                            className="w-full bg-neutral-800/50 text-neutral-200 rounded-xl p-3 border border-neutral-700 focus:border-yellow-400 focus:outline-none"
+                                            className="w-full bg-neutral-800/50 text-neutral-200 rounded-xl p-3 border border-neutral-700 focus:border-orange-500 focus:outline-none"
                                             placeholder={t('posterCreator_productPlaceholder') || 'VD: Chai nước hoa hồng, Lon nước ngọt...'}
                                             value={productDescription}
                                             onChange={(e) => setProductDescription(e.target.value)}
@@ -1345,7 +1345,7 @@ ${aspectRatioPrompt}
                                             {t('posterCreator_environmentDescLabel') || 'Mô tả vật xung quanh (tùy chọn)'}
                                         </label>
                                         <textarea
-                                            className="w-full h-20 bg-neutral-800/50 text-neutral-200 rounded-xl p-3 border border-neutral-700 focus:border-yellow-400 focus:outline-none resize-none"
+                                            className="w-full h-20 bg-neutral-800/50 text-neutral-200 rounded-xl p-3 border border-neutral-700 focus:border-orange-500 focus:outline-none resize-none"
                                             placeholder={t('posterCreator_environmentPlaceholder') || 'VD: Lá bạc hà, chanh, đá lạnh...'}
                                             value={localEnvDesc}
                                             onChange={(e) => setLocalEnvDesc(e.target.value)}
@@ -1363,7 +1363,7 @@ ${aspectRatioPrompt}
                                                     checked={appState.options.includeText}
                                                     onChange={(e) => handleOptionChange('includeText', e.target.checked)}
                                                 />
-                                                <div className="w-11 h-6 bg-neutral-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-400"></div>
+                                                <div className="w-11 h-6 bg-neutral-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
                                             </label>
                                             <span className="text-neutral-200 font-bold">
                                                 {t('posterCreator_includeText') || 'Thêm tiêu đề'}
@@ -1376,7 +1376,7 @@ ${aspectRatioPrompt}
                                                     <label className="block text-neutral-300 text-sm mb-1">{t('posterCreator_headline') || 'Tiêu đề chính'}</label>
                                                     <input
                                                         type="text"
-                                                        className="w-full bg-neutral-800/50 text-neutral-200 rounded-lg p-2 border border-neutral-700 focus:border-yellow-400 focus:outline-none text-sm"
+                                                        className="w-full bg-neutral-800/50 text-neutral-200 rounded-lg p-2 border border-neutral-700 focus:border-orange-500 focus:outline-none text-sm"
                                                         placeholder="VD: SALE 50%"
                                                         value={localHeadline}
                                                         onChange={(e) => setLocalHeadline(e.target.value)}
@@ -1387,7 +1387,7 @@ ${aspectRatioPrompt}
                                                     <label className="block text-neutral-300 text-sm mb-1">{t('posterCreator_subheadline') || 'Tiêu đề phụ'}</label>
                                                     <input
                                                         type="text"
-                                                        className="w-full bg-neutral-800/50 text-neutral-200 rounded-lg p-2 border border-neutral-700 focus:border-yellow-400 focus:outline-none text-sm"
+                                                        className="w-full bg-neutral-800/50 text-neutral-200 rounded-lg p-2 border border-neutral-700 focus:border-orange-500 focus:outline-none text-sm"
                                                         placeholder="VD: Ưu đãi có hạn"
                                                         value={localSubheadline}
                                                         onChange={(e) => setLocalSubheadline(e.target.value)}
@@ -1398,7 +1398,7 @@ ${aspectRatioPrompt}
                                                     <label className="block text-neutral-300 text-sm mb-1">{t('posterCreator_callToAction') || 'Lời kêu gọi'}</label>
                                                     <input
                                                         type="text"
-                                                        className="w-full bg-neutral-800/50 text-neutral-200 rounded-lg p-2 border border-neutral-700 focus:border-yellow-400 focus:outline-none text-sm"
+                                                        className="w-full bg-neutral-800/50 text-neutral-200 rounded-lg p-2 border border-neutral-700 focus:border-orange-500 focus:outline-none text-sm"
                                                         placeholder="VD: Mua ngay!"
                                                         value={localCTA}
                                                         onChange={(e) => setLocalCTA(e.target.value)}
@@ -1413,7 +1413,7 @@ ${aspectRatioPrompt}
                                     <div className="mb-4">
                                         <SearchableSelect id="aspectRatio" label={t('common_aspectRatio') || 'Tỷ lệ khung ảnh'} options={ASPECT_RATIO_OPTIONS} value={appState.options.aspectRatio || ''} onChange={(val) => handleOptionChange('aspectRatio', val)} placeholder={t('common_select') || 'Chọn...'} />
                                         {appState.options.aspectRatio && appState.options.aspectRatio !== 'Giữ nguyên theo ảnh tham khảo' && modelVersion !== 'v3' && (
-                                            <p className="text-xs text-yellow-400 mt-1 flex items-center gap-1">
+                                            <p className="text-xs text-orange-500 mt-1 flex items-center gap-1">
                                                 <span>⚠️</span>
                                                 <span>Tỷ lệ khung ảnh chỉ hoạt động với Model v3. Vui lòng chuyển sang v3 trong Settings.</span>
                                             </p>
@@ -1431,7 +1431,7 @@ ${aspectRatioPrompt}
                                                     key={count}
                                                     type="button"
                                                     className={`py-2 px-3 rounded-lg font-semibold transition-all ${(appState.options.imageCount || 1) === count
-                                                        ? 'bg-yellow-400 text-black shadow-lg'
+                                                        ? 'bg-orange-500 text-white shadow-lg'
                                                         : 'bg-neutral-700 text-neutral-300 hover:bg-neutral-600'
                                                         }`}
                                                     onClick={() => handleOptionChange('imageCount', count)}
@@ -1455,7 +1455,7 @@ ${aspectRatioPrompt}
                                                         handleOptionChange('enableAdvancedStyling', e.target.checked);
                                                     }}
                                                 />
-                                                <div className="w-11 h-6 bg-neutral-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-400"></div>
+                                                <div className="w-11 h-6 bg-neutral-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
                                             </label>
                                             <span className="text-neutral-200 font-bold">
                                                 ⚙️ {t('posterCreator_advancedOptions') || 'Tùy chọn chuyên sâu'}
@@ -1507,7 +1507,7 @@ ${aspectRatioPrompt}
                                                             {t('common_additionalNotesOptional') || 'Ghi chú bổ sung (tùy chọn)'}
                                                         </label>
                                                         <textarea
-                                                            className="w-full h-20 bg-neutral-800/50 text-neutral-200 rounded-xl p-3 border border-neutral-700 focus:border-yellow-400 focus:outline-none resize-none"
+                                                            className="w-full h-20 bg-neutral-800/50 text-neutral-200 rounded-xl p-3 border border-neutral-700 focus:border-orange-500 focus:outline-none resize-none"
                                                             placeholder={t('posterCreator_notesPlaceholder') || 'VD: Thêm logo ở góc phải...'}
                                                             value={localNotes}
                                                             onChange={(e) => setLocalNotes(e.target.value)}
@@ -1524,7 +1524,7 @@ ${aspectRatioPrompt}
                                         <button
                                             onClick={executeInitialGeneration}
                                             disabled={!canGenerate || isLoading}
-                                            className="px-8 py-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-bold rounded-full hover:from-yellow-300 hover:to-orange-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="px-8 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold rounded-full hover:from-orange-400 hover:to-red-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             {hasResults ? (t('posterCreator_generateMore') || 'Tạo thêm') : (t('posterCreator_generate') || 'Tạo Poster')}
                                         </button>

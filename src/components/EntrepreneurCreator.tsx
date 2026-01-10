@@ -452,7 +452,7 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
     }
 
     return (
-        <div className="flex flex-col items-center justify-center w-full h-full flex-1 min-h-0">
+        <div className="flex flex-col items-center justify-center w-full h-full flex-1 min-h-screen">
             <AnimatePresence>
                 {(appState.stage === 'idle' || appState.stage === 'configuring') && (
                     <AppScreenHeader {...headerProps} />
@@ -517,7 +517,7 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
                             <div className="max-h-[50vh] overflow-y-auto p-4 bg-black/20 border border-white/10 rounded-lg space-y-6">
                                 {Array.isArray(IDEAS_BY_CATEGORY) && IDEAS_BY_CATEGORY.map((categoryObj: any) => (
                                     <div key={categoryObj.category}>
-                                        <h3 className="text-xl base-font font-bold text-yellow-400 text-left mb-3 sticky top-[-20px] bg-black/80 py-2 -mx-4 px-4 z-10 flex items-center gap-2">
+                                        <h3 className="text-xl base-font font-bold text-orange-400 text-left mb-3 sticky top-[-20px] bg-black/80 py-2 -mx-4 px-4 z-10 flex items-center gap-2">
                                             {categoryObj.category}
                                         </h3>
                                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
@@ -528,7 +528,7 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
                                                         key={p}
                                                         onClick={() => handleIdeaSelect(p)}
                                                         className={`base-font font-bold p-2 rounded-sm text-sm transition-all duration-200 ${isSelected
-                                                            ? 'bg-yellow-400 text-black ring-2 ring-yellow-300 scale-105'
+                                                            ? 'bg-orange-400 text-black ring-2 ring-orange-300 scale-105'
                                                             : 'bg-white/10 text-neutral-300 hover:bg-white/20'
                                                             } ${!isSelected && appState.selectedIdeas.length === maxIdeas ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                         disabled={!isSelected && appState.selectedIdeas.length === maxIdeas}
@@ -544,7 +544,7 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
                         </div>
                     ) : (
                         <div className="w-full max-w-4xl text-center p-4 bg-neutral-700/50 rounded-lg my-4">
-                            <p className="text-sm text-yellow-300">{t('common_styleReferenceActive')}</p>
+                            <p className="text-sm text-orange-300">{t('common_styleReferenceActive')}</p>
                         </div>
                     )}
 
@@ -584,7 +584,7 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
                                 id="remove-watermark-entrepreneur"
                                 checked={appState.options.removeWatermark}
                                 onChange={(e) => handleOptionChange('removeWatermark', e.target.checked)}
-                                className="h-4 w-4 rounded border-neutral-500 bg-neutral-700 text-yellow-400 focus:ring-yellow-400 focus:ring-offset-neutral-800"
+                                className="h-4 w-4 rounded border-neutral-500 bg-neutral-700 text-orange-400 focus:ring-orange-400 focus:ring-offset-neutral-800"
                                 aria-label={t('common_removeWatermark')}
                             />
                             <label htmlFor="remove-watermark-entrepreneur" className="ml-3 block text-sm font-medium text-neutral-300">

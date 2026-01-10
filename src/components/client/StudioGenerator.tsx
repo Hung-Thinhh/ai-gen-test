@@ -53,6 +53,26 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
 
     const ASPECT_RATIO_OPTIONS = t('aspectRatioOptions') || ['Giữ nguyên', '1:1', '3:4', '4:3', '16:9'];
 
+
+    // Intelligent default tab selection
+    const defaultTab = React.useMemo(() => {
+        // 1. Try to detect from first available prompt
+        if (Array.isArray(TEMPLATES) && TEMPLATES.length > 0) {
+            const firstGender = TEMPLATES[0].gender;
+            if (firstGender && ['male', 'female', 'couple'].includes(firstGender)) {
+                return firstGender;
+            }
+        }
+        // 2. Try to detect from category name
+        if (studio.categories?.name) {
+            const catName = studio.categories.name.toLowerCase();
+            if (catName.includes('nam') || catName.includes('male')) return 'male';
+            if (catName.includes('cặp') || catName.includes('couple')) return 'couple';
+        }
+        // 3. Fallback
+        return 'female';
+    }, [TEMPLATES, studio]);
+
     const [appState, setAppState] = useState<KhmerPhotoMergeState>({
         stage: 'idle',
         uploadedImage: null,
@@ -66,7 +86,7 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
             removeWatermark: false,
             aspectRatio: '3:4',
         },
-        activeTab: 'female' // Default tab
+        activeTab: defaultTab as 'female' | 'male' | 'couple'
     });
 
 
@@ -237,7 +257,7 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
     const currentTemplates = TEMPLATES.filter((t: any) => (t.gender || 'female') === activeTab);
 
     return (
-        <div className="flex flex-col items-center justify-center w-full h-full flex-1 min-h-0 mb-40" id="studio-top">
+        <div className="flex flex-col items-center justify-center w-full h-full flex-1 min-h-screen mb-40" id="studio-top">
             <div className="w-full max-w-7xl pt-6 px-4">
                 <button onClick={handleGoBack} className="text-neutral-400 hover:text-white flex items-center gap-2 mb-4">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

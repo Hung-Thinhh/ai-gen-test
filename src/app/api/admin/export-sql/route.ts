@@ -1,25 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// Initialize Supabase Admin Client
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { sql } from '@/lib/neon/client';
 
 // List of tables to export (in order of dependencies)
-const TABLES_TO_EXPORT = [
-    'users',
-    'categories',
-    'tools',
-    'studio',
-    'prompts',
-    'hero_banners',
-    'system_configs',
-    'generation_history',
-    'payment_transactions',
-    'guest_sessions'
-];
+
+// Map of tables to explicit query functions
+const EXPORT_QUERIES: Record<string, () => Promise<any[]>> = {
+    users: () => sql`SELECT * FROM users`,
+    categories: () => sql`SELECT * FROM categories`,
+    tools: () => sql`SELECT * FROM tools`,
+    studio: () => sql`SELECT * FROM studio`,
+    prompts: () => sql`SELECT * FROM prompts`,
+    hero_banners: () => sql`SELECT * FROM hero_banners`,
+    system_configs: () => sql`SELECT * FROM system_configs`,
+    generation_history: () => sql`SELECT * FROM generation_history`,
+    payment_transactions: () => sql`SELECT * FROM payment_transactions`,
+    guest_sessions: () => sql`SELECT * FROM guest_sessions`,
+    packages: () => sql`SELECT * FROM packages`,
+    user_gallery: () => sql`SELECT * FROM user_gallery`,
+    guest_gallery: () => sql`SELECT * FROM guest_gallery`
+};
 
 function escapeSQL(value: any): string {
     if (value === null || value === undefined) {
@@ -41,9 +40,9 @@ function escapeSQL(value: any): string {
 
 export async function GET(request: NextRequest) {
     try {
-        console.log('[Export SQL] Starting database export...');
+        console.log('[Export SQL] Starting database export from Neon...');
 
-        let sqlOutput = `-- Supabase Database Export to SQL
+        let sqlOutput = `-- Neon Database Export to SQL
 -- Generated: ${new Date().toISOString()}
 -- Compatible with PostgreSQL (Neon, Supabase, etc.)
 
@@ -53,17 +52,9 @@ SET standard_conforming_strings = on;
 `;
 
         // Fetch and generate SQL for each table
-        for (const tableName of TABLES_TO_EXPORT) {
+        for (const [tableName, queryFn] of Object.entries(EXPORT_QUERIES)) {
             try {
-                const { data, error } = await supabaseAdmin
-                    .from(tableName)
-                    .select('*');
-
-                if (error) {
-                    console.error(`[Export SQL] Error fetching ${tableName}:`, error);
-                    sqlOutput += `-- Error fetching ${tableName}: ${error.message}\n\n`;
-                    continue;
-                }
+                const data = await queryFn();
 
                 if (!data || data.length === 0) {
                     sqlOutput += `-- Table ${tableName} is empty\n\n`;
@@ -98,7 +89,7 @@ SET standard_conforming_strings = on;
         sqlOutput += `-- SELECT setval('prompts_id_seq', (SELECT MAX(id) FROM prompts));\n`;
 
         // Return as downloadable SQL file
-        const filename = `supabase_backup_${new Date().toISOString().replace(/[:.]/g, '-')}.sql`;
+        const filename = `neon_backup_${new Date().toISOString().replace(/[:.]/g, '-')}.sql`;
 
         return new NextResponse(sqlOutput, {
             status: 200,

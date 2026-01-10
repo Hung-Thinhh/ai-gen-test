@@ -241,7 +241,7 @@ const PhotoRestoration: React.FC<PhotoRestorationProps> = (props) => {
     const isLoading = appState.stage === 'generating';
 
     return (
-        <div className="flex flex-col items-center justify-center w-full h-full flex-1 min-h-0">
+        <div className="flex flex-col items-center justify-center w-full h-full flex-1 min-h-screen py-10">
             <AnimatePresence>
                 {(appState.stage === 'idle' || appState.stage === 'configuring') && (<AppScreenHeader {...headerProps} />)}
             </AnimatePresence>
@@ -372,7 +372,44 @@ const PhotoRestoration: React.FC<PhotoRestorationProps> = (props) => {
                 )}
             </div>
 
-            {(appState.stage === 'generating' || appState.stage === 'results') && (
+            {/* Generating Stage */}
+            {appState.stage === 'generating' && (
+                <motion.div className="flex flex-col items-center gap-8 w-full max-w-screen-xl pt-6 pb-32 overflow-y-auto" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                    <div className="flex flex-col md:flex-row items-start justify-center gap-8 w-full px-4">
+                        {/* Input Image */}
+                        <div className="flex flex-col items-center gap-4 w-full md:w-auto">
+                            <div className="w-full md:w-[400px]">
+                                <ActionablePolaroidCard
+                                    type="content-input"
+                                    caption={uploaderCaption}
+                                    status="done"
+                                    mediaUrl={appState.uploadedImage!}
+                                    placeholderType="person"
+                                    onImageChange={() => { }}
+                                />
+                            </div>
+                            <p className="text-neutral-300 text-center max-w-xs text-sm">{uploaderDescription}</p>
+                        </div>
+
+                        {/* Loading Result */}
+                        <div className="flex flex-col items-center gap-4 w-full md:w-auto">
+                            <div className="w-full md:w-[400px]">
+                                <ActionablePolaroidCard
+                                    type="output"
+                                    caption={t('photoRestoration_resultCaption')}
+                                    status="pending"
+                                    mediaUrl={undefined}
+                                    placeholderType="magic"
+                                    onImageChange={() => { }}
+                                />
+                            </div>
+                            <p className="text-yellow-400 text-center max-w-xs text-sm animate-pulse font-semibold">⏳ {t('common_processing')}</p>
+                        </div>
+                    </div>
+                </motion.div>
+            )}
+
+            {appState.stage === 'results' && (
                 <ResultsView
                     stage={appState.stage}
                     originalImage={appState.uploadedImage}

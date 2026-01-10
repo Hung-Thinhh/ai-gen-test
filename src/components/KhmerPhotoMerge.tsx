@@ -400,7 +400,7 @@ const KhmerPhotoMerge: React.FC<KhmerPhotoMergeProps> = (props) => {
     // Removed Style image from inputs as per user request ("extra box")
 
     return (
-        <div className="flex flex-col items-center justify-center w-full h-full flex-1 min-h-0 mb-40" id="khmer-top">
+        <div className="flex flex-col items-center justify-center w-full h-full flex-1 min-h-screen mb-40" id="khmer-top">
             <AnimatePresence>
                 {!isLoading && (
                     <AppScreenHeader

@@ -26,6 +26,22 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        // Properly handle output_images as JSON
+        let outputImagesJson = null;
+        if (data.output_images) {
+            if (typeof data.output_images === 'string') {
+                // If already a string, try to parse and re-stringify to ensure valid JSON
+                try {
+                    outputImagesJson = JSON.stringify(JSON.parse(data.output_images));
+                } catch {
+                    outputImagesJson = data.output_images;
+                }
+            } else {
+                // If it's an array/object, stringify it
+                outputImagesJson = JSON.stringify(data.output_images);
+            }
+        }
+
         await sql`
             INSERT INTO generation_history 
             (user_id, guest_id, tool_id, output_images, generation_count, credits_used, api_model_used, generation_time_ms, error_message)
@@ -33,7 +49,7 @@ export async function POST(req: NextRequest) {
                 ${data.user_id || null},
                 ${data.guest_id || null},
                 ${toolId || null},
-                ${data.output_images},
+                ${outputImagesJson}::jsonb,
                 ${generationCount},
                 ${creditsUsed},
                 ${data.api_model_used || 'unknown'},

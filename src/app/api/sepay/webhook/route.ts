@@ -1,31 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// Create Supabase client with service role
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { sql } from '@/lib/neon/client';
 
 /**
  * SePay Webhook Handler
  * Receives payment notifications from SePay
- * 
- * SePay sends data in this format:
- * {
- *   "id": 92704,
- *   "gateway": "Vietcombank",
- *   "transactionDate": "2023-03-25 14:02:37",
- *   "accountNumber": "0123499999",
- *   "code": null,
- *   "content": "TKP102 DUKY_1766211544386_test-use",
- *   "transferType": "in",
- *   "transferAmount": 2277000,
- *   "accumulated": 19077000,
- *   "subAccount": null,
- *   "referenceCode": "MBVCB.3278907687",
- *   "description": ""
- * }
  */
 export async function POST(req: NextRequest) {
     try {
@@ -33,7 +11,14 @@ export async function POST(req: NextRequest) {
         const rawBody = await req.text();
         console.log('[Webhook] Raw body:', rawBody);
 
-        const sepayPayload = JSON.parse(rawBody);
+        let sepayPayload;
+        try {
+            sepayPayload = JSON.parse(rawBody);
+        } catch (e) {
+            console.error('[Webhook] Failed to parse JSON:', e);
+            return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+        }
+
         console.log('[Webhook] SePay payload:', sepayPayload);
 
         // Extract data from SePay format
@@ -55,11 +40,7 @@ export async function POST(req: NextRequest) {
 
         // Validate: Must be incoming transfer with content
         if (!content || !transferAmount || transferType !== 'in') {
-            console.error('[Webhook] Invalid webhook data:', {
-                content,
-                transferAmount,
-                transferType
-            });
+            console.error('[Webhook] Invalid webhook data:', { content, transferAmount, transferType });
             return NextResponse.json(
                 { error: 'Invalid webhook data or not an incoming transfer' },
                 { status: 400 }
@@ -67,9 +48,6 @@ export async function POST(req: NextRequest) {
         }
 
         // Extract order_id from content
-        // Format examples:
-        // - With underscore: "TKP102 DUKY_1766211816252_test-use"
-        // - Without underscore: "TKP102 DUKY1766211816252testuse"
         const orderIdMatch = content.match(/DUKY[_]?\d+[_]?[\w-]+/);
         if (!orderIdMatch) {
             console.error('[Webhook] Could not extract order_id from content:', content);
@@ -92,132 +70,120 @@ export async function POST(req: NextRequest) {
         });
 
         // Check if transaction already processed (idempotency)
-        const { data: existingTx } = await supabaseAdmin
-            .from('payment_transactions')
-            .select('*')
-            .eq('transaction_id', transaction_id)
-            .eq('status', 'completed')
-            .single();
+        const existingTx = await sql`
+            SELECT id FROM payment_transactions 
+            WHERE transaction_id = ${transaction_id} AND status = 'completed'
+            LIMIT 1
+        `;
 
-        if (existingTx) {
+        if (existingTx && existingTx.length > 0) {
             console.log('[Webhook] Transaction already processed:', transaction_id);
             return NextResponse.json({ success: true, message: 'Already processed' });
         }
 
-        // Get transaction from database
-        // Try both formats: with and without underscores
-        let transaction, fetchError;
+        // Get pending transaction from database
+        let transaction = null;
 
         // First try exact match
-        const exactResult = await supabaseAdmin
-            .from('payment_transactions')
-            .select('*')
-            .eq('order_id', order_id)
-            .single();
+        const exactResult = await sql`
+            SELECT * FROM payment_transactions 
+            WHERE order_id = ${order_id} 
+            LIMIT 1
+        `;
 
-        if (!exactResult.error && exactResult.data) {
-            transaction = exactResult.data;
-            fetchError = null;
+        if (exactResult && exactResult.length > 0) {
+            transaction = exactResult[0];
         } else {
             // Try normalized match (remove all non-alphanumeric except DUKY)
-            // Search for pattern DUKY + timestamp + suffix
             const timestampMatch = order_id.match(/\d{13,}/); // Extract timestamp
-
             if (timestampMatch) {
                 console.log('[Webhook] Trying fuzzy match with timestamp:', timestampMatch[0]);
-
-                const fuzzyResult = await supabaseAdmin
-                    .from('payment_transactions')
-                    .select('*')
-                    .like('order_id', `%${timestampMatch[0]}%`)
-                    .single();
-
-                transaction = fuzzyResult.data;
-                fetchError = fuzzyResult.error;
-            } else {
-                transaction = null;
-                fetchError = exactResult.error;
+                const fuzzyResult = await sql`
+                    SELECT * FROM payment_transactions 
+                    WHERE order_id LIKE ${`%${timestampMatch[0]}%`}
+                    LIMIT 1
+                `;
+                if (fuzzyResult && fuzzyResult.length > 0) {
+                    transaction = fuzzyResult[0];
+                }
             }
         }
 
-        if (fetchError || !transaction) {
+        if (!transaction) {
             console.error('[Webhook] Transaction not found for order_id:', order_id);
-            console.error('[Webhook] Database error:', fetchError);
-            return NextResponse.json(
-                { error: 'Transaction not found' },
-                { status: 404 }
-            );
+            return NextResponse.json({ error: 'Transaction not found' }, { status: 404 });
         }
 
         console.log('[Webhook] Found transaction:', {
             id: transaction.id,
             user_id: transaction.user_id,
             credits: transaction.credits,
+            package_id: transaction.package_id,
             current_status: transaction.status
         });
 
-        // Process successful payment (transferType === 'in' means money received)
+        // Process successful payment
         console.log('[Webhook] Processing successful payment...');
 
         // Get current user credits
-        const { data: user, error: userError } = await supabaseAdmin
-            .from('users')
-            .select('current_credits')
-            .eq('user_id', transaction.user_id)
-            .single();
+        const userResult = await sql`
+            SELECT current_credits, subscription_type, total_spent_vnd 
+            FROM users 
+            WHERE user_id = ${transaction.user_id} 
+            LIMIT 1
+        `;
 
-        if (userError) {
-            console.error('[Webhook] Error fetching user:', userError);
+        if (!userResult || userResult.length === 0) {
+            console.error('[Webhook] User not found:', transaction.user_id);
             throw new Error('Failed to fetch user');
         }
 
-        const currentCredits = user?.current_credits || 0;
-        const newCredits = currentCredits + transaction.credits;
+        const user = userResult[0];
+        const currentCredits = user.current_credits || 0;
+        const newCredits = currentCredits + (transaction.credits || 0);
+        const currentTotalSpent = user.total_spent_vnd || 0;
+        const newTotalSpent = currentTotalSpent + (transaction.amount || 0);
 
-        console.log('[Webhook] Updating credits:', {
-            current: currentCredits,
-            adding: transaction.credits,
-            new: newCredits
+        console.log('[Webhook] Updating user:', {
+            user_id: transaction.user_id,
+            credits_adding: transaction.credits,
+            package_id: transaction.package_id,
+            new_credits: newCredits,
+            new_total_spent: newTotalSpent
         });
 
-        // Update user credits
-        const { error: updateError } = await supabaseAdmin
-            .from('users')
-            .update({ current_credits: newCredits })
-            .eq('user_id', transaction.user_id);
+        // Update user credits and subscription info
+        // Store package_id in subscription_type column as requested
+        await sql`
+            UPDATE users SET 
+                current_credits = ${newCredits},
+                total_spent_vnd = ${newTotalSpent},
+                subscription_type = ${transaction.package_id},
+                updated_at = NOW()
+            WHERE user_id = ${transaction.user_id}
+        `;
 
-        if (updateError) {
-            console.error('[Webhook] Error updating credits:', updateError);
-            throw new Error('Failed to update credits');
-        }
-
-        // Update transaction status (use transaction.id since order_id format may differ)
-        const { error: txUpdateError } = await supabaseAdmin
-            .from('payment_transactions')
-            .update({
-                transaction_id: transaction_id,
-                status: 'completed',
-                payment_method: payment_method,
-                completed_at: new Date().toISOString(),
-                sepay_response: sepayPayload
-            })
-            .eq('id', transaction.id); // Use transaction.id instead of order_id!
-
-        if (txUpdateError) {
-            console.error('[Webhook] Error updating transaction:', txUpdateError);
-            throw new Error('Failed to update transaction');
-        }
+        // Update transaction status
+        await sql`
+            UPDATE payment_transactions SET
+                transaction_id = ${transaction_id},
+                status = 'completed',
+                payment_method = ${payment_method},
+                completed_at = ${new Date().toISOString()},
+                sepay_response = ${JSON.stringify(sepayPayload)}
+            WHERE id = ${transaction.id}
+        `;
 
         console.log(`✅ [Webhook] Payment completed: ${transaction.credits} credits added to user ${transaction.user_id}`);
 
         return NextResponse.json({ success: true });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('[Webhook] Processing error:', error);
         return NextResponse.json(
             {
                 error: 'Webhook processing failed',
-                message: error instanceof Error ? error.message : 'Unknown error'
+                message: error.message || 'Unknown error'
             },
             { status: 500 }
         );
@@ -228,6 +194,6 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
     return NextResponse.json({
         status: 'ok',
-        message: 'SePay webhook endpoint is active'
+        message: 'SePay webhook endpoint is active (Neon)'
     });
 }

@@ -48,7 +48,7 @@ const OutfitExtractor: React.FC<OutfitExtractorProps> = (props) => {
     const isLoading = appState.stage === 'generating';
 
     return (
-        <div className="flex flex-col items-center justify-center w-full h-full flex-1 min-h-0">
+        <div className="flex flex-col items-center justify-center w-full h-full py-10 flex-1 min-h-screen">
             <AnimatePresence>{appState.stage === 'configuring' && <AppScreenHeader {...headerProps} />}</AnimatePresence>
             {appState.stage === 'configuring' && (
                 <motion.div className="flex flex-col items-center gap-6 w-full max-w-screen-xl py-6 overflow-y-auto" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
@@ -69,14 +69,18 @@ const OutfitExtractor: React.FC<OutfitExtractorProps> = (props) => {
 
             {/* Generating Stage - Show input image + loading result */}
             {appState.stage === 'generating' && (
-                <motion.div className="flex flex-col items-center gap-8 w-full max-w-screen-xl py-6 overflow-y-auto" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <motion.div className="flex flex-col items-center gap-8 w-full max-w-screen-xl pt-6 pb-32 overflow-y-auto" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <div className="flex flex-col md:flex-row items-start justify-center gap-8 w-full px-4">
-                        <div className="flex flex-col items-center gap-4">
-                            <ActionablePolaroidCard type="multi-input" caption={uploaderCaption} status="done" mediaUrl={appState.uploadedImage!} placeholderType="person" onImageChange={() => { }} />
+                        <div className="flex flex-col items-center gap-4 w-full md:w-auto">
+                            <div className="w-full md:w-[400px]">
+                                <ActionablePolaroidCard type="multi-input" caption={uploaderCaption} status="done" mediaUrl={appState.uploadedImage!} placeholderType="person" onImageChange={() => { }} />
+                            </div>
                             <p className="text-neutral-300 text-center max-w-xs text-sm">{uploaderDescription}</p>
                         </div>
-                        <div className="flex flex-col items-center gap-4">
-                            <ActionablePolaroidCard type="output" caption={t('outfitExtractor_result')} status="pending" mediaUrl={undefined} placeholderType="magic" onImageChange={() => { }} />
+                        <div className="flex flex-col items-center gap-4 w-full md:w-auto">
+                            <div className="w-full md:w-[400px]">
+                                <ActionablePolaroidCard type="output" caption={t('outfitExtractor_result')} status="pending" mediaUrl={undefined} placeholderType="magic" onImageChange={() => { }} />
+                            </div>
                             <p className="text-yellow-400 text-center max-w-xs text-sm animate-pulse font-semibold">⏳ {t('common_processing')}</p>
                         </div>
                     </div>

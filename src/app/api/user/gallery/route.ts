@@ -35,19 +35,20 @@ export async function POST(req: NextRequest) {
 
         if (!urls || !Array.isArray(urls)) return NextResponse.json({ error: 'Invalid URLs' }, { status: 400 });
 
-        // Atomic Upsert: Append to array
-        // Note: Neon/Postgres array_append or || operator
+        // Atomic Upsert: Append to JSONB array
+        // gallery column is JSONB, not text[]
         await sql`
             INSERT INTO profiles (id, gallery, last_updated)
-            VALUES (${userId}, ${urls}, NOW())
+            VALUES (${userId}, ${JSON.stringify(urls)}::jsonb, NOW())
             ON CONFLICT (id) 
             DO UPDATE SET 
-                gallery = profiles.gallery || EXCLUDED.gallery,
+                gallery = COALESCE(profiles.gallery, '[]'::jsonb) || ${JSON.stringify(urls)}::jsonb,
                 last_updated = NOW()
         `;
 
         return NextResponse.json({ success: true });
     } catch (e: any) {
+        console.error('[API] POST /api/user/gallery error:', e);
         return NextResponse.json({ error: e.message }, { status: 500 });
     }
 }

@@ -91,7 +91,7 @@ export const authOptions: NextAuthOptions = {
             }
             return true; // Allow sign in
         },
-        async jwt({ token, user, account }) {
+        async jwt({ token, user, account, trigger }) {
             // Initial sign in
             if (user) {
                 token.id = user.id;
@@ -99,15 +99,20 @@ export const authOptions: NextAuthOptions = {
                 token.accessToken = (user as any).accessToken;
             }
 
-            // ALWAYS fetch fresh user data from Neon using email
-            // This ensures role and credits are up-to-date on every request
-            if (token.email) {
+            // Only fetch user data on:
+            // 1. Initial sign-in (user exists)
+            // 2. Explicit update trigger
+            // 3. No cached data exists
+            // This prevents excessive DB queries on tab refocus
+            const shouldFetch = user || trigger === 'update' || !token.userData;
+
+            if (token.email && shouldFetch) {
                 try {
                     const userData = await getUserByEmail(token.email as string);
 
                     if (userData) {
                         token.userData = userData;
-                        token.id = userData.user_id; // Use Neon user_id
+                        token.id = userData.user_id;
                         console.log('[NextAuth] ✅ User data refreshed from Neon:', {
                             email: userData.email,
                             role: userData.role,

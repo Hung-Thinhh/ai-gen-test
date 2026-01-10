@@ -47,7 +47,9 @@ const Lightbox: React.FC<LightboxProps> = ({ images, selectedIndex, onClose, onN
     const handleDownloadCurrent = () => {
         if (selectedIndex !== null && images[selectedIndex]) {
             const url = images[selectedIndex];
-            downloadImage(url, `Duky-image-${selectedIndex + 1}`);
+            // Generate random ID: timestamp + random number
+            const randomId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+            downloadImage(url, `Duky-AI-${randomId}`);
         }
     };
 

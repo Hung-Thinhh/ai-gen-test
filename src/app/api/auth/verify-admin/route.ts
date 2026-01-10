@@ -1,62 +1,42 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { sql } from '@/lib/neon/client';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 export async function GET(request: NextRequest) {
     try {
-        // Get authorization header
-        const authHeader = request.headers.get('authorization');
+        // Try getting NextAuth session
+        const session = await getServerSession(authOptions);
 
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        if (!session || !session.user || !session.user.email) {
             return NextResponse.json(
-                { isAdmin: false, role: null, error: 'No authorization token' },
+                { isAdmin: false, role: null, error: 'Unauthorized' },
                 { status: 401 }
             );
         }
 
-        const token = authHeader.replace('Bearer ', '');
+        // Get user role from Neon database
+        const result = await sql`
+            SELECT role, user_id FROM users 
+            WHERE email = ${session.user.email} 
+            LIMIT 1
+        `;
 
-        // Create Supabase client with service role to bypass RLS
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-        const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-            auth: {
-                autoRefreshToken: false,
-                persistSession: false
-            }
-        });
-
-        // Verify the JWT token and get user
-        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-        if (authError || !user) {
-            return NextResponse.json(
-                { isAdmin: false, role: null, error: 'Invalid token' },
-                { status: 401 }
-            );
-        }
-
-        // Get user role from database
-        const { data: userData, error: dbError } = await supabase
-            .from('users')
-            .select('role')
-            .eq('user_id', user.id)
-            .single();
-
-        if (dbError || !userData) {
+        if (!result || result.length === 0) {
             return NextResponse.json(
                 { isAdmin: false, role: null, error: 'User not found in database' },
                 { status: 404 }
             );
         }
 
+        const userData = result[0];
         const isAdmin = userData.role === 'admin';
 
         return NextResponse.json({
             isAdmin,
             role: userData.role,
-            userId: user.id
+            userId: userData.user_id
         });
 
     } catch (error: any) {

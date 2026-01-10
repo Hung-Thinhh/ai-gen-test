@@ -1,19 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase/client';
+import { sql } from '@/lib/neon/client';
 
 export async function GET(req: NextRequest) {
     try {
-        const { data, error } = await supabaseAdmin
-            .from('tools')
-            .select('*')
-            .order('created_at', { ascending: false });
+        const data = await sql`
+            SELECT * FROM tools 
+            ORDER BY created_at DESC
+        `;
 
-        if (error) {
-            console.error('Error fetching tools:', error);
-            return NextResponse.json({ error: 'Failed to fetch tools' }, { status: 500 });
-        }
-
-        return NextResponse.json({ data });
+        return NextResponse.json({ data: data || [] });
     } catch (error: any) {
         console.error('Server error fetching tools:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

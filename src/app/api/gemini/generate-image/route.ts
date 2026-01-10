@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
-import { supabaseAdmin } from '@/lib/supabase/client';
+// import { supabaseAdmin } from '@/lib/supabase/client';
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 
@@ -126,6 +126,7 @@ export async function POST(req: NextRequest) {
         console.log('[API DEBUG] Generation successful, deducting credits...');
 
         // DIRECT SQL UPDATE (Via Neon)
+        let newCredits = currentCredits - creditCost; // Default fallback
         try {
             console.log(`[API] Deducting ${creditCost} credits directly (via Neon)...`);
             const { sql } = await import('@/lib/neon/client');
@@ -140,7 +141,8 @@ export async function POST(req: NextRequest) {
                 `;
 
                 if (result.length > 0) {
-                    console.log(`[API] Guest credits updated. New balance: ${result[0].credits}`);
+                    newCredits = result[0].credits;
+                    console.log(`[API] Guest credits updated. New balance: ${newCredits}`);
                 } else {
                     console.warn('[API] Guest ID not found during deduction:', guestId);
                 }
@@ -155,7 +157,8 @@ export async function POST(req: NextRequest) {
                 `;
 
                 if (result.length > 0) {
-                    console.log(`[API] User credits updated. New balance: ${result[0].current_credits}`);
+                    newCredits = result[0].current_credits;
+                    console.log(`[API] User credits updated. New balance: ${newCredits}`);
                 } else {
                     console.warn('[API] User ID not found during deduction:', userId);
                 }
@@ -167,7 +170,11 @@ export async function POST(req: NextRequest) {
 
         console.log('[API DEBUG] Credits deducted successfully');
 
-        return NextResponse.json(response);
+        // Return response with new credit balance
+        return NextResponse.json({
+            ...response,
+            newCredits // Add new credit balance to response
+        });
 
     } catch (error: any) {
         console.error("Server-side Gemini generation error:", error);

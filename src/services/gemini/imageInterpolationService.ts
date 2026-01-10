@@ -61,9 +61,9 @@ export async function analyzeImagePairForPrompt(inputImageDataUrl: string, outpu
 
         const text = response.text;
         if (!text) {
-            throw new Error("AI không thể ước tính độ tuổi từ ảnh.");
+            throw new Error("AI không thể tạo prompt từ cặp ảnh.");
         }
-        const normalizedText = text.toLowerCase().trim();
+        const normalizedText = text.trim();
         if (normalizedText) {
             const parsed = JSON.parse(normalizedText);
             const suggestionsString = Array.isArray(parsed.suggestions) ? parsed.suggestions.join('\n') : '';
@@ -136,9 +136,9 @@ export async function analyzeImagePairForPromptDeep(inputImageDataUrl: string, o
 
         const text = response.text;
         if (!text) {
-            throw new Error("AI không thể ước tính độ tuổi từ ảnh.");
+            throw new Error("AI không thể tạo prompt chi tiết từ cặp ảnh.");
         }
-        const normalizedText = text.toLowerCase().trim();
+        const normalizedText = text.trim();
         if (normalizedText) {
             const parsed = JSON.parse(normalizedText);
             const suggestionsString = Array.isArray(parsed.suggestions) ? parsed.suggestions.join('\n') : '';
@@ -214,9 +214,9 @@ export async function analyzeImagePairForPromptExpert(inputImageDataUrl: string,
 
         const text = response.text;
         if (!text) {
-            throw new Error("AI không thể ước tính độ tuổi từ ảnh.");
+            throw new Error("AI không thể tạo prompt chuyên gia từ cặp ảnh.");
         }
-        const normalizedText = text.toLowerCase().trim();
+        const normalizedText = text.trim();
         if (normalizedText) {
             const parsed = JSON.parse(normalizedText);
             const suggestionsString = Array.isArray(parsed.suggestions) ? parsed.suggestions.join('\n') : '';
