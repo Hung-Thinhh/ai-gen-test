@@ -44,16 +44,30 @@ import toast from 'react-hot-toast';
 // Helper for badges
 const RoleBadge = ({ role }: { role: string }) => {
     let displayRole = role;
-    if (role === 'Admin') displayRole = 'Quản trị viên';
-    if (role === 'User') displayRole = 'Người dùng';
-    if (role === 'Supervisor') displayRole = 'Giám sát viên';
+    let bgColor = '#F3F4F6';
+    let textColor = '#374151';
+    let borderColor = '#E5E7EB';
+
+    if (role === 'Admin' || role.toLowerCase() === 'admin') {
+        displayRole = 'admin';
+        bgColor = '#DBEAFE';
+        textColor = '#1D4ED8';
+        borderColor = '#93C5FD';
+    } else if (role === 'User' || role.toLowerCase() === 'user') {
+        displayRole = 'user';
+        bgColor = '#FEF3C7'; // Yellow highlight
+        textColor = '#B45309';
+        borderColor = '#FCD34D';
+    } else if (role === 'Supervisor') {
+        displayRole = 'Giám sát viên';
+    }
 
     return (
         <Box sx={{
             display: 'inline-flex',
-            bgcolor: '#F3F4F6',
-            color: '#374151',
-            border: '1px solid #E5E7EB',
+            bgcolor: bgColor,
+            color: textColor,
+            border: `1px solid ${borderColor}`,
             px: 1.5,
             py: 0.5,
             borderRadius: 20,
@@ -102,6 +116,15 @@ export default function UserManagement() {
     const [userToBan, setUserToBan] = useState<any>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
+    // Filter states
+    const [roleFilter, setRoleFilter] = useState<string>('');
+    const [packageFilter, setPackageFilter] = useState<string>('');
+    const [packages, setPackages] = useState<any[]>([]);
+
+    // Filter menu anchors
+    const [roleAnchor, setRoleAnchor] = useState<null | HTMLElement>(null);
+    const [packageAnchor, setPackageAnchor] = useState<null | HTMLElement>(null);
+
     // Fetch Users on Mount
     useEffect(() => {
         const fetchUsers = async () => {
@@ -127,7 +150,20 @@ export default function UserManagement() {
             setLoading(false);
         };
 
+        const fetchPackages = async () => {
+            try {
+                const res = await fetch('/api/admin/packages');
+                if (res.ok) {
+                    const data = await res.json();
+                    setPackages(data.packages || []);
+                }
+            } catch (error) {
+                console.error('Error fetching packages:', error);
+            }
+        };
+
         fetchUsers();
+        fetchPackages();
     }, [token]);
 
     const handleEditClick = (user: any) => {
@@ -196,10 +232,13 @@ export default function UserManagement() {
     };
 
     // Filtering
-    const filteredUsers = users.filter(user =>
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredUsers = users.filter(user => {
+        const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            user.email.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesRole = !roleFilter || user.role.toLowerCase() === roleFilter.toLowerCase();
+        const matchesPackage = !packageFilter || user.plan === packageFilter;
+        return matchesSearch && matchesRole && matchesPackage;
+    });
 
     return (
         <Box sx={{ width: '100%', bgcolor: '#FFFFFF', borderRadius: 2, p: 3, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
@@ -256,9 +295,61 @@ export default function UserManagement() {
                 </Stack>
 
                 <Stack direction="row" spacing={3} alignItems="center">
-                    <Button color="inherit" endIcon={<KeyboardArrowDown />} sx={{ textTransform: 'none', color: '#4B5563', fontWeight: 500 }}>Gói</Button>
-                    <Button color="inherit" endIcon={<KeyboardArrowDown />} sx={{ textTransform: 'none', color: '#4B5563', fontWeight: 500 }}>Vai trò</Button>
-                    <Button color="inherit" startIcon={<FilterListIcon />} sx={{ textTransform: 'none', color: '#4B5563', fontWeight: 600 }}>Bộ lọc khác</Button>
+                    {/* Package Filter */}
+                    <Button
+                        color="inherit"
+                        endIcon={<KeyboardArrowDown />}
+                        sx={{ textTransform: 'none', color: packageFilter ? '#0F6CBD' : '#4B5563', fontWeight: 500 }}
+                        onClick={(e) => setPackageAnchor(e.currentTarget)}
+                    >
+                        Gói{packageFilter ? `: ${packageFilter}` : ''}
+                    </Button>
+                    <Select
+                        value={packageFilter}
+                        onChange={(e) => { setPackageFilter(e.target.value); setPackageAnchor(null); }}
+                        displayEmpty
+                        open={Boolean(packageAnchor)}
+                        onClose={() => setPackageAnchor(null)}
+                        sx={{ position: 'absolute', visibility: 'hidden', width: 0 }}
+                        MenuProps={{ anchorEl: packageAnchor, open: Boolean(packageAnchor), onClose: () => setPackageAnchor(null) }}
+                    >
+                        <MenuItem value="">Tất cả gói</MenuItem>
+                        {packages.map((pkg: any) => (
+                            <MenuItem key={pkg.package_id || pkg.name} value={pkg.name}>{pkg.name}</MenuItem>
+                        ))}
+                    </Select>
+
+                    {/* Role Filter */}
+                    <Button
+                        color="inherit"
+                        endIcon={<KeyboardArrowDown />}
+                        sx={{ textTransform: 'none', color: roleFilter ? '#0F6CBD' : '#4B5563', fontWeight: 500 }}
+                        onClick={(e) => setRoleAnchor(e.currentTarget)}
+                    >
+                        Vai trò{roleFilter ? `: ${roleFilter === 'user' ? 'User' : 'Admin'}` : ''}
+                    </Button>
+                    <Select
+                        value={roleFilter}
+                        onChange={(e) => { setRoleFilter(e.target.value); setRoleAnchor(null); }}
+                        displayEmpty
+                        open={Boolean(roleAnchor)}
+                        onClose={() => setRoleAnchor(null)}
+                        sx={{ position: 'absolute', visibility: 'hidden', width: 0 }}
+                        MenuProps={{ anchorEl: roleAnchor, open: Boolean(roleAnchor), onClose: () => setRoleAnchor(null) }}
+                    >
+                        <MenuItem value="">Tất cả</MenuItem>
+                        <MenuItem value="user">User</MenuItem>
+                        <MenuItem value="admin">Admin</MenuItem>
+                    </Select>
+
+                    <Button
+                        color="inherit"
+                        startIcon={<FilterListIcon />}
+                        sx={{ textTransform: 'none', color: '#4B5563', fontWeight: 600 }}
+                        onClick={() => { setRoleFilter(''); setPackageFilter(''); }}
+                    >
+                        Xóa bộ lọc
+                    </Button>
                 </Stack>
             </Stack>
 
