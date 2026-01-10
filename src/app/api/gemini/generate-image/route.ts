@@ -32,10 +32,16 @@ export async function POST(req: NextRequest) {
         console.log('[API DEBUG] Checking NextAuth session...');
         const session = await getServerSession(authOptions);
 
-        if (session && session.user) {
-            // Determine User ID from session
-            userId = (session.user as any).id || (session.user as any).user_id;
-            console.log('[API DEBUG] Found NextAuth user:', userId);
+        if (session && session.user && session.user.email) {
+            // Fetch UUID from database by email
+            const { getUserByEmail } = await import('@/lib/neon/queries');
+            const userData = await getUserByEmail(session.user.email);
+            if (userData) {
+                userId = userData.user_id;
+                console.log('[API DEBUG] Found user UUID from DB:', userId);
+            } else {
+                console.warn('[API DEBUG] User not found in DB for email:', session.user.email);
+            }
         } else {
             // Check Guest ID if no user session
             if (guestIdHeader) {

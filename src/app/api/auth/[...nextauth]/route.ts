@@ -4,6 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { getUserByEmail, createUser } from "@/lib/neon/queries";
 import { createClient } from "@supabase/supabase-js";
+import crypto from "crypto";
 
 // Keep Supabase client ONLY for password authentication
 // (Neon doesn't have built-in auth, so we still use Supabase Auth for credentials login)
@@ -57,54 +58,67 @@ export const authOptions: NextAuthOptions = {
             // Only auto-create for OAuth providers (Google)
             if (account?.provider === 'google' && user.email) {
                 try {
-                    console.log('[NextAuth] Checking if user exists:', user.email);
+                    console.log('=== [NextAuth signIn] Starting ===');
+                    console.log('[NextAuth] Provider:', account.provider);
+                    console.log('[NextAuth] User email:', user.email);
+                    console.log('[NextAuth] User ID from Google:', user.id);
+                    console.log('[NextAuth] User name:', user.name);
 
                     // Check if user already exists using Neon
+                    console.log('[NextAuth] Checking if user exists in DB...');
                     const existingUser = await getUserByEmail(user.email);
 
                     if (!existingUser) {
-                        console.log('[NextAuth] Creating new user:', user.email);
+                        console.log('[NextAuth] ❌ User does NOT exist. Creating new user...');
 
-                        // Create new user with default credits
+                        // Create new user with credits from system_config
+                        // Generate UUID for user_id (Google ID is numeric, DB expects UUID)
+                        const uuid = crypto.randomUUID();
+                        console.log('[NextAuth] Generating UUID for new user:', uuid);
+
                         const newUser = await createUser({
-                            user_id: user.id,
+                            user_id: uuid,
                             email: user.email!,
                             display_name: user.name || user.email?.split('@')[0],
                             avatar_url: user.image || undefined,
                             user_type: 'registered',
-                            current_credits: 10,
                             role: 'user'
                         });
 
                         if (!newUser) {
-                            console.error('[NextAuth] Failed to create user (result is null)');
+                            console.error('[NextAuth] ❌ CRITICAL: createUser returned null/undefined');
                         } else {
                             console.log('[NextAuth] ✅ User created successfully');
+                            console.log('[NextAuth] New user data:', newUser);
                         }
                     } else {
-                        console.log('[NextAuth] User already exists');
+                        console.log('[NextAuth] ✅ User already exists:', existingUser.email);
+                        console.log('[NextAuth] Existing user_id:', existingUser.user_id);
                     }
+                    console.log('=== [NextAuth signIn] Complete ===');
                 } catch (error) {
+                    console.error('=== [NextAuth signIn] ERROR ===');
                     console.error('[NextAuth] Error in signIn callback:', error);
+                    console.error('[NextAuth] Error stack:', (error as Error).stack);
                     // Don't block login on error
                 }
+            } else {
+                console.log('[NextAuth] Skipping user creation - not Google or no email');
             }
             return true; // Allow sign in
         },
         async jwt({ token, user, account, trigger }) {
-            // Initial sign in
-            if (user) {
-                token.id = user.id;
+            // Store email from initial sign in
+            if (user && user.email) {
                 token.email = user.email;
                 token.accessToken = (user as any).accessToken;
             }
 
-            // Only fetch user data on:
+            // Fetch user data from DB by email when:
             // 1. Initial sign-in (user exists)
-            // 2. Explicit update trigger
-            // 3. No cached data exists
-            // This prevents excessive DB queries on tab refocus
-            const shouldFetch = user || trigger === 'update' || !token.userData;
+            // 2. Explicit update trigger (e.g., after credit change)
+            // 3. No cached UUID exists
+            const shouldFetch = user || trigger === 'update' || !token.id;
 
             if (token.email && shouldFetch) {
                 try {
@@ -112,15 +126,18 @@ export const authOptions: NextAuthOptions = {
 
                     if (userData) {
                         token.userData = userData;
-                        token.id = userData.user_id;
-                        console.log('[NextAuth] ✅ User data refreshed from Neon:', {
+                        token.id = userData.user_id; // Always use UUID from DB
+                        console.log('[NextAuth JWT] ✅ Loaded user data:', {
                             email: userData.email,
+                            user_id: userData.user_id,
                             role: userData.role,
                             credits: userData.current_credits
                         });
+                    } else {
+                        console.warn('[NextAuth JWT] ⚠️ User not found in DB for email:', token.email);
                     }
                 } catch (error) {
-                    console.error('[NextAuth] Error fetching user data:', error);
+                    console.error('[NextAuth JWT] Error fetching user data:', error);
                 }
             }
 

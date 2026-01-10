@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { sql } from '@/lib/neon/client';
+import { getUserByEmail } from '@/lib/neon/queries';
 
 export async function POST(req: NextRequest) {
     try {
@@ -19,15 +20,24 @@ export async function POST(req: NextRequest) {
         // Validate required fields
         if (!data.user_id && !data.guest_id) return NextResponse.json({ error: 'Missing user context' }, { status: 400 });
 
-        // If user is logged in, ensure user_id matches session (security)
-        if (hasUser && data.user_id) {
-            const sessionUserId = (session.user as any).id || (session.user as any).user_id;
-            if (data.user_id !== sessionUserId) {
-                // return NextResponse.json({ error: 'Forbidden: ID mismatch' }, { status: 403 }); 
-                // Optional: warn but maybe allow if admin? For now, let's just proceed or strictly enforce.
-                // Let's trust the data.user_id if session exists for now to avoid breaking legacy, 
-                // but ideally we should overwrite data.user_id with sessionUserId.
+        // If user is logged in, ensure we use DB UUID instead of session ID
+        let userId = data.user_id;
+        console.log('[History] Initial userId from request:', userId);
+        console.log('[History] hasUser:', hasUser);
+        console.log('[History] session.user.email:', session?.user?.email);
+
+        if (hasUser && session?.user?.email) {
+            console.log('[History] Fetching user by email:', session.user.email);
+            const userData = await getUserByEmail(session.user.email);
+            console.log('[History] getUserByEmail result:', userData);
+            if (userData) {
+                userId = userData.user_id; // Use UUID from DB
+                console.log('[History] ✅ Using UUID from DB:', userId);
+            } else {
+                console.warn('[History] ⚠️ User not found in DB, using original userId:', userId);
             }
+        } else {
+            console.log('[History] No email in session, using original userId:', userId);
         }
 
         let creditsUsed = data.credits_used;
@@ -63,7 +73,7 @@ export async function POST(req: NextRequest) {
             INSERT INTO generation_history 
             (user_id, guest_id, tool_id, output_images, generation_count, credits_used, api_model_used, generation_time_ms, error_message)
             VALUES (
-                ${data.user_id || null},
+                ${userId || null},
                 ${data.guest_id || null},
                 ${toolId || null},
                 ${outputImagesJson}::jsonb,
