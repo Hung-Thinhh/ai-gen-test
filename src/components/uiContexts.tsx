@@ -175,6 +175,13 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             .catch(err => console.warn('Failed to fetch IP', err));
     }, []);
 
+    // DEBUG: Log Guest ID on change (Requested by User)
+    useEffect(() => {
+        if (!isLoggedIn && guestId) {
+            console.log('👀 [DEBUG] Current Guest ID:000000000000000000000000000000000000000000000000000000000', guestId);
+        }
+    }, [isLoggedIn, guestId]);
+
     const refreshUsageCounts = useCallback(() => {
         import('../services/gemini/usageTracker').then(({ getUsageCount }) => {
             setV2UsageCount(getUsageCount('v2'));
@@ -245,7 +252,9 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                     const cloudGallery = await storageService.getUserCloudGallery(user.id);
                     setImageGallery(cloudGallery);
                     const history = await db.getAllHistoryEntries();
-                    setGenerationHistory(history);
+                    // RAM OPTIMIZATION: Do not store full Base64 output_images in State
+                    const lightHistory = history.map(h => ({ ...h, output_images: undefined }));
+                    setGenerationHistory(lightHistory);
                 } catch (err: any) {
                     console.error("Failed to load user data:", err);
                     // On error, try to load local data as fallback
@@ -290,7 +299,9 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 }
 
                 setImageGallery(mergedGallery);
-                setGenerationHistory(history);
+                // RAM OPTIMIZATION: Strip heavy Base64 data
+                const lightHistory = history.map(h => ({ ...h, output_images: undefined }));
+                setGenerationHistory(lightHistory);
             }
             setIsDbLoaded(true);
         }
@@ -318,18 +329,22 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         return () => window.removeEventListener('user-logged-out', handleLogout);
     }, [guestId]);
 
-    // Listen for credit updates from AuthContext (e.g. after payment or login)
+    // Listen for credit updates from AuthContext OR baseService (e.g. after payment or generation)
     useEffect(() => {
         const handleCreditsUpdate = (event: CustomEvent) => {
             if (event.detail && typeof event.detail.credits === 'number') {
                 console.log('[uiContexts] Received external credit update:', event.detail.credits);
-                setUserCredits(event.detail.credits);
+                if (isLoggedIn && user) {
+                    setUserCredits(event.detail.credits);
+                } else if (guestId) {
+                    setGuestCredits(event.detail.credits);
+                }
             }
         };
 
         window.addEventListener('user-credits-updated', handleCreditsUpdate as EventListener);
         return () => window.removeEventListener('user-credits-updated', handleCreditsUpdate as EventListener);
-    }, []);
+    }, [isLoggedIn, user, guestId]);
 
 
     const t = useCallback((key: string, ...args: any[]) => {
@@ -384,8 +399,12 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             timestamp: Date.now(),
         };
         await db.addHistoryEntry(newEntry);
+
+        // Create a lightweight version for React State (remove heavy Base64 images)
+        const lightEntry = { ...newEntry, output_images: undefined };
+
         setGenerationHistory(prev => {
-            const updatedHistory = [newEntry, ...prev];
+            const updatedHistory = [lightEntry, ...prev];
             // Pruning can be done here if desired, but IndexedDB is large
             return updatedHistory;
         });

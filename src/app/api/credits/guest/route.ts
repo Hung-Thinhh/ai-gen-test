@@ -45,7 +45,22 @@ export async function GET(req: NextRequest) {
             }
         }
 
-        return NextResponse.json({ credits: result[0].credits || 0 });
+        let currentCredits = result[0].credits || 0;
+
+        // [INFINITE TRIAL LOGIC]
+        // If credits <= 0, refill immediately so UI shows positive balance
+        if (currentCredits <= 0) {
+            const defaultCredits = 3;
+            await sql`
+                UPDATE guest_sessions 
+                SET credits = ${defaultCredits}
+                WHERE guest_id = ${guestId}
+            `;
+            currentCredits = defaultCredits;
+            console.log(`[API] GET Guest ${guestId}: Refilled to ${defaultCredits} credits`);
+        }
+
+        return NextResponse.json({ credits: currentCredits });
 
     } catch (error: any) {
         console.error('[API] Error in GET /api/credits/guest:', error);
@@ -75,37 +90,61 @@ export async function POST(req: NextRequest) {
         `;
 
         if (!checkGuest || checkGuest.length === 0) {
-            // Create guest with default credits - amount?
-            // If they are generating, they need credits. 
-            // Default usually 3. If cost is 1, they have 2 left.
-            // But if cost > 3, they fail immediately.
             const defaultCredits = 3;
-            await sql`
-                INSERT INTO guest_sessions (guest_id, credits, last_seen)
-                VALUES (${guestId}, ${defaultCredits}, NOW())
-            `;
+            try {
+                await sql`
+                    INSERT INTO guest_sessions (guest_id, credits, last_seen)
+                    VALUES (${guestId}, ${defaultCredits}, NOW())
+                `;
+            } catch (e) {
+                // Ignore conflict if concurrent insert
+            }
         }
 
         // Atomically check and deduct credits
-        const result = await sql`
+        let result = await sql`
             UPDATE guest_sessions 
             SET credits = credits - ${amount}, last_seen = NOW()
             WHERE guest_id = ${guestId} AND credits >= ${amount}
             RETURNING credits
         `;
 
+        // [INFINITE TRIAL LOGIC]
+        // If insufficient credits, REFILL to default (3) and TRY AGAIN
         if (!result || result.length === 0) {
-            // Insufficient credits or user issue
-            const currentData = await sql`
-                SELECT credits FROM guest_sessions WHERE guest_id = ${guestId} LIMIT 1
+            console.log(`[API] Guest ${guestId} out of credits. Refilling for Infinite Trial...`);
+
+            // Reset to 3 (or whatever default)
+            const defaultCredits = 3;
+
+            // Refill
+            await sql`
+                UPDATE guest_sessions 
+                SET credits = ${defaultCredits}
+                WHERE guest_id = ${guestId}
             `;
 
-            return NextResponse.json({
-                success: false,
-                error: 'Insufficient credits',
-                current: currentData.length > 0 ? currentData[0].credits : 0,
-                required: amount
-            }, { status: 402 });
+            // Retry deduction
+            result = await sql`
+                UPDATE guest_sessions 
+                SET credits = credits - ${amount}, last_seen = NOW()
+                WHERE guest_id = ${guestId} AND credits >= ${amount}
+                RETURNING credits
+            `;
+
+            // If still fails (e.g. amount > default), then error
+            if (!result || result.length === 0) {
+                const currentData = await sql`
+                    SELECT credits FROM guest_sessions WHERE guest_id = ${guestId} LIMIT 1
+                `;
+
+                return NextResponse.json({
+                    success: false,
+                    error: 'Insufficient credits (Refill failed or Request too large)',
+                    current: currentData.length > 0 ? currentData[0].credits : 0,
+                    required: amount
+                }, { status: 402 });
+            }
         }
 
         return NextResponse.json({

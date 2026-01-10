@@ -27,18 +27,23 @@ export const LeonardoHeader = () => {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    // Initialize credits from session
+    // Initialize and sync credits from session or context
     useEffect(() => {
-        const userCreditsFromSession = (session?.user as any)?.credits;
-        if (isLoggedIn && userCreditsFromSession !== undefined) {
-            setCurrentCredits(userCreditsFromSession);
+        if (isLoggedIn) {
+            const userCreditsFromSession = (session?.user as any)?.credits;
+            if (userCreditsFromSession !== undefined) {
+                setCurrentCredits(userCreditsFromSession);
+            }
+        } else {
+            setCurrentCredits(guestCredits);
         }
-    }, [session, isLoggedIn]);
+    }, [session, isLoggedIn, guestCredits]);
 
     // Listen for credit updates from generation
     useEffect(() => {
         const handleCreditsUpdate = (event: CustomEvent) => {
             if (event.detail?.credits !== undefined) {
+                console.log('[LeonardoHeader] Credit update event:', event.detail.credits);
                 setCurrentCredits(event.detail.credits);
             }
         };
@@ -47,8 +52,8 @@ export const LeonardoHeader = () => {
         return () => window.removeEventListener('user-credits-updated', handleCreditsUpdate as EventListener);
     }, []);
 
-    // Determine credits to display
-    const displayCredits = isLoggedIn ? currentCredits : guestCredits;
+    // Determine credits to display (Always use local state which is synced with Context + Events)
+    const displayCredits = currentCredits;
 
     return (
         <header

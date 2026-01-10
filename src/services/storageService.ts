@@ -327,35 +327,24 @@ export const getUserCredits = async (userId: string, token?: string): Promise<nu
  */
 export const getGuestCredits = async (guestId: string): Promise<number> => {
     try {
-        const { data, error } = await supabase
-            .from(GUESTS_TABLE)
-            .select('credits')
-            .eq('guest_id', guestId)
-            .maybeSingle();
+        console.log(`[getGuestCredits] Fetching specific guest credits via API for: ${guestId}`);
 
-        if (error) {
-            // Ignore missing column error (old schema)
-            if (error.code === '42703') {
-                console.warn('Guest credits column not found, returning default');
-                return 3;
-            }
-            console.error("Error fetching guest credits:", error);
-            throw new Error(`Failed to fetch guest credits: ${error.message}`);
+        // Use Server API instead of direct Supabase
+        const res = await fetch(`/api/credits/guest?guestId=${guestId}`);
+
+        if (!res.ok) {
+            console.warn(`[getGuestCredits] API request failed: ${res.status}`);
+            return 0;
         }
 
-        // If no record found, guest hasn't been created yet
-        if (!data) {
-            console.log(`[getGuestCredits] No record for ${guestId}, returning default 3`);
-            return 3; // Default for new guests
-        }
-
-        const credits = data.credits ?? 3;
-        console.log(`[getGuestCredits] Guest ${guestId}: ${credits} credits`);
+        const data = await res.json();
+        const credits = data.credits ?? 0;
+        console.log(`[getGuestCredits] Guest ${guestId}: ${credits} credits (API)`);
         return credits;
+
     } catch (error: any) {
         console.error("Error in getGuestCredits:", error);
-        // Re-throw to let caller handle
-        throw error;
+        return 0;
     }
 };
 
@@ -646,6 +635,11 @@ export const updateTool = async (toolId: string | number, updates: any, token?: 
  */
 export const logGenerationHistory = async (userId: string | null, entry: any, token?: string, guestId?: string) => {
     try {
+        if (!userId) {
+            console.log("[Storage] Guest history logging disabled.");
+            return;
+        }
+
         const client = getFreshClient(token);
 
         let resolvedToolId = entry.tool_id;
