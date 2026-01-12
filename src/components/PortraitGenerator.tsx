@@ -270,7 +270,6 @@ const PortraitGenerator: React.FC<PortraitGeneratorProps> = (props) => {
     };
 
     const handleGenerate = async () => {
-        if (!appState.prompt.trim()) return;
 
         const preGenState = { ...appState };
         const imageCount = appState.options.imageCount;
@@ -383,17 +382,7 @@ const PortraitGenerator: React.FC<PortraitGeneratorProps> = (props) => {
                             onRemove={() => onStateChange({ ...appState, uploadedImage: null })}
                         />
 
-                        {/* Prompt */}
-                        <div className="mt-5">
-                            <label className="block text-neutral-200 font-bold mb-2">Mô tả chân dung *</label>
-                            <input
-                                type="text"
-                                value={appState.prompt}
-                                onChange={(e) => onStateChange({ ...appState, prompt: e.target.value })}
-                                placeholder="Ví dụ: Chân dung cô gái châu Á, tóc dài, mắt to..."
-                                className="w-full bg-neutral-900/50 border border-neutral-700 rounded-xl px-4 py-3 text-white focus:border-orange-400 focus:outline-none"
-                            />
-                        </div>
+
 
                         {/* Options Grid */}
                         <div className="mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -431,6 +420,18 @@ const PortraitGenerator: React.FC<PortraitGeneratorProps> = (props) => {
                             </p>
                         </div>
 
+                        {/* Prompt - Optional */}
+                        <div className="mt-5">
+                            <label className="block text-neutral-200 font-bold mb-2">Mô tả chân dung (tùy chọn)</label>
+                            <input
+                                type="text"
+                                value={appState.prompt}
+                                onChange={(e) => onStateChange({ ...appState, prompt: e.target.value })}
+                                placeholder="Ví dụ: Chân dung cô gái châu Á, tóc dài, mắt to..."
+                                className="w-full bg-neutral-900/50 border border-neutral-700 rounded-xl px-4 py-3 text-white focus:border-orange-400 focus:outline-none"
+                            />
+                        </div>
+
                         {/* Additional Notes */}
                         <div className="mt-5">
                             <label className="block text-neutral-300 text-sm font-medium mb-1.5">Ghi chú thêm</label>
@@ -449,8 +450,8 @@ const PortraitGenerator: React.FC<PortraitGeneratorProps> = (props) => {
                             </button>
                             <button
                                 onClick={handleGenerate}
-                                disabled={!appState.prompt.trim() || isLoading}
-                                className={`px-8 py-2.5 rounded-full font-bold text-sm transition-all ${!appState.prompt.trim() || isLoading
+                                disabled={isLoading}
+                                className={`px-8 py-2.5 rounded-full font-bold text-sm transition-all ${isLoading
                                     ? 'bg-neutral-600 text-neutral-400 cursor-not-allowed'
                                     : 'bg-gradient-to-r from-orange-400 to-orange-600 text-white hover:from-orange-500 hover:to-orange-700 shadow-lg shadow-orange-500/20'
                                     }`}
