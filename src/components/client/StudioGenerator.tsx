@@ -73,6 +73,11 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
         return 'female';
     }, [TEMPLATES, studio]);
 
+    // Multi-select state for templates (max 4)
+    const [selectedStyleImages, setSelectedStyleImages] = useState<string[]>([]);
+    const [generatedImages, setGeneratedImages] = useState<string[]>([]);
+    const [pendingCount, setPendingCount] = useState(0);
+
     const [appState, setAppState] = useState<KhmerPhotoMergeState>({
         stage: 'idle',
         uploadedImage: null,
@@ -95,14 +100,16 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
     // useEffect(() => { ... }, [TEMPLATES]);
 
 
-    const outputLightboxImages = appState.generatedImage ? [appState.generatedImage] : [];
-    const lightboxImages = [appState.uploadedImage, appState.selectedStyleImage, ...outputLightboxImages].filter((img): img is string => !!img);
+    const lightboxImages = [appState.uploadedImage, ...selectedStyleImages, ...generatedImages].filter((img): img is string => !!img);
 
     const handleGoBack = () => {
         router.push('/studio');
     };
 
     const handleReset = () => {
+        setSelectedStyleImages([]);
+        setGeneratedImages([]);
+        setPendingCount(0);
         setAppState(prev => ({
             ...prev,
             stage: 'idle',
@@ -157,19 +164,26 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
     };
 
     const handleTabChange = (tab: 'female' | 'male' | 'couple') => {
+        setSelectedStyleImages([]); // Clear multi-selection when switching tabs
         setAppState(prev => ({
             ...prev,
             activeTab: tab,
-            selectedStyleImage: null // Clear selection when switching tabs
+            selectedStyleImage: null
         }));
     };
 
     const handleStyleSelect = (templateUrl: string) => {
-        console.log("Selecting style:", templateUrl);
-        setAppState(prev => ({
-            ...prev,
-            selectedStyleImage: templateUrl,
-        }));
+        setSelectedStyleImages(prev => {
+            if (prev.includes(templateUrl)) {
+                // Deselect if already selected
+                return prev.filter(url => url !== templateUrl);
+            } else if (prev.length < 4) {
+                // Add if under limit
+                return [...prev, templateUrl];
+            }
+            // At limit, don't add
+            return prev;
+        });
     };
 
     const handleOptionChange = (field: keyof KhmerPhotoMergeState['options'], value: string | boolean) => {
@@ -185,74 +199,80 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
             ? (appState.uploadedImage && appState.uploadedImage2)
             : appState.uploadedImage;
 
-        if (!hasRequiredImages || !appState.selectedStyleImage) {
+        if (!hasRequiredImages || selectedStyleImages.length === 0) {
             console.warn("Missing inputs - aborting generation");
             return;
         }
 
         const preGenState = { ...appState };
-        setAppState(prev => ({ ...prev, stage: 'generating', error: null }));
+        const imageCount = selectedStyleImages.length;
+        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
+        const totalCredits = creditCostPerImage * imageCount;
 
-        const creditCost = modelVersion === 'v3' ? 2 : 1;
-
-        if (!await checkCredits(creditCost)) {
-            setAppState(prev => ({ ...prev, stage: 'configuring' }));
+        if (!await checkCredits(totalCredits)) {
             return;
         }
 
-        try {
-            const selectedTemplate = TEMPLATES.find((t: any) => t.image_url === appState.selectedStyleImage || t.url === appState.selectedStyleImage);
-            const templatePrompt = selectedTemplate ? (selectedTemplate.prompt || selectedTemplate.content) : "Portrait style";
-            // Note: DB schema uses 'content' for prompt, Khmer hardcoded used 'prompt'. 
-            // Also DB uses 'image_url', hardcoded used 'url'. Adapted above.
+        // Start generating
+        setAppState(prev => ({ ...prev, stage: 'generating', error: null }));
+        setGeneratedImages([]);
+        setPendingCount(imageCount);
 
-            console.log("Generating with prompt:", templatePrompt);
+        const secondImage = isCoupleMode ? appState.uploadedImage2 : undefined;
+        const results: string[] = [];
+        let errorCount = 0;
 
-            const secondImage = isCoupleMode ? appState.uploadedImage2 : undefined;
+        // Generate images in parallel
+        const generateSingle = async (styleUrl: string): Promise<string | null> => {
+            try {
+                const selectedTemplate = TEMPLATES.find((t: any) => t.image_url === styleUrl || t.url === styleUrl);
+                const templatePrompt = selectedTemplate ? (selectedTemplate.prompt || selectedTemplate.content) : "Portrait style";
 
-            // Using generic generateStudioImage
-            const resultUrl = await generateStudioImage(
-                appState.uploadedImage!,
-                studio.name, // Pass studio name as Style Context
-                templatePrompt,
-                appState.options.customPrompt,
-                appState.options.removeWatermark,
-                appState.options.aspectRatio,
-                secondImage
-            );
+                const resultUrl = await generateStudioImage(
+                    appState.uploadedImage!,
+                    studio.name,
+                    templatePrompt,
+                    appState.options.customPrompt,
+                    appState.options.removeWatermark,
+                    appState.options.aspectRatio,
+                    secondImage
+                );
 
-            const settingsToEmbed = {
-                viewId: 'studio-generator',
-                state: { ...preGenState, stage: 'configuring', generatedImage: null, error: null },
-            };
-            const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
+                const settingsToEmbed = {
+                    viewId: 'studio-generator',
+                    state: { ...preGenState, stage: 'configuring', generatedImage: null, error: null },
+                };
+                return await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
+            } catch (err) {
+                console.error("Generation failed for style:", styleUrl, err);
+                errorCount++;
+                return null;
+            }
+        };
 
-            logGeneration(studio.id, preGenState, urlWithMetadata, {
-                generation_count: 1,
-                credits_used: creditCost,
+        const promises = selectedStyleImages.map(styleUrl => generateSingle(styleUrl));
+        const allResults = await Promise.all(promises);
+        const successfulImages = allResults.filter((r): r is string => r !== null);
+
+        if (successfulImages.length > 0) {
+            setGeneratedImages(successfulImages);
+            logGeneration(studio.id, preGenState, successfulImages[0], {
+                generation_count: successfulImages.length,
+                credits_used: creditCostPerImage * successfulImages.length,
                 api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
             });
-
-            setAppState(prev => ({
-                ...prev,
-                stage: 'results',
-                generatedImage: urlWithMetadata,
-                historicalImages: [...prev.historicalImages, { style: prev.selectedStyleImage!, url: urlWithMetadata }],
-            }));
-            // addImagesToGallery([urlWithMetadata]); // If we have this function
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
-            console.error("Generation failed:", err);
-            setAppState(prev => ({
-                ...prev,
-                stage: 'results',
-                error: errorMessage
-            }));
         }
+
+        setPendingCount(0);
+        setAppState(prev => ({
+            ...prev,
+            stage: 'results',
+            error: errorCount > 0 ? `Đã tạo ${successfulImages.length}/${imageCount} ảnh` : null
+        }));
     };
 
     const isLoading = appState.stage === 'generating';
-    const hasResults = !!appState.generatedImage;
+    const hasResults = generatedImages.length > 0;
 
     const currentTemplates = TEMPLATES.filter((t: any) => (t.gender || 'female') === activeTab);
 
@@ -401,28 +421,36 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                                             isMobile={isMobile}
                                         />
                                     </div>
-                                    {appState.selectedStyleImage && (
+                                    {selectedStyleImages.length > 0 && (
                                         <div className="mt-2">
-                                            <p className="text-sm text-neutral-400 mb-2 text-center">Mẫu đã chọn</p>
-                                            <img
-                                                src={appState.selectedStyleImage}
-                                                alt="Mẫu"
-                                                className="w-20 h-28 object-cover rounded-lg border border-orange-400/50"
-                                            />
+                                            <p className="text-sm text-neutral-400 mb-2 text-center">Mẫu đã chọn ({selectedStyleImages.length})</p>
+                                            <div className="flex gap-2 flex-wrap justify-center">
+                                                {selectedStyleImages.map((url, idx) => (
+                                                    <img
+                                                        key={idx}
+                                                        src={url}
+                                                        alt={`Mẫu ${idx + 1}`}
+                                                        className="w-16 h-22 object-cover rounded-lg border border-orange-400/50"
+                                                    />
+                                                ))}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
 
                                 {/* Output Section - Loading */}
                                 <div className="themed-card backdrop-blur-md p-4 rounded-2xl flex flex-col items-center gap-4">
-                                    <h3 className="text-lg font-bold text-orange-400">Kết quả</h3>
-                                    <div className="w-full max-w-xs aspect-[3/4] bg-neutral-900/50 rounded-xl border border-neutral-700 flex flex-col items-center justify-center gap-4">
-                                        <div className="w-16 h-16 border-4 border-orange-400 border-t-transparent rounded-full animate-spin" />
-                                        <p className="text-neutral-300 text-sm">Đang tạo ảnh...</p>
-                                        <div className="text-xs text-neutral-500">Vui lòng đợi trong giây lát</div>
+                                    <h3 className="text-lg font-bold text-orange-400">Kết quả ({pendingCount} ảnh)</h3>
+                                    <div className={`grid gap-2 w-full ${pendingCount > 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                                        {Array.from({ length: pendingCount }).map((_, idx) => (
+                                            <div key={idx} className="aspect-[3/4] bg-neutral-900/50 rounded-xl border border-neutral-700 flex flex-col items-center justify-center gap-2">
+                                                <div className="w-10 h-10 border-4 border-orange-400 border-t-transparent rounded-full animate-spin" />
+                                                <p className="text-neutral-300 text-xs">Đang tạo...</p>
+                                            </div>
+                                        ))}
                                     </div>
                                     <button
-                                        onClick={() => setAppState(prev => ({ ...prev, stage: 'configuring', error: null }))}
+                                        onClick={() => { setAppState(prev => ({ ...prev, stage: 'configuring', error: null })); setPendingCount(0); }}
                                         className="mt-2 px-6 py-2 bg-neutral-700 text-white rounded-full hover:bg-neutral-600 transition-colors text-sm"
                                     >
                                         Hủy
@@ -444,19 +472,21 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                                     </div>
                                 )}
 
-                                {appState.generatedImage && (
-                                    <div className="flex justify-center mb-6">
-                                        <div className="w-full max-w-sm">
-                                            <ActionablePolaroidCard
-                                                type="output"
-                                                caption="Kết quả"
-                                                status="done"
-                                                mediaUrl={appState.generatedImage}
-                                                onClick={() => openLightbox(lightboxImages.indexOf(appState.generatedImage!))}
-                                                isMobile={isMobile}
-                                                onGenerateVideoFromPrompt={(prompt) => generateVideo(appState.generatedImage!, prompt)}
-                                            />
-                                        </div>
+                                {generatedImages.length > 0 && (
+                                    <div className={`grid gap-4 mb-6 ${generatedImages.length > 2 ? 'grid-cols-2' : 'grid-cols-1 max-w-sm mx-auto'}`}>
+                                        {generatedImages.map((img, idx) => (
+                                            <div key={idx} className="w-full">
+                                                <ActionablePolaroidCard
+                                                    type="output"
+                                                    caption={`Kết quả ${idx + 1}`}
+                                                    status="done"
+                                                    mediaUrl={img}
+                                                    onClick={() => openLightbox(lightboxImages.indexOf(img))}
+                                                    isMobile={isMobile}
+                                                    onGenerateVideoFromPrompt={(prompt) => generateVideo(img, prompt)}
+                                                />
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
 
@@ -479,29 +509,49 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                     {(!isLoading && appState.stage !== 'results') && (
                         <div className="w-full max-w-4xl space-y-6 mt-6">
                             <div>
-                                <h3 className="text-lg font-bold text-neutral-300 mb-3 ml-1">Danh sách mẫu ({currentTemplates.length})</h3>
+                                <div className="flex items-center justify-between mb-3">
+                                    <h3 className="text-lg font-bold text-neutral-300 ml-1">Danh sách mẫu ({currentTemplates.length})</h3>
+                                    <div className="flex items-center gap-2">
+                                        <span className={`text-sm font-medium ${selectedStyleImages.length >= 4 ? 'text-orange-400' : 'text-neutral-400'}`}>
+                                            Đã chọn: {selectedStyleImages.length}/4
+                                        </span>
+                                        {selectedStyleImages.length > 0 && (
+                                            <button
+                                                onClick={() => setSelectedStyleImages([])}
+                                                className="text-xs text-neutral-500 hover:text-white underline"
+                                            >
+                                                Bỏ chọn tất cả
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
                                 {currentTemplates.length === 0 ? (
                                     <div className="text-center text-neutral-500 py-8">Chưa có mẫu nào cho mục này.</div>
                                 ) : (
                                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                                        {currentTemplates.map((tpl: any, idx: number) => (
-                                            <button
-                                                key={idx}
-                                                onClick={() => handleStyleSelect(tpl.image_url || tpl.url)}
-                                                className={`relative rounded-xl overflow-hidden border-2 transition-all duration-200 aspect-[9/16] ${appState.selectedStyleImage === (tpl.image_url || tpl.url) ? 'border-orange-400 scale-105 shadow-lg shadow-orange-400/20' : 'border-neutral-700 hover:border-neutral-500'}`}
-                                            >
-                                                <img src={tpl.image_url || tpl.url} alt={`Template ${idx + 1}`} className="w-full h-full object-cover" />
-                                                {appState.selectedStyleImage === (tpl.image_url || tpl.url) && (
-                                                    <div className="absolute inset-0 bg-orange-400/20 flex items-center justify-center">
-                                                        <div className="bg-orange-400 rounded-full p-1">
-                                                            <svg className="w-3 h-3 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                                            </svg>
+                                        {currentTemplates.map((tpl: any, idx: number) => {
+                                            const templateUrl = tpl.image_url || tpl.url;
+                                            const isSelected = selectedStyleImages.includes(templateUrl);
+                                            const selectionIndex = selectedStyleImages.indexOf(templateUrl);
+                                            const isAtLimit = selectedStyleImages.length >= 4 && !isSelected;
+                                            return (
+                                                <button
+                                                    key={idx}
+                                                    onClick={() => handleStyleSelect(templateUrl)}
+                                                    disabled={isAtLimit}
+                                                    className={`relative rounded-xl overflow-hidden border-2 transition-all duration-200 aspect-[9/16] ${isSelected ? 'border-orange-400 scale-105 shadow-lg shadow-orange-400/20' : isAtLimit ? 'border-neutral-800 opacity-50 cursor-not-allowed' : 'border-neutral-700 hover:border-neutral-500'}`}
+                                                >
+                                                    <img src={templateUrl} alt={`Template ${idx + 1}`} className="w-full h-full object-cover" />
+                                                    {isSelected && (
+                                                        <div className="absolute inset-0 bg-orange-400/20 flex items-center justify-center">
+                                                            <div className="bg-orange-400 rounded-full w-6 h-6 flex items-center justify-center">
+                                                                <span className="text-black font-bold text-sm">{selectionIndex + 1}</span>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                )}
-                                            </button>
-                                        ))}
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>
@@ -547,16 +597,21 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                                     </div>
                                 </div>
 
-                                <div className="mt-8 flex justify-center">
+                                <div className="mt-8 flex flex-col items-center gap-2">
+                                    {selectedStyleImages.length > 0 && (
+                                        <p className="text-sm text-neutral-400">
+                                            Chi phí: {selectedStyleImages.length * (modelVersion === 'v3' ? 2 : 1)} credits
+                                        </p>
+                                    )}
                                     <button
                                         onClick={handleGenerate}
-                                        disabled={!appState.uploadedImage || !appState.selectedStyleImage || isLoading}
-                                        className={`px-12 py-3 rounded-full font-bold text-black text-lg transition-all transform active:scale-95 shadow-lg ${!appState.uploadedImage || !appState.selectedStyleImage || isLoading
+                                        disabled={!appState.uploadedImage || selectedStyleImages.length === 0 || isLoading}
+                                        className={`px-12 py-3 rounded-full font-bold text-black text-lg transition-all transform active:scale-95 shadow-lg ${!appState.uploadedImage || selectedStyleImages.length === 0 || isLoading
                                             ? 'bg-neutral-600 cursor-not-allowed opacity-50'
                                             : 'bg-gradient-to-r from-orange-400 to-orange-600 hover:from-orange-600 hover:to-orange-400 shadow-orange-500/20'
                                             }`}
                                     >
-                                        {hasResults ? 'Tạo lại' : 'Tạo ảnh'}
+                                        {hasResults ? 'Tạo lại' : `Tạo ${selectedStyleImages.length} ảnh`}
                                     </button>
                                 </div>
                             </div>
