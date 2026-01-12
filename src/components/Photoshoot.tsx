@@ -30,7 +30,22 @@ const Photoshoot: React.FC<PhotoshootProps> = (props) => {
 
         try {
             const images = appState.outfitImage ? [appState.personImage, appState.outfitImage] : [appState.personImage];
-            const prompt = `Create a professional photoshoot. Background: ${appState.options.background || 'studio'}. Pose: ${appState.options.pose || 'standing'}. Lighting: ${appState.options.lighting || 'professional'}. ${appState.options.notes}`;
+            const prompt = `**CRITICAL: PRESERVE EXACT IDENTITY**
+Create a professional photoshoot of the person in the provided image.
+
+**ABSOLUTE REQUIREMENT - FACE IDENTITY PRESERVATION:**
+- The person in the output MUST be the EXACT SAME PERSON as in the input image.
+- Preserve 100% of facial features: eyes, nose, mouth, face shape, jawline, cheekbones.
+- Maintain the original skin tone and any distinguishing features.
+- If someone knows this person, they MUST immediately recognize them.
+
+**PHOTOSHOOT SETTINGS:**
+- Background: ${appState.options.background || 'studio'}
+- Pose: ${appState.options.pose || 'standing'}
+- Lighting: ${appState.options.lighting || 'professional'}
+${appState.options.notes ? `- Additional notes: ${appState.options.notes}` : ''}
+
+**QUALITY:** High resolution, professional photography, photorealistic result.`;
             const result = await generateStyledImage(prompt, images);
             onStateChange({ ...appState, stage: 'results', resultImage: result });
             addImagesToGallery([result]);

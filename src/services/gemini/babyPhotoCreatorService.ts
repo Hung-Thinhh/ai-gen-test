@@ -52,7 +52,24 @@ function getPrimaryPrompt(idea: string, customPrompt?: string, removeWatermark?:
     const watermarkText = removeWatermark ? ' Yêu cầu quan trọng: Kết quả cuối cùng không được chứa bất kỳ watermark, logo, hay chữ ký nào.' : '';
     const aspectRatioText = (aspectRatio && aspectRatio !== 'Giữ nguyên') ? `Bức ảnh kết quả BẮT BUỘC phải có tỷ lệ khung hình chính xác là ${aspectRatio}.` : '';
 
-    return `${aspectRatioText}\nTạo một bức ảnh chụp chân thật và tự nhiên của em bé trong ảnh gốc, trong bối cảnh concept "${idea}".${modificationText}${watermarkText} YÊU CẦU QUAN TRỌNG NHẤT: Phải giữ lại chính xác tuyệt đối 100% các đặc điểm trên khuôn mặt, đường nét, và biểu cảm của em bé trong ảnh gốc. Không được thay đổi hay chỉnh sửa khuôn mặt. Bức ảnh phải có chất lượng cao, sắc nét, như được chụp bởi một nhiếp ảnh gia chuyên nghiệp. Tránh tạo ra ảnh theo phong cách vẽ hay hoạt hình.`;
+    return `${aspectRatioText}
+
+**NHIỆM VỤ ƯU TIÊN HÀNG ĐẦU - GIỮ NGUYÊN KHUÔN MẶT EM BÉ (NON-NEGOTIABLE):**
+Đây là tác vụ tạo ảnh em bé, và điều QUAN TRỌNG NHẤT là giữ nguyên 100% danh tính của em bé trong ảnh gốc:
+1. Giữ nguyên CHÍNH XÁC: hình dáng khuôn mặt, mắt, mũi, miệng, tai, tóc.
+2. Giữ nguyên màu da, biểu cảm đặc trưng, và mọi nét đặc biệt của em bé.
+3. Người thân của em bé PHẢI nhận ra ngay đây là con/cháu của họ.
+4. KHÔNG ĐƯỢC tạo ra khuôn mặt em bé khác - chỉ được sử dụng khuôn mặt từ ảnh gốc.
+
+**MÔ TẢ BỐI CẢNH:**
+Tạo một bức ảnh chụp chân thật và tự nhiên của em bé trong ảnh gốc, trong bối cảnh concept "${idea}".
+
+**YÊU CẦU KỸ THUẬT:**
+- Chất lượng cao, sắc nét, như được chụp bởi một nhiếp ảnh gia chuyên nghiệp.
+- Tránh tạo ra ảnh theo phong cách vẽ hay hoạt hình.
+- Ánh sáng tự nhiên, màu sắc rực rỡ.${modificationText}${watermarkText}
+
+**KIỂM TRA CUỐI:** Nếu khuôn mặt em bé trong kết quả không giống hệt ảnh gốc, tác vụ THẤT BẠI.`;
 }
 
 function getFallbackPrompt(idea: string, customPrompt?: string, removeWatermark?: boolean, aspectRatio?: string): string {
@@ -60,7 +77,13 @@ function getFallbackPrompt(idea: string, customPrompt?: string, removeWatermark?
     const watermarkText = removeWatermark ? ' Yêu cầu thêm: Không có watermark, logo, hay chữ ký trên ảnh.' : '';
     const aspectRatioText = (aspectRatio && aspectRatio !== 'Giữ nguyên') ? `Bức ảnh kết quả BẮT BUỘC phải có tỷ lệ khung hình chính xác là ${aspectRatio}.` : '';
 
-    return `${aspectRatioText}\nTạo một bức ảnh chụp chân dung của em bé trong ảnh này với chủ đề "${idea}".${modificationText}${watermarkText} Bức ảnh cần trông thật và tự nhiên. YÊU CẦU QUAN TRỌNG NHẤT: Phải giữ lại chính xác tuyệt đối 100% các đặc điểm trên khuôn mặt của em bé trong ảnh gốc. Không được thay đổi khuôn mặt.`;
+    return `${aspectRatioText}
+
+**YÊU CẦU TUYỆT ĐỐI - GIỮ NGUYÊN KHUÔN MẶT:**
+Tạo ảnh chân dung em bé với chủ đề "${idea}".
+- BẮT BUỘC giữ nguyên 100% khuôn mặt em bé trong ảnh gốc (mắt, mũi, miệng, khuôn mặt).
+- Không được thay đổi hay cải thiện khuôn mặt.
+- Kết quả phải trông thật và tự nhiên.${modificationText}${watermarkText}`;
 }
 
 async function analyzeBabyConceptImage(styleImageDataUrl: string): Promise<string> {

@@ -1,5 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/neon/client';
+import { getSystemConfig } from '@/lib/neon/queries';
+
+// Helper function to get guest generation limit from system_configs
+async function getGuestGenerationLimit(): Promise<number> {
+    try {
+        const limit = await getSystemConfig('guest_generation_limit');
+        return limit ? parseInt(limit, 10) : 3; // Fallback to 3 if not configured
+    } catch (error) {
+        console.error('[API] Error fetching guest_generation_limit:', error);
+        return 3;
+    }
+}
 
 /**
  * GET /api/credits/guest?guestId=xxx - Get guest credits
@@ -20,9 +32,9 @@ export async function GET(req: NextRequest) {
             LIMIT 1
         `;
 
-        // If guest doesn't exist, create with default credits
+        // If guest doesn't exist, create with default credits from system_configs
         if (!result || result.length === 0) {
-            const defaultCredits = 3;
+            const defaultCredits = await getGuestGenerationLimit();
             // Use upsert-like logic or just insert since we checked it doesn't exist
             // But concurrency might be an issue, usage of ON CONFLICT is better if guest_id is PK/Unique
             // Assuming guest_id is compatible with ON CONFLICT or just try INSERT
@@ -50,7 +62,7 @@ export async function GET(req: NextRequest) {
         // [INFINITE TRIAL LOGIC]
         // If credits <= 0, refill immediately so UI shows positive balance
         if (currentCredits <= 0) {
-            const defaultCredits = 3;
+            const defaultCredits = await getGuestGenerationLimit();
             await sql`
                 UPDATE guest_sessions 
                 SET credits = ${defaultCredits}
@@ -90,7 +102,7 @@ export async function POST(req: NextRequest) {
         `;
 
         if (!checkGuest || checkGuest.length === 0) {
-            const defaultCredits = 3;
+            const defaultCredits = await getGuestGenerationLimit();
             try {
                 await sql`
                     INSERT INTO guest_sessions (guest_id, credits, last_seen)
@@ -114,8 +126,8 @@ export async function POST(req: NextRequest) {
         if (!result || result.length === 0) {
             console.log(`[API] Guest ${guestId} out of credits. Refilling for Infinite Trial...`);
 
-            // Reset to 3 (or whatever default)
-            const defaultCredits = 3;
+            // Reset to guest_generation_limit from system_configs
+            const defaultCredits = await getGuestGenerationLimit();
 
             // Refill
             await sql`

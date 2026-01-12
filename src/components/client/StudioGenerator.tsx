@@ -36,7 +36,7 @@ interface StudioGeneratorProps {
 
 const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
     const router = useRouter();
-    const { t, settings, checkCredits, modelVersion } = useAppControls();
+    const { t, settings, checkCredits, modelVersion, handleModelVersionChange } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
     const { generateVideo } = useVideoGeneration();
     const isMobile = useMediaQuery('(max-width: 768px)');
@@ -258,13 +258,31 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
 
     return (
         <div className="flex flex-col items-center justify-center w-full h-full flex-1 min-h-screen mb-40" id="studio-top">
-            <div className="w-full max-w-7xl pt-6 px-4">
-                <button onClick={handleGoBack} className="text-neutral-400 hover:text-white flex items-center gap-2 mb-4">
+            <div className="w-full max-w-7xl pt-6 px-4 flex items-center justify-between">
+                <button onClick={handleGoBack} className="text-neutral-400 hover:text-white flex items-center gap-2">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
                     Quay lại
                 </button>
+
+                {/* Model Version Selector */}
+                <div className="flex gap-1 themed-card backdrop-blur-md rounded-full p-1 border border-white/10 shadow-lg">
+                    <button
+                        onClick={() => handleModelVersionChange('v2')}
+                        className={`rounded-full font-bold transition-all duration-200 px-4 py-1.5 text-xs ${modelVersion === 'v2' ? 'text-black shadow-md bg-orange-500' : 'text-neutral-400 hover:text-white'
+                            }`}
+                    >
+                        Model V2
+                    </button>
+                    <button
+                        onClick={() => handleModelVersionChange('v3')}
+                        className={`rounded-full font-bold transition-all duration-200 px-4 py-1.5 text-xs ${modelVersion === 'v3' ? 'text-black shadow-md bg-orange-500' : 'text-neutral-400 hover:text-white'
+                            }`}
+                    >
+                        Model V3
+                    </button>
+                </div>
             </div>
 
             <AnimatePresence>
@@ -299,7 +317,7 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                                         key={tab.id}
                                         onClick={() => handleTabChange(tab.id as any)}
                                         className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${activeTab === tab.id
-                                            ? 'bg-yellow-400 text-black shadow-lg shadow-yellow-400/20'
+                                            ? 'bg-orange-400 text-black shadow-lg shadow-orange-400/20'
                                             : 'text-neutral-400 hover:text-white hover:bg-white/5'
                                             }`}
                                     >
@@ -312,7 +330,7 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                                 {activeTab === 'couple' ? (
                                     <>
                                         <div className="themed-card backdrop-blur-md p-4 rounded-2xl flex flex-col items-center gap-4">
-                                            <h3 className="text-lg font-bold text-yellow-400">1. Ảnh Nữ (Chính)</h3>
+                                            <h3 className="text-lg font-bold text-orange-400">1. Ảnh Nữ (Chính)</h3>
                                             <ActionablePolaroidCard
                                                 type={appState.uploadedImage ? 'photo-input' : 'uploader'}
                                                 mediaUrl={appState.uploadedImage ?? undefined}
@@ -325,7 +343,7 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                                             />
                                         </div>
                                         <div className="themed-card backdrop-blur-md p-4 rounded-2xl flex flex-col items-center gap-4">
-                                            <h3 className="text-lg font-bold text-yellow-400">2. Ảnh Nam (Phụ)</h3>
+                                            <h3 className="text-lg font-bold text-orange-400">2. Ảnh Nam (Phụ)</h3>
                                             <ActionablePolaroidCard
                                                 type={appState.uploadedImage2 ? 'photo-input' : 'uploader'}
                                                 mediaUrl={appState.uploadedImage2 ?? undefined}
@@ -341,7 +359,7 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                                 ) : (
                                     <>
                                         <div className="themed-card backdrop-blur-md p-4 rounded-2xl flex flex-col items-center gap-4">
-                                            <h3 className="text-lg font-bold text-yellow-400">1. Tải ảnh lên</h3>
+                                            <h3 className="text-lg font-bold text-orange-400">1. Tải ảnh lên</h3>
                                             <ActionablePolaroidCard
                                                 type={appState.uploadedImage ? 'photo-input' : 'uploader'}
                                                 mediaUrl={appState.uploadedImage ?? undefined}
@@ -359,25 +377,66 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                         </div>
                     )}
 
-                    {/* 2. Loading State */}
+                    {/* 2. Loading State - Show header, inputs and loading output */}
                     {isLoading && (
-                        <motion.div className="flex flex-col items-center justify-center gap-4 py-12" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                            <div className="w-16 h-16 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin" />
-                            <p className="text-neutral-300">Đang tạo ảnh...</p>
-                            <button
-                                onClick={() => setAppState(prev => ({ ...prev, stage: 'configuring', error: null }))}
-                                className="mt-4 px-6 py-2 bg-neutral-700 text-white rounded-full hover:bg-neutral-600 transition-colors text-sm"
-                            >
-                                Hủy
-                            </button>
-                        </motion.div>
+                        <div className="w-full max-w-4xl">
+                            {/* Title */}
+                            <div className="text-center mb-6">
+                                <h1 className="text-2xl md:text-3xl font-bold text-white">{studio.name}</h1>
+                                <p className="text-neutral-400 mt-2">{studio.description || "Đang tạo ảnh..."}</p>
+                            </div>
+
+                            {/* Input/Output Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Input Section */}
+                                <div className="themed-card backdrop-blur-md p-4 rounded-2xl flex flex-col items-center gap-4">
+                                    <h3 className="text-lg font-bold text-orange-400">Ảnh gốc</h3>
+                                    <div className="w-full max-w-xs">
+                                        <ActionablePolaroidCard
+                                            type="photo-input"
+                                            mediaUrl={appState.uploadedImage ?? undefined}
+                                            caption="Ảnh của bạn"
+                                            placeholderType="person"
+                                            status="done"
+                                            isMobile={isMobile}
+                                        />
+                                    </div>
+                                    {appState.selectedStyleImage && (
+                                        <div className="mt-2">
+                                            <p className="text-sm text-neutral-400 mb-2 text-center">Mẫu đã chọn</p>
+                                            <img
+                                                src={appState.selectedStyleImage}
+                                                alt="Mẫu"
+                                                className="w-20 h-28 object-cover rounded-lg border border-orange-400/50"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Output Section - Loading */}
+                                <div className="themed-card backdrop-blur-md p-4 rounded-2xl flex flex-col items-center gap-4">
+                                    <h3 className="text-lg font-bold text-orange-400">Kết quả</h3>
+                                    <div className="w-full max-w-xs aspect-[3/4] bg-neutral-900/50 rounded-xl border border-neutral-700 flex flex-col items-center justify-center gap-4">
+                                        <div className="w-16 h-16 border-4 border-orange-400 border-t-transparent rounded-full animate-spin" />
+                                        <p className="text-neutral-300 text-sm">Đang tạo ảnh...</p>
+                                        <div className="text-xs text-neutral-500">Vui lòng đợi trong giây lát</div>
+                                    </div>
+                                    <button
+                                        onClick={() => setAppState(prev => ({ ...prev, stage: 'configuring', error: null }))}
+                                        className="mt-2 px-6 py-2 bg-neutral-700 text-white rounded-full hover:bg-neutral-600 transition-colors text-sm"
+                                    >
+                                        Hủy
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     )}
 
                     {/* 3. Results Section */}
                     {!isLoading && appState.stage === 'results' && (
                         <div className="w-full max-w-4xl mt-6">
                             <div className="themed-card backdrop-blur-md rounded-2xl p-6 relative border-dashed! border-orange-600! px-0!">
-                                <h3 className="base-font font-bold text-xl text-yellow-400 mb-4 text-center">Kết quả</h3>
+                                <h3 className="base-font font-bold text-xl text-orange-400 mb-4 text-center">Kết quả</h3>
 
                                 {appState.error && (
                                     <div className="w-full p-4 mb-4 bg-red-500/20 border border-red-500/50 rounded-xl text-red-300 text-center">
@@ -408,7 +467,7 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                                     >
                                         Sửa
                                     </button>
-                                    <button onClick={handleReset} className="px-6 py-2 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 shadow-orange-500/20 text-white rounded-full cursor-pointer transition-colors">
+                                    <button onClick={handleReset} className="px-6 py-2 bg-gradient-to-r from-orange-400 to-orange-600 hover:from-orange-600 hover:to-orange-400 shadow-orange-500/20 text-white rounded-full cursor-pointer transition-colors">
                                         Bắt đầu lại
                                     </button>
                                 </div>
@@ -429,12 +488,12 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                                             <button
                                                 key={idx}
                                                 onClick={() => handleStyleSelect(tpl.image_url || tpl.url)}
-                                                className={`relative rounded-xl overflow-hidden border-2 transition-all duration-200 aspect-[3/4] ${appState.selectedStyleImage === (tpl.image_url || tpl.url) ? 'border-yellow-400 scale-105 shadow-lg shadow-yellow-400/20' : 'border-neutral-700 hover:border-neutral-500'}`}
+                                                className={`relative rounded-xl overflow-hidden border-2 transition-all duration-200 aspect-[9/16] ${appState.selectedStyleImage === (tpl.image_url || tpl.url) ? 'border-orange-400 scale-105 shadow-lg shadow-orange-400/20' : 'border-neutral-700 hover:border-neutral-500'}`}
                                             >
                                                 <img src={tpl.image_url || tpl.url} alt={`Template ${idx + 1}`} className="w-full h-full object-cover" />
                                                 {appState.selectedStyleImage === (tpl.image_url || tpl.url) && (
-                                                    <div className="absolute inset-0 bg-yellow-400/20 flex items-center justify-center">
-                                                        <div className="bg-yellow-400 rounded-full p-1">
+                                                    <div className="absolute inset-0 bg-orange-400/20 flex items-center justify-center">
+                                                        <div className="bg-orange-400 rounded-full p-1">
                                                             <svg className="w-3 h-3 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                                                             </svg>
@@ -457,7 +516,7 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                                             value={appState.options.customPrompt}
                                             onChange={(e) => handleOptionChange('customPrompt', e.target.value)}
                                             placeholder="Nhập ghi chú thêm cho AI..."
-                                            className="w-full bg-neutral-900/50 border border-neutral-700 rounded-xl p-3 text-white focus:border-yellow-400 focus:outline-none"
+                                            className="w-full bg-neutral-900/50 border border-neutral-700 rounded-xl p-3 text-white focus:border-orange-400 focus:outline-none"
                                             rows={2}
                                         />
                                     </div>
@@ -467,7 +526,7 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                                             <select
                                                 value={appState.options.aspectRatio}
                                                 onChange={(e) => handleOptionChange('aspectRatio', e.target.value)}
-                                                className="bg-neutral-900/50 border border-neutral-700 rounded-xl px-4 py-2 text-white focus:border-yellow-400 focus:outline-none"
+                                                className="bg-neutral-900/50 border border-neutral-700 rounded-xl px-4 py-2 text-white focus:border-orange-400 focus:outline-none"
                                             >
                                                 {Array.isArray(ASPECT_RATIO_OPTIONS) && ASPECT_RATIO_OPTIONS.map((opt: string) => (
                                                     <option key={opt} value={opt}>{opt}</option>
@@ -480,7 +539,7 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                                                     type="checkbox"
                                                     checked={appState.options.removeWatermark}
                                                     onChange={(e) => handleOptionChange('removeWatermark', e.target.checked)}
-                                                    className="rounded border-neutral-600 bg-neutral-800 text-yellow-400 focus:ring-yellow-400"
+                                                    className="rounded border-neutral-600 bg-neutral-800 text-orange-400 focus:ring-orange-400"
                                                 />
                                                 <span className="text-sm font-medium text-neutral-300">Xóa watermark</span>
                                             </label>
@@ -494,7 +553,7 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                                         disabled={!appState.uploadedImage || !appState.selectedStyleImage || isLoading}
                                         className={`px-12 py-3 rounded-full font-bold text-black text-lg transition-all transform active:scale-95 shadow-lg ${!appState.uploadedImage || !appState.selectedStyleImage || isLoading
                                             ? 'bg-neutral-600 cursor-not-allowed opacity-50'
-                                            : 'bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 shadow-orange-500/20'
+                                            : 'bg-gradient-to-r from-orange-400 to-orange-600 hover:from-orange-600 hover:to-orange-400 shadow-orange-500/20'
                                             }`}
                                     >
                                         {hasResults ? 'Tạo lại' : 'Tạo ảnh'}

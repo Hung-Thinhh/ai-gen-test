@@ -65,18 +65,75 @@ export async function swapFaces(
     targetFaceDataUrl: string,
     additionalInstructions?: string
 ): Promise<string> {
-    const prompt = `Your task is to perform a face swap.
-- The ** first image ** is the source image that needs to be modified.
-- The ** second image ** contains the target face that should be transferred onto the person in the first image.
+    const prompt = `**PROFESSIONAL FACE SWAP - READ CAREFULLY**
 
-** CRITICAL INSTRUCTIONS:**
-    1. Identify the face in the second image.
-2. Identify the primary face in the first image.
-3. Replace the face in the first image with the face from the second image.
-4. The final result must be seamless and photorealistic.You must adjust lighting, skin tone, and perspective of the swapped face to perfectly match the source image's environment.
-5. Preserve the hair, clothing, and background of the first image.
+**UNDERSTAND THE TASK:**
+You are replacing the FACE in Image 1 with the FACE from Image 2.
+- Image 1 = The SCENE (body, clothes, hair, background, pose, angle) - KEEP EVERYTHING EXCEPT THE FACE
+- Image 2 = The NEW FACE source - TAKE ONLY THE FACIAL FEATURES
 
-    ${additionalInstructions ? `**User Refinement:** ${additionalInstructions}` : ''} `;
+**CRITICAL RULES:**
+
+**RULE 1: PRESERVE SCENE FROM IMAGE 1 (100%)**
+Keep these EXACTLY as they appear in Image 1:
+✓ Background (studio backdrop, scenery, colors)
+✓ Body and clothing (same clothes, same pose)
+✓ Hair style and hair color (from Image 1, NOT Image 2)
+✓ Head angle and pose (same tilt, rotation)
+✓ Overall lighting direction and color temperature
+✓ Image composition and framing
+DO NOT change ANYTHING about the scene, clothes, hair, or background!
+
+**RULE 2: TAKE FACE FROM IMAGE 2 (Identity Features Only)**
+Extract these facial features from Image 2:
+✓ Eye shape, color, spacing, eyelids
+✓ Nose shape and structure
+✓ Mouth, lips, teeth pattern
+✓ Face shape (jaw, cheeks, chin contour)
+✓ Eyebrows shape and thickness
+✓ Skin texture, freckles, moles
+✓ Glasses (if person in Image 2 wears glasses, include them)
+✓ Facial hair (beard, mustache if present)
+
+**RULE 3: ADAPT THE FACE TO IMAGE 1'S SCENE (CRITICAL)**
+
+1. **MATCH HEAD ANGLE FROM IMAGE 1:**
+   - Look at Image 1's head angle (straight, 3/4 left, 3/4 right, tilted).
+   - Rotate Image 2's face to match that EXACT angle.
+   - The face must fit the head position in Image 1.
+
+2. **MATCH LIGHTING FROM IMAGE 1:**
+   - Apply Image 1's lighting to the new face.
+   - Shadows should fall in the same direction as Image 1.
+   - Color temperature (warm/cool) must match Image 1.
+   - If Image 1 has studio lighting, apply studio lighting to the face.
+
+3. **SKIN TONE COLOR GRADING:**
+   - Keep the person's identity from Image 2 (same skin texture).
+   - BUT adjust brightness, contrast, saturation to match Image 1's lighting.
+   - Remove any color cast from Image 2's original photo.
+   - The face should look like it was photographed in Image 1's lighting.
+
+4. **SCALE TO FIT:**
+   - Size the face to match the head in Image 1.
+   - Face fills the head area naturally.
+
+**RULE 4: SEAMLESS BLENDING**
+- NO visible edges or seams around the face.
+- Hair from Image 1 blends naturally with the new face.
+- Neck and ear transitions are invisible.
+- Result looks like a REAL photograph, not a collage.
+
+**COMMON MISTAKES TO AVOID:**
+❌ Don't use Image 2's background
+❌ Don't use Image 2's hair style
+❌ Don't use Image 2's clothing
+❌ Don't keep Image 2's head angle if different from Image 1
+❌ Don't keep Image 2's lighting if different from Image 1
+
+${additionalInstructions ? `**User's Additional Instructions:** ${additionalInstructions}` : ''}
+
+**FINAL CHECK:** Result = Image 1's body/scene/hair + Image 2's face (adapted to fit Image 1's angle and lighting).`;
 
     const sourceParsed = parseDataUrl(sourceImageDataUrl);
     const targetParsed = parseDataUrl(targetFaceDataUrl);
@@ -125,15 +182,39 @@ export async function generatePhotoBooth(
     imageDataUrl: string,
     count: number
 ): Promise<string> {
-    const prompt = `Take the person from the provided image and create a photobooth - style photo strip.
+    const prompt = `**PHOTOBOOTH TASK - CRITICAL: PRESERVE EXACT IDENTITY**
 
-** CRITICAL INSTRUCTIONS:**
-    1. Create a grid of ** ${count}** unique photos.
-2. Each photo in the grid must feature the ** exact same person ** from the original image.
-3. ** Vary the Poses / Expressions:** Each photo must have a different, fun, classic photobooth expression or pose(e.g., smiling, laughing, winking, surprised, making a funny face, peace sign, etc.).
-4. ** Maintain Identity:** The person's identity must be perfectly preserved across all photos.
-5. ** Cohesive Style:** All photos should share a consistent lighting and style, as if taken in the same photobooth session.
-6. The final output must be a single image file containing the grid of photos.`;
+Create a photobooth-style photo strip using the person from the provided image.
+
+**ABSOLUTE REQUIREMENT - IDENTITY PRESERVATION (NON-NEGOTIABLE):**
+1. Every photo in the grid MUST feature the EXACT SAME PERSON from the original image.
+2. Preserve 100% of these facial features across ALL photos:
+   - Eye shape, eye color, eye spacing
+   - Nose shape, nose size, nostril structure  
+   - Mouth shape, lip fullness
+   - Face shape: jawline, cheekbones, chin
+   - Forehead shape, eyebrows
+   - Skin tone, skin texture, any distinguishing features
+3. If someone knows this person, they MUST recognize them in EVERY photo.
+4. DO NOT create generic faces - use ONLY the face from the reference image.
+
+**PHOTOBOOTH SPECIFICATIONS:**
+1. Create a grid of **${count}** unique photos.
+2. Each photo should have a different fun expression/pose:
+   - Smiling, laughing, winking, surprised
+   - Making funny faces, peace sign, thumbs up
+   - Looking thoughtful, excited, playful
+3. Maintain consistent lighting and style across all photos.
+4. Background should be neutral/photobooth style.
+
+**TECHNICAL REQUIREMENTS:**
+- High resolution, sharp focus
+- Natural skin tones matching the original
+- Photorealistic quality
+- The final output must be a single image containing the grid.
+
+**QUALITY CHECK:** 
+The person in the output MUST be immediately recognizable as the person in the input photo. Different expressions - SAME person.`;
 
     const { mimeType, data } = parseDataUrl(imageDataUrl);
     const parts = [

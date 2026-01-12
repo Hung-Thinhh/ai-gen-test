@@ -409,8 +409,22 @@ export interface PortraitGeneratorState {
     stage: 'configuring' | 'generating' | 'results';
     prompt: string;
     uploadedImage: string | null;
-    resultImage: string | null;
-    options: { style: string; lighting: string; background: string; notes: string };
+    resultImages: string[];
+    pendingCount: number;
+    options: {
+        style: string;
+        lighting: string;
+        background: string;
+        angle: string;
+        expression: string;
+        aspectRatio: string;
+        skinTone: string;
+        attire: string;
+        mood: string;
+        colorTone: string;
+        imageCount: number;
+        notes: string;
+    };
     error: string | null;
 }
 
@@ -657,7 +671,7 @@ export const getInitialStateForApp = (viewId: string): AnyAppState => {
         case 'dress-the-model':
             return { stage: 'idle', modelImage: null, clothingImage: null, generatedImage: null, historicalImages: [], options: { background: '', pose: '', style: '', aspectRatio: 'Giữ nguyên', notes: '', removeWatermark: false }, error: null };
         case 'portrait-generator':
-            return { stage: 'configuring', prompt: '', uploadedImage: null, resultImage: null, options: { style: '', lighting: '', background: '', notes: '' }, error: null };
+            return { stage: 'configuring', prompt: '', uploadedImage: null, resultImages: [], pendingCount: 0, options: { style: '', lighting: '', background: '', angle: '', expression: '', aspectRatio: '3:4', skinTone: '', attire: '', mood: '', colorTone: '', imageCount: 1, notes: '' }, error: null };
         case 'photo-restoration':
             return { stage: 'idle', uploadedImage: null, generatedImage: null, historicalImages: [], options: { type: 'Chân dung', gender: 'Tự động', age: '', nationality: '', notes: '', removeWatermark: false, removeStains: true, colorizeRgb: true }, error: null };
         case 'swap-style':
@@ -727,7 +741,7 @@ export const getInitialStateForApp = (viewId: string): AnyAppState => {
         case 'concept-studio':
             return { stage: 'configuring', conceptImage: null, resultImage: null, error: null } as ConceptStudioState;
         case 'portrait-generator':
-            return { stage: 'configuring', prompt: '', resultImage: null, options: { style: '', lighting: '', background: '', notes: '' }, error: null } as PortraitGeneratorState;
+            return { stage: 'configuring', prompt: '', uploadedImage: null, resultImages: [], pendingCount: 0, options: { style: '', lighting: '', background: '', angle: '', expression: '', aspectRatio: '3:4', skinTone: '', attire: '', mood: '', colorTone: '', imageCount: 1, notes: '' }, error: null } as PortraitGeneratorState;
         case 'photoshoot':
             return { stage: 'configuring', personImage: null, outfitImage: null, resultImage: null, options: { background: '', pose: '', lighting: '', notes: '' }, error: null } as PhotoshootState;
         case 'studio-photoshoot':
@@ -861,6 +875,7 @@ export interface AppControlContextType {
     guestCredits: number; // NEW
     userCredits: number; // NEW
     userIp: string;   // NEW
+    isIncognito: boolean; // NEW - Detect incognito mode
     generationHistory: GenerationHistoryEntry[];
     modelVersion: ModelVersion;
     imageResolution: ImageResolution;

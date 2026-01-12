@@ -136,11 +136,42 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const [guestCredits, setGuestCredits] = useState<number>(0); // Default to 0
     const [userCredits, setUserCredits] = useState<number>(0); // New user credits
     const [userIp, setUserIp] = useState<string>('');
+    const [isIncognito, setIsIncognito] = useState<boolean>(false); // Detect incognito mode
 
     // Initialize Guest ID and IP
     useEffect(() => {
-        // 1. Initialize stable Guest ID using FingerprintJS
+        // 0. Detect Incognito Mode using Storage Quota
+        const detectIncognito = async () => {
+            try {
+                if ('storage' in navigator && 'estimate' in navigator.storage) {
+                    const { quota } = await navigator.storage.estimate();
+                    // Incognito mode typically has quota < 120MB
+                    const isPrivate = quota !== undefined && quota < 120000000;
+                    if (isPrivate) {
+                        console.log('🕵️ Incognito mode detected! Quota:', quota);
+                        setIsIncognito(true);
+                        // Set credits = 0 for incognito users
+                        setGuestCredits(0);
+                    }
+                }
+            } catch (e) {
+                console.log('Could not detect incognito mode');
+            }
+        };
+        detectIncognito();
+
+        // 1. Initialize stable Guest ID - PRIORITY: localStorage first, then FingerprintJS
         const initGuestId = async () => {
+            // Check localStorage FIRST to maintain stability
+            const existingGuestId = localStorage.getItem('guest_device_id');
+
+            if (existingGuestId) {
+                console.log('🆔 Using existing Guest ID from localStorage:', existingGuestId);
+                setGuestId(existingGuestId);
+                return; // Exit early - don't regenerate fingerprint
+            }
+
+            // Only generate new fingerprint if no existing ID
             try {
                 // Dynamic import to avoid SSR issues and reduce initial bundle size
                 const FingerprintJS = await import('@fingerprintjs/fingerprintjs');
@@ -149,20 +180,17 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
                 // Use visitorId as the core of our guestId
                 const stableGuestId = `guest_${result.visitorId}`;
-                console.log('🆔 Fingerprint Generated:', stableGuestId);
+                console.log('🆔 New Fingerprint Generated:', stableGuestId);
 
                 setGuestId(stableGuestId);
                 localStorage.setItem('guest_device_id', stableGuestId);
             } catch (error) {
-                console.warn('⚠️ Fingerprint failed, falling back to localStorage/Random:', error);
+                console.warn('⚠️ Fingerprint failed, creating random ID:', error);
 
-                // Fallback: Use existing local storage or create new random
-                let storedGuestId = localStorage.getItem('guest_device_id');
-                if (!storedGuestId) {
-                    storedGuestId = `guest_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-                    localStorage.setItem('guest_device_id', storedGuestId);
-                }
-                setGuestId(storedGuestId);
+                // Fallback: Create new random ID
+                const randomGuestId = `guest_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+                localStorage.setItem('guest_device_id', randomGuestId);
+                setGuestId(randomGuestId);
             }
         };
 
@@ -277,11 +305,23 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 let mergedGallery = localGallery;
                 if (guestId) {
                     try {
-                        const { getGuestCredits } = await import('../services/storageService');
-                        const credits = await getGuestCredits(guestId);
-                        // DEBUG: Toast to verify
-                        // import('react-hot-toast').then(t => t.default.success(`Guest: ${guestId.slice(0,6)}... Credits: ${credits}`));
-                        setGuestCredits(credits);
+                        // Check if incognito mode - skip credits for private browsing
+                        let isPrivateBrowsing = false;
+                        if ('storage' in navigator && 'estimate' in navigator.storage) {
+                            const { quota } = await navigator.storage.estimate();
+                            isPrivateBrowsing = quota !== undefined && quota < 120000000;
+                        }
+
+                        if (isPrivateBrowsing) {
+                            console.log('🕵️ Private browsing detected - credits = 0');
+                            setGuestCredits(0);
+                        } else {
+                            const { getGuestCredits } = await import('../services/storageService');
+                            const credits = await getGuestCredits(guestId);
+                            // DEBUG: Toast to verify
+                            // import('react-hot-toast').then(t => t.default.success(`Guest: ${guestId.slice(0,6)}... Credits: ${credits}`));
+                            setGuestCredits(credits);
+                        }
 
                         const guestCloudImages = await storageService.getGuestCloudGallery(guestId);
                         if (guestCloudImages.length > 0) {
@@ -293,8 +333,8 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                         }
                     } catch (e) {
                         console.warn('Failed to load guest cloud data:', e);
-                        // Set default credits for new guests on error
-                        setGuestCredits(3);
+                        // Keep default (0) - server will provide correct value on next API call
+                        // setGuestCredits(0); // Already initialized to 0
                     }
                 }
 
@@ -320,7 +360,8 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                     setGuestCredits(credits);
                 } catch (e) {
                     console.error('[uiContexts] Failed to refresh guest credits after logout:', e);
-                    setGuestCredits(3); // Fallback to default
+                    // Don't set fallback - keep current value or 0
+                    // Server will provide correct value on retry
                 }
             }
         };
@@ -1075,6 +1116,7 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         userIp,
         user,
         isLoggedIn,
+        isIncognito,
     }), [
         currentView, settings, theme, imageGallery, historyIndex, viewHistory,
         isSearchOpen, isGalleryOpen, isInfoOpen, isExtraToolsOpen,
@@ -1097,7 +1139,7 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         openStoryboardingModal, closeStoryboardingModal, hideStoryboardingModal,
         toggleStoryboardingModal, openLayerComposer, closeLayerComposer,
         hideLayerComposer, toggleLayerComposer, importSettingsAndNavigate,
-        t, guestId, userIp, user, isLoggedIn
+        t, guestId, userIp, user, isLoggedIn, isIncognito
     ]);
 
     return (

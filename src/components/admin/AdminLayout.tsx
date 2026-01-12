@@ -40,7 +40,8 @@ import {
     CreditCard as BillingIcon,
     BarChart as AnalyticsIcon,
     Description as DescriptionIcon,
-    Image as ImageIcon
+    Image as ImageIcon,
+    Article as ArticleIcon
 } from '@mui/icons-material';
 
 // ... (code omitted)
@@ -164,7 +165,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
             // Editor role restrictions
             if (role === 'editor') {
-                const allowedPaths = ['/admin/tools', '/admin/prompts', '/admin/categories', '/admin/studios'];
+                const allowedPaths = ['/admin/tools', '/admin/prompts', '/admin/categories', '/admin/studios', '/admin/blog'];
                 const isAllowed = allowedPaths.some(path => pathname?.startsWith(path));
                 if (!isAllowed) {
                     console.log('[AdminLayout] Editor accessing restricted page, redirecting to tools');
@@ -196,6 +197,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         if (path.includes('studios')) return 'Studio';
         if (path.includes('system-configs')) return 'Cấu hình Hệ thống';
         if (path.includes('banners')) return 'Banner Trang Chủ';
+        if (path.includes('blog')) return 'Blog';
         return 'Tổng quan';
     };
 
@@ -233,6 +235,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { text: 'Studio', icon: <BrushIcon />, path: '/admin/studios', roles: ['admin', 'editor'] },
         { text: 'Prompts', icon: <DescriptionIcon />, path: '/admin/prompts', roles: ['admin', 'editor'] },
         { text: 'Banner', icon: <ImageIcon />, path: '/admin/banners', roles: ['admin'] },
+        { text: 'Blog', icon: <ArticleIcon />, path: '/admin/blog', roles: ['admin', 'editor'] },
         { text: 'Cấu hình HT', icon: <SettingsIcon />, path: '/admin/system-configs', roles: ['admin'] },
         { text: 'Gói cước', icon: <BillingIcon />, path: '/admin/pricing', roles: ['admin'] },
     ];

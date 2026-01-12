@@ -80,6 +80,21 @@ const Home: React.FC<HomeProps> = ({ onSelectApp, title, subtitle, apps: initial
         }));
 
         const activeTools = mappedTools.filter((t: any) => t.status == 'active');
+
+        // Sort by sort_order: 1, 2, 3... first, then 0s (or null) at the end
+        activeTools.sort((a: any, b: any) => {
+          const orderA = a.sort_order || 0;
+          const orderB = b.sort_order || 0;
+
+          // If both are 0/null, maintain original order
+          if (orderA === 0 && orderB === 0) return 0;
+          // 0/null goes to the end
+          if (orderA === 0) return 1;
+          if (orderB === 0) return -1;
+          // Sort by sort_order ascending (1, 2, 3...)
+          return orderA - orderB;
+        });
+
         setDbTools(activeTools);
       } catch (error) {
         console.error("Error fetching tools in Home:", error);

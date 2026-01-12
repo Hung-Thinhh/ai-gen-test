@@ -81,7 +81,11 @@ export async function POST(req: NextRequest) {
             // Create guest session if doesn't exist
             if (!guestData) {
                 console.log('[API DEBUG] Creating new guest session:', guestId);
-                const defaultCredits = 3;
+
+                // Get default credits from system_configs
+                const { getSystemConfig } = await import('@/lib/neon/queries');
+                const guestLimitConfig = await getSystemConfig('guest_generation_limit');
+                const defaultCredits = guestLimitConfig ? parseInt(guestLimitConfig, 10) : 3;
 
                 try {
                     await sql`
