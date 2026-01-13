@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { sql } from '@/lib/neon/client';
+import { sql } from '@/lib/postgres/client';
 
 // GET all packages
 export async function GET(req: NextRequest) {

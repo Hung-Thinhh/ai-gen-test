@@ -42,7 +42,6 @@ import {
     type ImageResolution
 } from './uiUtils';
 import { type IDPhotoCreatorState } from './uiTypes';
-import { setupAuthListener } from '@/lib/supabase/auth-listener';
 import { LoadingSpinnerIcon, HomeIcon, SparklesIcon, GalleryIcon, GridSquaresIcon, PlaceholderPersonIcon } from './icons';
 import { BottomNavigation } from './BottomNavigation';
 import { MobilePageHeader } from './MobileHeader';
@@ -214,18 +213,6 @@ function MainApp() {
                 window.history.replaceState({}, '', window.location.pathname);
             }
         }
-    }, []);
-
-    // Setup auth state listener for auto token refresh
-    useEffect(() => {
-        console.log('[MainApp] Setting up auth listener');
-        const subscription = setupAuthListener();
-
-        // Cleanup on unmount
-        return () => {
-            console.log('[MainApp] Cleaning up auth listener');
-            subscription.unsubscribe();
-        };
     }, []);
 
 

@@ -318,7 +318,7 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images })
                                     <button
                                         onClick={handlePrevPage}
                                         disabled={currentPage === 1}
-                                        className="cur w-8 h-8 flex items-center justify-center bg-neutral-800 text-neutral-300 rounded-full hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                                        className="cur w-10 h-10 flex items-center justify-center bg-neutral-800 text-neutral-300 rounded-full hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
                                     >
                                         ←
                                     </button>
@@ -351,7 +351,7 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images })
                                             <button
                                                 key={pageNum}
                                                 onClick={() => handlePageChange(pageNum)}
-                                                className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors text-sm ${currentPage === pageNum
+                                                className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors text-sm ${currentPage === pageNum
                                                     ? 'bg-orange-500 text-white font-semibold'
                                                     : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
                                                     }`}
@@ -365,7 +365,7 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images })
                                     <button
                                         onClick={handleNextPage}
                                         disabled={currentPage === totalPages}
-                                        className="w-8 h-8 flex items-center justify-center bg-neutral-800 text-neutral-300 rounded-full hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                                        className="w-10 h-10 flex items-center justify-center bg-neutral-800 text-neutral-300 rounded-full hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
                                     >
                                         →
                                     </button>

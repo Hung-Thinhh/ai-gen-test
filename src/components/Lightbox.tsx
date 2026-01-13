@@ -71,7 +71,7 @@ const Lightbox: React.FC<LightboxProps> = ({ images, selectedIndex, onClose, onN
 
                     <div className="relative w-full h-full flex items-center justify-center overflow-hidden" onClick={onClose}>
                         <button
-                            className="lightbox-action-btn absolute top-18 left-4 z-[60] p-2 bg-orange-500! hover:bg-black/70 rounded-full text-white backdrop-blur-sm transition-all"
+                            className="lightbox-action-btn absolute top-20 left-4 z-[60] p-2 bg-orange-500! hover:bg-black/70 rounded-full text-white backdrop-blur-sm transition-all"
                             onClick={(e) => { e.stopPropagation(); onClose(); }}
                             title="Đóng (Esc)"
                         >
@@ -105,7 +105,7 @@ const Lightbox: React.FC<LightboxProps> = ({ images, selectedIndex, onClose, onN
                                     />
                                 )}
 
-                                <div className="absolute md:top-4 top-[-17%] right-2 flex gap-4 z-50">
+                                <div className="absolute md:top-4 top-[-30%] right-2 flex gap-4 z-50">
                                     <button
                                         className="lightbox-action-btn bg-black/50 hover:bg-black/70 p-2 rounded-full text-white backdrop-blur-sm transition-all"
                                         onClick={handleZoomOut}

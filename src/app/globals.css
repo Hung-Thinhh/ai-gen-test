@@ -3439,7 +3439,7 @@ input:checked+.switch-slider:before {
     /* Pagination - Compact and centered */
     .gallery-pagination,
     .flex.items-center.justify-between {
-        flex-direction: column !important;
+        /* flex-direction: column !important; */
         gap: 8px !important;
         padding: 12px !important;
         margin-top: 60px;

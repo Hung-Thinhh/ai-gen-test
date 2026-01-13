@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase/client';
+// import { supabase } from '@/lib/supabase/client'; // REMOVED
 import { useRouter } from 'next/navigation';
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 
 export default function LoginPage() {
     const router = useRouter();
+    const { data: session, status } = useSession();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [email, setEmail] = useState('');
@@ -40,14 +41,10 @@ export default function LoginPage() {
 
     // Check if already logged in
     useEffect(() => {
-        const checkSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                router.push('/');
-            }
-        };
-        checkSession();
-    }, [router]);
+        if (status === 'authenticated') {
+            router.push('/');
+        }
+    }, [status, router]);
 
     const handleGoogleLogin = async () => {
         try {

@@ -174,7 +174,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                                 )}
                                 style={modelVersion === 'v2' ? { backgroundColor: '#f97316' } : {}} // Orange-500
                             >
-                                Model V2
+                                <span className="hidden md:inline">Model </span>V2
                             </button>
                             <button
                                 onClick={() => handleModelVersionChange('v3')}
@@ -186,7 +186,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                                 )}
                                 style={modelVersion === 'v3' ? { backgroundColor: '#f97316' } : {}} // Orange-500
                             >
-                                Model V3
+                                <span className="hidden md:inline">Model </span>V3
                             </button>
                         </div>
 

@@ -1,8 +1,8 @@
 import { log } from 'console';
-import { supabase } from '../lib/supabase/client';
 import { uploadToCloudinary } from './cloudinaryService';
 import { cacheService, CACHE_KEYS, CACHE_TTL } from './cacheService';
 import { getSession } from "next-auth/react";
+// Helper to get user role
 // Helper to get user role
 // Helper to get user role
 export const getUserRole = async (userId: string): Promise<string | null> => {
@@ -46,6 +46,8 @@ const getAccessToken = async () => {
     }
 };
 
+// DEPRECATED: No longer used - app migrated to API routes
+/*
 const getFreshClient = (accessToken?: string) => {
     if (!accessToken) return supabase;
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -55,6 +57,7 @@ const getFreshClient = (accessToken?: string) => {
     options.global = { headers: { Authorization: `Bearer ${accessToken}` } };
     return createClient(supabaseUrl, supabaseAnonKey, options);
 }
+*/
 
 // Helper for timeouts
 // Helper for timeouts
@@ -66,6 +69,8 @@ const promiseWithTimeout = <T>(promise: PromiseLike<T>, ms: number, label: strin
 };
 
 
+// DEPRECATED: No longer used - app migrated to API routes
+/*
 // Helper to execute operations with JWT retry logic
 const executeWithRetry = async <T>(
     operationName: string,
@@ -84,7 +89,7 @@ const executeWithRetry = async <T>(
                 'getSession_Initial'
             );
             activeToken = sessionData.session?.access_token;
-        } catch (e) { /* ignore */ }
+        } catch (e) { } 
     }
 
     let client = getFreshClient(activeToken);
@@ -121,6 +126,7 @@ const executeWithRetry = async <T>(
         return { data: null, error: e };
     }
 };
+*/
 
 /**
  * Uploads a Base64 image to Cloudinary (Replaces Firebase Storage) and returns the download URL.
@@ -182,7 +188,10 @@ export const addMultipleImagesToCloudGallery = async (userId: string, imageUrls:
  */
 export const getUserCloudGallery = async (userId: string, useFreshClient: boolean = false, token?: string): Promise<string[]> => {
     try {
-        const res = await fetch('/api/user/gallery');
+        const timestamp = Date.now();
+        const res = await fetch(`/api/user/gallery?_t=${timestamp}`, {
+            cache: 'no-store'
+        });
         if (!res.ok) return [];
         const data = await res.json();
         return data.gallery || [];
@@ -243,17 +252,17 @@ export const saveGuestSession = async (guestId: string, ip: string, imageUrl?: s
 export const saveGuestSessionBatch = async (guestId: string, ip: string, imageUrls: string[]) => {
     try {
         // 1. Get existing session to update history properly - Use Fresh Client
-        const client = getFreshClient(); // Explicitly use fresh client for read-modify-write
-        const { data } = await client
-            .from(GUESTS_TABLE)
-            .select('history')
-            .eq('guest_id', guestId)
-            .maybeSingle();
+        // const client = getFreshClient(); // Explicitly use fresh client for read-modify-write
+        // const { data } = await client
+        //     .from(GUESTS_TABLE)
+        //     .select('history')
+        //     .eq('guest_id', guestId)
+        //     .maybeSingle();
 
         let currentHistory: any[] = [];
-        if (data && Array.isArray(data.history)) {
-            currentHistory = data.history;
-        }
+        // if (data && Array.isArray(data.history)) {
+        //     currentHistory = data.history;
+        // }
 
         if (imageUrls.length > 0) {
             const newEntries = imageUrls.map(url => ({
@@ -402,15 +411,11 @@ export const deductUserCredit = async (userId: string, amount: number = 1, token
  */
 export const transferGuestCreditsToUser = async (guestId: string): Promise<number | null> => {
     try {
-        const { data, error } = await supabase
-            .from(GUESTS_TABLE)
-            .select('current_credits')
-            .eq('guest_id', guestId)
-            .maybeSingle();
+        const response = await fetch(`/api/guest/credits?guestId=${encodeURIComponent(guestId)}`);
+        if (!response.ok) return null;
 
-        if (error || !data) return null;
-
-        return data.current_credits;
+        const data = await response.json();
+        return data.credits;
     } catch (error) {
         return null;
     }
@@ -421,21 +426,14 @@ export const transferGuestCreditsToUser = async (guestId: string): Promise<numbe
  */
 export const getGuestCloudGallery = async (guestId: string, useFreshClient: boolean = false): Promise<string[]> => {
     try {
-        const client = useFreshClient ? getFreshClient() : supabase;
+        const timestamp = Date.now();
+        const response = await fetch(`/api/guest/gallery?guestId=${encodeURIComponent(guestId)}&_t=${timestamp}`, {
+            cache: 'no-store'
+        });
+        if (!response.ok) return [];
 
-        const { data, error } = await client
-            .from(GUESTS_TABLE)
-            .select('history')
-            .eq('guest_id', guestId)
-            .maybeSingle();
-
-        if (error) return [];
-
-        if (data && Array.isArray(data.history)) {
-            // Extract URLs and reverse
-            return data.history.map((item: any) => item.url).reverse();
-        }
-        return [];
+        const data = await response.json();
+        return data.gallery || [];
     } catch (error) {
         console.error("Error fetching guest gallery:", error);
         return [];
@@ -640,7 +638,6 @@ export const logGenerationHistory = async (userId: string | null, entry: any, to
             return;
         }
 
-        const client = getFreshClient(token);
 
         let resolvedToolId = entry.tool_id;
 
@@ -1470,6 +1467,9 @@ export const deletePrompt = async (promptId: string, token?: string) => {
  */
 export const incrementPromptUsage = async (promptId: number) => {
     try {
+        console.warn("[Storage] incrementPromptUsage disabled during migration");
+        return true;
+        /*
         // First get current usage
         const { data: currentData, error: fetchError } = await supabase
             .from('prompts')
@@ -1492,16 +1492,15 @@ export const incrementPromptUsage = async (promptId: number) => {
             .eq('id', promptId);
 
         if (updateError) {
-            console.error("Error updating prompt usage:", updateError);
+            console.error("Error incrementing prompt usage:", updateError);
             return false;
         }
-
-        // Invalidate usage-sorted cache (most likely to be affected)
-        // Keep created_at cache as it won't change order
-        cacheService.remove(`${CACHE_KEYS.PROMPTS}_usage`);
         return true;
+        */
     } catch (error) {
-        console.error("Error incrementing prompt usage:", error);
+        console.error("Error deleting prompt:", error);
         return false;
     }
 };
+
+

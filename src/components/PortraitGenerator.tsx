@@ -477,7 +477,7 @@ const PortraitGenerator: React.FC<PortraitGeneratorProps> = (props) => {
                     </div>
 
                     {/* Two column layout - fit screen height */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
                         {/* Left: Input */}
                         <div className="themed-card border border-neutral-700 rounded-2xl p-6">
                             <h3 className="text-orange-400 font-bold text-lg mb-4 text-center">Ảnh gốc</h3>
@@ -502,7 +502,7 @@ const PortraitGenerator: React.FC<PortraitGeneratorProps> = (props) => {
                         {/* Right: Loading outputs */}
                         <div className="themed-card border border-neutral-700 rounded-2xl p-4">
                             <h3 className="text-orange-400 font-bold text-lg mb-3 text-center">Kết quả</h3>
-                            <div className={`grid gap-2 ${appState.pendingCount > 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                            <div className={`grid gap-3 ${appState.pendingCount >= 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                                 {Array.from({ length: appState.pendingCount }).map((_, i) => (
                                     <div
                                         key={i}
@@ -517,10 +517,10 @@ const PortraitGenerator: React.FC<PortraitGeneratorProps> = (props) => {
                         </div>
                     </div>
 
-                    {/* Cancel button */}
+                    {/* Cancel button - Moved outside grid */}
                     <button
                         onClick={() => onStateChange({ ...appState, stage: 'configuring', pendingCount: 0 })}
-                        className="px-6 py-2 bg-neutral-700 text-white rounded-full hover:bg-neutral-600 transition-colors text-sm"
+                        className="px-6 py-2 bg-neutral-700 text-white rounded-full hover:bg-neutral-600 transition-colors text-sm font-medium"
                     >
                         Hủy
                     </button>
@@ -545,7 +545,7 @@ const PortraitGenerator: React.FC<PortraitGeneratorProps> = (props) => {
                     </div>
 
                     {/* Two column layout - fit screen height */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
                         {/* Left: Input */}
                         <div className="themed-card border border-neutral-700 rounded-2xl p-6">
                             <h3 className="text-orange-400 font-bold text-lg mb-4 text-center">Ảnh gốc</h3>
@@ -568,22 +568,17 @@ const PortraitGenerator: React.FC<PortraitGeneratorProps> = (props) => {
                         {/* Right: Results */}
                         <div className="themed-card border border-neutral-700 rounded-2xl p-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 250px)' }}>
                             <h3 className="text-orange-400 font-bold text-lg mb-3 text-center">Kết quả ({appState.resultImages.length})</h3>
-                            <div className={`grid gap-2 ${appState.resultImages.length > 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                            <div className={`grid gap-3 ${appState.resultImages.length >= 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                                 {appState.resultImages.map((img, i) => (
-                                    <motion.div
+                                    <ActionablePolaroidCard
                                         key={i}
-                                        initial={{ opacity: 0, scale: 0.8 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        transition={{ delay: i * 0.1 }}
-                                        className="w-full"
-                                    >
-                                        <img
-                                            src={img}
-                                            alt={`Result ${i + 1}`}
-                                            className={`w-full rounded-lg border border-neutral-600 cursor-pointer hover:opacity-90 transition-all hover:scale-[1.01] object-cover ${appState.resultImages.length <= 2 ? 'aspect-[3/4]' : 'aspect-square'}`}
-                                            onClick={() => openLightbox(lightboxImages.indexOf(img))}
-                                        />
-                                    </motion.div>
+                                        type="output"
+                                        caption={`Kết quả ${i + 1}`}
+                                        status="done"
+                                        mediaUrl={img}
+                                        onClick={() => openLightbox(lightboxImages.indexOf(img))}
+                                        isMobile={isMobile}
+                                    />
                                 ))}
                             </div>
                         </div>

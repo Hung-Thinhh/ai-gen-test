@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
         if (session && session.user && session.user.email) {
             // Fetch UUID from database by email
-            const { getUserByEmail } = await import('@/lib/neon/queries');
+            const { getUserByEmail } = await import('@/lib/postgres/queries');
             const userData = await getUserByEmail(session.user.email);
             if (userData) {
                 userId = userData.user_id;
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
 
         let currentCredits = 0;
 
-        const { sql } = await import('@/lib/neon/client');
+        const { sql } = await import('@/lib/postgres/client');
 
         if (isGuest && guestId) {
             // For guests: ensure session exists first
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
                 console.log('[API DEBUG] Creating new guest session:', guestId);
 
                 // Get default credits from system_configs
-                const { getSystemConfig } = await import('@/lib/neon/queries');
+                const { getSystemConfig } = await import('@/lib/postgres/queries');
                 const guestLimitConfig = await getSystemConfig('guest_generation_limit');
                 const defaultCredits = guestLimitConfig ? parseInt(guestLimitConfig, 10) : 3;
 
@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
         let newCredits = currentCredits - creditCost; // Default fallback
         try {
             console.log(`[API] Deducting ${creditCost} credits directly (via Neon)...`);
-            const { sql } = await import('@/lib/neon/client');
+            const { sql } = await import('@/lib/postgres/client');
 
             if (isGuest && guestId) {
                 // Atomic Update & Return

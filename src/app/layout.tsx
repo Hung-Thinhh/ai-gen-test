@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Be_Vietnam_Pro, Inter } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import "./globals.css";
-import { DevMockLogin } from "@/components/DevMockLogin";
 
 const beVietnamPro = Be_Vietnam_Pro({
   weight: ['300', '400', '500', '600', '700', '900'],
@@ -43,10 +42,6 @@ export default function RootLayout({
         <Providers>
           {IS_MAINTENANCE_MODE && <MaintenanceOverlay />}
           {children}
-          {/* DEV ONLY: Mock login button */}
-          {process.env.NODE_ENV === 'development' && (
-            <DevMockLogin />
-          )}
         </Providers>
         <script
           dangerouslySetInnerHTML={{

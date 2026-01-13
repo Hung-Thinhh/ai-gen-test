@@ -1,0 +1,50 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    # Warm up: 5 users trong 30s
+    - duration: 30
+      arrivalRate: 5
+      name: "Warm up"
+    
+    # Ramp up: Tăng dần lên 20 users/s trong 60s
+    - duration: 60
+      arrivalRate: 5
+      rampTo: 20
+      name: "Ramp up load"
+    
+    # Sustain: Giữ 20 users/s trong 120s
+    - duration: 120
+      arrivalRate: 20
+      name: "Sustained load"
+
+scenarios:
+  # Test homepage
+  - name: "Browse homepage"
+    weight: 30
+    flow:
+      - get:
+          url: "/"
+      
+  # Test tool page
+  - name: "Browse tools"
+    weight: 30
+    flow:
+      - get:
+          url: "/tool"
+      - think: 2
+      - get:
+          url: "/tool/free-generation"
+  
+  # Test gallery
+  - name: "View gallery"
+    weight: 20
+    flow:
+      - get:
+          url: "/gallery"
+  
+  # Test API - Guest credits
+  - name: "API - Guest credits"
+    weight: 20
+    flow:
+      - get:
+          url: "/api/guest/credits?guestId=test_{{ $randomString }}"

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@/lib/neon/client';
+import { sql } from '@/lib/postgres/client';
 import type { CreatePaymentRequest, CreatePaymentResponse } from '@/types/payment';
 
 export async function POST(req: NextRequest) {

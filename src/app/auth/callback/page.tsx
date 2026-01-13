@@ -2,37 +2,15 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase/client';
+// import { supabase } from '@/lib/supabase/client'; // REMOVED
 
 export default function AuthCallbackPage() {
     const router = useRouter();
 
     useEffect(() => {
-        const handleCallback = async () => {
-            try {
-                // Get the session from the URL
-                const { data: { session }, error } = await supabase.auth.getSession();
-
-                if (error) {
-                    console.error('Auth callback error:', error);
-                    router.push('/login?error=' + encodeURIComponent(error.message));
-                    return;
-                }
-
-                if (session) {
-                    console.log('[Auth] Login successful, redirecting to home');
-                    router.push('/');
-                } else {
-                    console.warn('[Auth] No session found, redirecting to login');
-                    router.push('/login');
-                }
-            } catch (error) {
-                console.error('Unexpected error in auth callback:', error);
-                router.push('/login');
-            }
-        };
-
-        handleCallback();
+        // NextAuth handles callbacks automatically at /api/auth/callback/...
+        // This page might be legacy or for manual handling. Redirecting to home.
+        router.push('/');
     }, [router]);
 
     return (

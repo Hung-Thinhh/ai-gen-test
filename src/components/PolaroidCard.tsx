@@ -226,7 +226,7 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ mediaUrl, caption, status, 
                                 e.stopPropagation();
                                 onShake(caption);
                             }}
-                            className="p-2 flex items-center justify-center bg-neutral-800/80 rounded-full text-white hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            className="p-2 hidden md:flex items-center justify-center bg-neutral-800/80 rounded-full text-white hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
                             aria-label={`${t('common_regenerate')} ${caption}`}
                         >
                             <RegenerateIcon className="h-5 w-5 pointer-events-none" />
@@ -238,7 +238,7 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ mediaUrl, caption, status, 
                                 e.stopPropagation();
                                 onDownload(caption);
                             }}
-                            className="p-2 flex items-center justify-center bg-neutral-800/80 rounded-full text-white hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            className="p-2 hidden md:flex items-center justify-center bg-neutral-800/80 rounded-full text-white hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
                             aria-label={`${t('common_download')} ${caption}`}
                         >
                             <DownloadIcon className="h-5 w-5 pointer-events-none" strokeWidth={2} />

@@ -1,9 +1,17 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
-import { supabase } from '../lib/supabase/client';
 import { getUserRole } from '../services/storageService';
 import { useSession, signOut } from "next-auth/react";
-import type { User } from '@supabase/supabase-js';
 import toast from 'react-hot-toast';
+
+// User type (simplified from Supabase User)
+interface User {
+    id: string;
+    email: string | null;
+    user_metadata?: {
+        avatar_url?: string;
+        full_name?: string;
+    };
+}
 
 interface AuthContextType {
     user: User | null;
@@ -150,13 +158,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(null);
         setUserRole(null);
 
-        // Sign out NextAuth only (Supabase Auth is handled by NextAuth session expiry essentially)
-        // But we can call signOut to be safe if tokens were somehow used.
+        // Sign out NextAuth
         const { signOut: nextAuthSignOut } = await import('next-auth/react');
         await nextAuthSignOut({ redirect: false });
-
-        // Supabase signout - optional but good practice if mixed usage existed
-        await supabase.auth.signOut();
 
         window.dispatchEvent(new CustomEvent('user-logged-out'));
         window.location.href = '/';
@@ -188,68 +192,3 @@ export const useAuth = (): AuthContextType => {
     return context;
 };
 
-// Helper function to ensure user exists in database
-// Returns the user's full data including credits
-async function ensureUserExists(user: User): Promise<{ credits: number; role: string } | null> {
-    try {
-        console.log('[ensureUserExists] Checking if user exists:', user.id);
-
-        // Check if user exists - use maybeSingle() to avoid errors
-        const { data: existingUser, error: checkError } = await supabase
-            .from('users')
-            .select('user_id, current_credits, role')
-            .eq('user_id', user.id)
-            .maybeSingle();
-
-        if (checkError) {
-            console.error('[ensureUserExists] Error checking user existence:', checkError);
-            return null;
-        }
-
-        if (!existingUser) {
-            console.log('[ensureUserExists] User not found, creating new user...');
-
-            // Check for potential guest credits to transfer - DISABLED per new requirement
-            let initialCredits = 10; // Fixed 10 credits for new users (No accumulation)
-
-            // Create new user and return the created data
-            const { data: newUser, error } = await supabase
-                .from('users')
-                .insert({
-                    user_id: user.id,
-                    user_type: 'registered',
-                    email: user.email,
-                    display_name: user.user_metadata?.full_name || user.email?.split('@')[0],
-                    avatar_url: user.user_metadata?.avatar_url,
-                    current_credits: initialCredits,
-                    role: 'user',
-                    created_at: new Date().toISOString()
-                })
-                .select('current_credits, role')
-                .single();
-
-            if (error) {
-                console.error('[ensureUserExists] Failed to create user:', error);
-                return null;
-            } else {
-                console.log(`[ensureUserExists] ✅ New user created with ${initialCredits} credits`);
-                toast.success('Chào mừng! Bạn nhận được 10 credits miễn phí! 🎉');
-                // Return the newly created user's data
-                return {
-                    credits: newUser?.current_credits ?? initialCredits,
-                    role: newUser?.role ?? 'user'
-                };
-            }
-        } else {
-            console.log('[ensureUserExists] ✅ User already exists, skipping creation');
-            // Return existing user's data
-            return {
-                credits: existingUser.current_credits ?? 0,
-                role: existingUser.role ?? 'user'
-            };
-        }
-    } catch (error) {
-        console.error('[ensureUserExists] Error ensuring user exists:', error);
-        return null;
-    }
-}

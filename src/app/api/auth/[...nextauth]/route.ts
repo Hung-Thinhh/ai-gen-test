@@ -2,7 +2,7 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
-import { getUserByEmail, createUser } from "@/lib/neon/queries";
+import { getUserByEmail, createUser } from "@/lib/postgres/queries";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 

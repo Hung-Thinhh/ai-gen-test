@@ -2,7 +2,6 @@
 
 import { useEffect, useState, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase/client';
 import toast from 'react-hot-toast';
 
 function PaymentSuccessContent() {

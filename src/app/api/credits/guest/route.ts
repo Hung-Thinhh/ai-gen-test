@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@/lib/neon/client';
-import { getSystemConfig } from '@/lib/neon/queries';
+import { sql } from '@/lib/postgres/client';
+import { getSystemConfig } from '@/lib/postgres/queries';
 
 // Helper function to get guest generation limit from system_configs
 async function getGuestGenerationLimit(): Promise<number> {

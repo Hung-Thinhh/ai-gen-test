@@ -19,6 +19,7 @@ import {
   CardMedia,
   Pagination,
   Dialog,
+  CircularProgress,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { styled } from '@mui/system';
@@ -105,8 +106,9 @@ const Home: React.FC<HomeProps> = ({ onSelectApp, title, subtitle, apps: initial
     fetchTools();
   }, []);
 
-  // Use DB tools if available, else fallback to initialApps
-  const apps = dbTools.length > 0 ? dbTools : initialApps;
+  // Use DB tools if available, else fallback to initialApps (only after loading)
+  // Prevent flash of old data by using empty array during loading
+  const apps = (loadingTools || dbTools.length > 0) ? dbTools : initialApps;
 
   // Get page from URL or default to 1
   const pageFromUrl = parseInt(searchParams.get('page') || '1', 10);
@@ -233,61 +235,67 @@ const Home: React.FC<HomeProps> = ({ onSelectApp, title, subtitle, apps: initial
     >
 
 
-      <Grid container spacing={2} justifyContent="center">
-        {displayedApps.map((app) => (
-          <Grid size={{ xs: 6, sm: 6, md: 3 }} key={app.id}>
-            <Card
-              className="themed-card"
-              sx={{
-                cursor: 'pointer',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '16px',
-                transition: 'transform 0.3s, box-shadow 0.3s',
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                '&:hover': {
-                  transform: 'scale(1.05)',
-                },
-              }}
-              onClick={() => onSelectApp(app.id)}
-            >
-              {app.previewImageUrl && (
-                <CardMedia
-                  component="img"
-                  sx={{ aspectRatio: '1/1', objectFit: 'cover' }}
-                  image={app.previewImageUrl}
-                  alt={`Preview for ${app.title}`}
-                />
-              )}
-              <CardContent sx={{ flexGrow: 1 }}>
-                <Typography
-                  variant="h6"
-                  component="div"
-                  className="themed-text"
-                  sx={{ marginBottom: 1, fontWeight: 700 }}
-                >
-                  {getLocalizedText(app.title, language)}
-                </Typography>
-                <Typography
-                  variant="body2"
-                  className="themed-text-tertiary"
-                  sx={{
-                    display: '-webkit-box',
-                    WebkitLineClamp: 3,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    opacity: 0.85
-                  }}
-                >
-                  {getLocalizedText(app.description, language)}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
+      {loadingTools ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+          <CircularProgress color="inherit" />
+        </Box>
+      ) : (
+        <Grid container spacing={2} justifyContent="center">
+          {displayedApps.map((app) => (
+            <Grid size={{ xs: 6, sm: 6, md: 3 }} key={app.id}>
+              <Card
+                className="themed-card"
+                sx={{
+                  cursor: 'pointer',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '16px',
+                  transition: 'transform 0.3s, box-shadow 0.3s',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  '&:hover': {
+                    transform: 'scale(1.05)',
+                  },
+                }}
+                onClick={() => onSelectApp(app.id)}
+              >
+                {app.previewImageUrl && (
+                  <CardMedia
+                    component="img"
+                    sx={{ aspectRatio: '1/1', objectFit: 'cover' }}
+                    image={app.previewImageUrl}
+                    alt={`Preview for ${app.title}`}
+                  />
+                )}
+                <CardContent sx={{ flexGrow: 1 }}>
+                  <Typography
+                    variant="h6"
+                    component="div"
+                    className="themed-text"
+                    sx={{ marginBottom: 1, fontWeight: 700 }}
+                  >
+                    {getLocalizedText(app.title, language)}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    className="themed-text-tertiary"
+                    sx={{
+                      display: '-webkit-box',
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      opacity: 0.85
+                    }}
+                  >
+                    {getLocalizedText(app.description, language)}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
 
       {apps.length > APPS_PER_PAGE && (
         <Box sx={{ marginTop: '20px' }}>

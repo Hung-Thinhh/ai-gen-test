@@ -3,7 +3,6 @@
  * Handles authentication, error handling, and response parsing
  */
 
-import { supabase } from './supabase/client';
 
 interface ApiRequestOptions {
     method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
@@ -18,11 +17,6 @@ class ApiClient {
     /**
      * Get authentication token from Supabase
      */
-    private async getAuthToken(): Promise<string | null> {
-        const { data: { session } } = await supabase.auth.getSession();
-        return session?.access_token || null;
-    }
-
     /**
      * Make authenticated API request
      */
@@ -43,13 +37,12 @@ class ApiClient {
         };
 
         // Add authentication if required
-        if (requireAuth) {
-            const token = await this.getAuthToken();
-            if (!token) {
-                throw new Error('Authentication required');
-            }
-            headers['Authorization'] = `Bearer ${token}`;
-        }
+        // if (requireAuth) {
+        //     if (!token) {
+        //         throw new Error('Authentication required');
+        //     }
+        //     headers['Authorization'] = `Bearer ${token}`;
+        // }
 
         // Add guest ID if provided
         if (guestId) {

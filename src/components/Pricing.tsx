@@ -5,7 +5,6 @@
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppControls } from './uiUtils';
-import { supabase } from '../lib/supabase/client';
 import { useSession } from "next-auth/react";
 import toast from 'react-hot-toast';
 import type { PricingPackage } from '@/types/payment';

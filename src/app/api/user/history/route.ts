@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
-import { sql } from '@/lib/neon/client';
-import { getUserByEmail } from '@/lib/neon/queries';
+import { sql } from '@/lib/postgres/client';
+import { getUserByEmail } from '@/lib/postgres/queries';
 
 export async function POST(req: NextRequest) {
     try {

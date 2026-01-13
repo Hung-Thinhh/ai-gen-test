@@ -289,17 +289,17 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                 <div className="flex gap-1 themed-card backdrop-blur-md rounded-full p-1 border border-white/10 shadow-lg">
                     <button
                         onClick={() => handleModelVersionChange('v2')}
-                        className={`rounded-full font-bold transition-all duration-200 px-4 py-1.5 text-xs ${modelVersion === 'v2' ? 'text-black shadow-md bg-orange-500' : 'text-neutral-400 hover:text-white'
+                        className={`rounded-full font-bold transition-all duration-200 px-4 py-1.5 !text-xs ${modelVersion === 'v2' ? 'text-black shadow-md bg-orange-500' : 'text-neutral-400 hover:text-white'
                             }`}
                     >
-                        Model V2
+                        <span className="hidden md:inline">Model </span>V2
                     </button>
                     <button
                         onClick={() => handleModelVersionChange('v3')}
-                        className={`rounded-full font-bold transition-all duration-200 px-4 py-1.5 text-xs ${modelVersion === 'v3' ? 'text-black shadow-md bg-orange-500' : 'text-neutral-400 hover:text-white'
+                        className={`rounded-full font-bold transition-all duration-200 px-4 py-1.5 !text-xs ${modelVersion === 'v3' ? 'text-black shadow-md bg-orange-500' : 'text-neutral-400 hover:text-white'
                             }`}
                     >
-                        Model V3
+                        <span className="hidden md:inline">Model </span>V3
                     </button>
                 </div>
             </div>
@@ -392,7 +392,7 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
 
                                     {/* Show loading spinners */}
                                     {isLoading && (
-                                        <div className={`grid gap-2 w-full ${pendingCount > 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                                        <div className={`grid gap-3 md:gap-4 w-full ${pendingCount > 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                                             {Array.from({ length: pendingCount }).map((_, idx) => (
                                                 <div key={idx} className="aspect-[3/4] bg-neutral-900/50 rounded-xl border border-neutral-700 flex flex-col items-center justify-center gap-2">
                                                     <div className="w-10 h-10 border-4 border-orange-400 border-t-transparent rounded-full animate-spin" />
@@ -404,9 +404,9 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
 
                                     {/* Show generated images */}
                                     {!isLoading && generatedImages.length > 0 && (
-                                        <div className="grid grid-cols-2 gap-2 w-full">
+                                        <div className="grid grid-cols-2 gap-3 md:gap-4 w-full">
                                             {generatedImages.map((img, idx) => (
-                                                <div key={idx} className="w-full aspect-[9/16]">
+                                                <div key={idx} className="">
                                                     <ActionablePolaroidCard
                                                         type="output"
                                                         caption={`Kết quả ${idx + 1}`}

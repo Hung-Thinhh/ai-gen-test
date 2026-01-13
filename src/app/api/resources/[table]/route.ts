@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@/lib/neon/client';
-import { getUserByEmail } from '@/lib/neon/queries';
+import { sql } from '@/lib/postgres/client';
+import { getUserByEmail } from '@/lib/postgres/queries';
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 

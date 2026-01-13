@@ -77,7 +77,7 @@ export const useImageEditor = (): ImageEditorContextType => {
 const AppControlContext = createContext<AppControlContextType | undefined>(undefined);
 
 export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { user, isLoggedIn, token } = useAuth();
+    const { user, isLoggedIn, token, isLoading: authLoading } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
     const [viewHistory, setViewHistory] = useState<ViewState[]>([{ viewId: 'overview', state: { stage: 'home' } }]);
@@ -275,10 +275,10 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 try {
                     // Credits are already fetched by AuthContext and dispatched via 'user-credits-updated' event
                     // No need to call getUserCredits here - listen to the event instead
-                    console.log('[loadData] Skipping getUserCredits (handled by AuthContext)');
-
-                    const cloudGallery = await storageService.getUserCloudGallery(user.id);
-                    setImageGallery(cloudGallery);
+                    // [REMOVED] User Data is now handled by refreshGallery() exclusively
+                    // console.log('[loadData] Skipping getUserCredits (handled by AuthContext)');
+                    // const cloudGallery = await storageService.getUserCloudGallery(user.id);
+                    // setImageGallery(cloudGallery);
                     const history = await db.getAllHistoryEntries();
                     // RAM OPTIMIZATION: Do not store full Base64 output_images in State
                     const lightHistory = history.map(h => ({ ...h, output_images: undefined }));
@@ -286,8 +286,8 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 } catch (err: any) {
                     console.error("Failed to load user data:", err);
                     // On error, try to load local data as fallback
-                    const gallery = await db.getAllGalleryImages();
-                    setImageGallery(gallery);
+                    // const gallery = await db.getAllGalleryImages();
+                    // setImageGallery(gallery);
                     // Don't reset credits to 0 on error - keep existing value
                     toast.error('Không thể tải dữ liệu từ server. Sử dụng dữ liệu local.', {
                         duration: 3000,
@@ -301,6 +301,9 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                     db.getAllHistoryEntries()
                 ]);
 
+                // [REMOVED] Guest Cloud Data is now handled by refreshGallery() exclusively
+                // This prevents race conditions where guest data overwrites user data
+                /*
                 // Try to load Cloudinary gallery for guest
                 let mergedGallery = localGallery;
                 if (guestId) {
@@ -337,8 +340,9 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                         // setGuestCredits(0); // Already initialized to 0
                     }
                 }
-
+                
                 setImageGallery(mergedGallery);
+                */
                 // RAM OPTIMIZATION: Strip heavy Base64 data
                 const lightHistory = history.map(h => ({ ...h, output_images: undefined }));
                 setGenerationHistory(lightHistory);
@@ -664,6 +668,12 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     // NEW: Strict DB Fetch
     const refreshGallery = useCallback(async () => {
         try {
+            // Wait for auth to initialize
+            if (authLoading) {
+                console.log("Waiting for auth to load...");
+                return;
+            }
+
             console.log("Refreshing gallery from DB...");
             let fetchedImages: string[] = [];
 
@@ -685,7 +695,7 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             console.error("Failed to refresh gallery:", error);
             toast.error("Không thể tải thư viện ảnh.");
         }
-    }, [isLoggedIn, user, guestId, token]);
+    }, [isLoggedIn, user, guestId, token, authLoading]);
 
     // NEW: Refresh Credits Function
     const refreshCredits = useCallback(async () => {
@@ -721,6 +731,15 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             (window as any).__refreshCredits = refreshCredits;
         }
     }, [refreshCredits]);
+
+    // ✅ AUTO REFRESH: Trigger data refresh when Auth State settles
+    useEffect(() => {
+        if (!authLoading) {
+            console.log('[uiContexts] Auth settled. Refreshing Gallery & Credits...');
+            refreshGallery();
+            refreshCredits();
+        }
+    }, [authLoading, isLoggedIn, user, guestId, refreshGallery, refreshCredits]);
 
     useEffect(() => {
         const fetchSettings = async () => {

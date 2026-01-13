@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@/lib/neon/client';
+import { sql } from '@/lib/postgres/client';
 
 // List of tables to export (in order of dependencies)
 

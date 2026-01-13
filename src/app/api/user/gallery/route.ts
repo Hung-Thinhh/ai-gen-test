@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
-import { sql } from '@/lib/neon/client';
-import { getUserByEmail } from '@/lib/neon/queries';
+import { sql } from '@/lib/postgres/client';
+import { getUserByEmail } from '@/lib/postgres/queries';
 
 // Helper to get UUID from session
 async function getUUIDFromSession(session: any): Promise<string | null> {
@@ -49,7 +49,12 @@ export async function GET(req: NextRequest) {
             gallery = profiles[0].gallery.reverse();
         }
 
-        return NextResponse.json({ gallery });
+        return NextResponse.json({ gallery }, {
+            headers: {
+                'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+                'Pragma': 'no-cache'
+            }
+        });
     } catch (e: any) {
         console.error('[API] GET /api/user/gallery error:', e);
         return NextResponse.json({ error: e.message }, { status: 500 });
@@ -97,11 +102,16 @@ export async function DELETE(req: NextRequest) {
 
         if (!url_to_remove) return NextResponse.json({ error: 'Missing url' }, { status: 400 });
 
-        // Remove item from array
+        // Remove item from JSONB array using jsonb_path_query_array
+        // Filter out the matching URL
         await sql`
             UPDATE profiles 
-            SET gallery = array_remove(gallery, ${url_to_remove}),
-                last_updated = NOW()
+            SET gallery = (
+                SELECT jsonb_agg(elem)
+                FROM jsonb_array_elements(COALESCE(gallery, '[]'::jsonb)) AS elem
+                WHERE elem::text != ${JSON.stringify(url_to_remove)}
+            ),
+            last_updated = NOW()
             WHERE id = ${userId}
         `;
 

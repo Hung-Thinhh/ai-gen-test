@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
 
 export async function middleware(request: NextRequest) {
     const url = request.nextUrl;
@@ -11,112 +10,6 @@ export async function middleware(request: NextRequest) {
     if (!isStaticAsset) {
         console.log('[Middleware] 🚀 EXECUTING for:', pathname);
     }
-
-    // ============================================
-    // ADMIN ROUTE PROTECTION - TEMPORARILY DISABLED
-    // ============================================
-    // NOTE: Middleware cannot access Supabase session due to SSR cookie handling
-    // Client-side protection in AdminLayout.tsx is active and working
-    // TODO: Fix Supabase SSR session sharing between client and server
-
-    /*
-    if (pathname.startsWith('/admin')) {
-        console.log('[Middleware] Admin route accessed:', pathname);
-
-        try {
-            let response = NextResponse.next({
-                request: {
-                    headers: request.headers,
-                },
-            });
-
-            const supabase = createServerClient(
-                process.env.NEXT_PUBLIC_SUPABASE_URL!,
-                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-                {
-                    cookies: {
-                        get(name: string) {
-                            return request.cookies.get(name)?.value;
-                        },
-                        set(name: string, value: string, options: CookieOptions) {
-                            request.cookies.set({
-                                name,
-                                value,
-                                ...options,
-                            });
-                            response = NextResponse.next({
-                                request: {
-                                    headers: request.headers,
-                                },
-                            });
-                            response.cookies.set({
-                                name,
-                                value,
-                                ...options,
-                            });
-                        },
-                        remove(name: string, options: CookieOptions) {
-                            request.cookies.set({
-                                name,
-                                value: '',
-                                ...options,
-                            });
-                            response = NextResponse.next({
-                                request: {
-                                    headers: request.headers,
-                                },
-                            });
-                            response.cookies.set({
-                                name,
-                                value: '',
-                                ...options,
-                            });
-                        },
-                    },
-                }
-            );
-
-            console.log('[Middleware] Getting user session...');
-            const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-            if (authError || !user) {
-                console.log('[Middleware] ❌ No authenticated user:', authError?.message || 'No user');
-                const redirectUrl = new URL('/', request.url);
-                redirectUrl.searchParams.set('error', 'login_required');
-                return NextResponse.redirect(redirectUrl);
-            }
-
-            console.log('[Middleware] ✅ User authenticated:', user.id);
-
-            const { data: userData, error: dbError } = await supabase
-                .from('users')
-                .select('role')
-                .eq('user_id', user.id)
-                .single();
-
-            if (dbError || !userData || userData.role !== 'admin') {
-                console.log('[Middleware] ❌ User is not admin. Role:', userData?.role || 'none');
-                const redirectUrl = new URL('/', request.url);
-                redirectUrl.searchParams.set('error', 'unauthorized');
-                return NextResponse.redirect(redirectUrl);
-            }
-
-            console.log('[Middleware] ✅ Admin access granted for user:', user.id);
-            return response;
-
-        } catch (error) {
-            console.error('[Middleware] Error checking admin access:', error);
-            const redirectUrl = new URL('/', request.url);
-            redirectUrl.searchParams.set('error', 'server_error');
-            return NextResponse.redirect(redirectUrl);
-        }
-    }
-    */
-
-    // ============================================
-    // ROUTE VALIDATION (existing logic)
-    // ============================================
-    // List of valid route prefixes
     const validPrefixes = [
         '/',
         '/tool',

@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
         }
 
         // 2. Get userId from database
-        const { getUserByEmail } = await import('@/lib/neon/queries');
+        const { getUserByEmail } = await import('@/lib/postgres/queries');
         const userData = await getUserByEmail(session.user.email);
 
         if (!userData) {
@@ -67,11 +67,11 @@ export async function POST(request: NextRequest) {
         }
 
         // 5. Delete from Neon database
-        const { sql } = await import('@/lib/neon/client');
+        const { sql } = await import('@/lib/postgres/client');
 
         // Find and update generation_history records containing this image
         const histories = await sql`
-            SELECT id, output_images
+            SELECT history_id, output_images
             FROM generation_history
             WHERE user_id = ${userId}
         `;
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
                     // If no images left, delete the entire record
                     await sql`
                         DELETE FROM generation_history
-                        WHERE id = ${history.id}
+                        WHERE history_id = ${history.history_id}
                     `;
                     deletedCount++;
                 } else {
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
                     await sql`
                         UPDATE generation_history
                         SET output_images = ${updatedImages}
-                        WHERE id = ${history.id}
+                        WHERE history_id = ${history.history_id}
                     `;
                     updatedCount++;
                 }

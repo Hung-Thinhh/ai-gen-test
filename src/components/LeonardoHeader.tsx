@@ -59,14 +59,14 @@ export const LeonardoHeader = () => {
         <header
             className={cn(
                 "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
-                "bg-black/90 backdrop-blur-xl border-b",
+                "bg-black/90 backdrop-blur-xl border-b flex",
                 scrolled
                     ? "border-orange-500/20 shadow-2xl shadow-orange-500/10"
                     : "border-white/5"
             )}
         >
             <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-                {/* Logo */}
+                {/* Logo - Left side */}
                 <Link href="/">
                     <button
                         className="flex items-center gap-3 group cursor-pointer"
@@ -83,8 +83,9 @@ export const LeonardoHeader = () => {
                         </span>
                     </button>
                 </Link>
-                {/* Navigation */}
-                <nav className="hidden md:flex items-center gap-8">
+
+                {/* Desktop Navigation - Hidden on mobile */}
+                <nav className="hidden lg:flex items-center gap-8">
                     <NavLink href="/tool" isActive={pathname?.startsWith('/tool')}>
                         Công cụ
                     </NavLink>

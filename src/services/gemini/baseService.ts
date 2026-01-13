@@ -4,7 +4,6 @@
 */
 import { Modality } from "@google/genai";
 import type { GenerateContentResponse } from "@google/genai";
-import { supabase } from '@/lib/supabase/client';
 
 // --- Global Configuration Store ---
 interface GlobalConfig {
@@ -164,20 +163,14 @@ async function getCachedSession(): Promise<string | undefined> {
         return cachedSession.token;
     }
 
-    // Fetch new session
-    devLog('[baseService] Fetching fresh session...');
+    // Fetch NextAuth session
+    devLog('[baseService] Fetching fresh NextAuth session...');
     try {
-        const sessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('getSession timeout')), 3000)
-        );
+        // Use NextAuth's getSession (client-side)
+        const { getSession } = await import('next-auth/react');
+        const session = await getSession();
 
-        const { data: { session } } = await Promise.race([
-            sessionPromise,
-            timeoutPromise
-        ]) as any;
-
-        const token = session?.access_token;
+        const token = (session as any)?.accessToken;
 
         // Cache the result
         cachedSession = { token, timestamp: now };
@@ -185,35 +178,7 @@ async function getCachedSession(): Promise<string | undefined> {
 
         return token;
     } catch (error) {
-        devWarn('[baseService] getSession failed, trying localStorage fallback...', error);
-
-        // Fallback to localStorage
-        if (typeof window !== 'undefined') {
-            try {
-                const allKeys = Object.keys(localStorage);
-                const supabaseKey = allKeys.find(key => key.includes('supabase') || key.includes('sb-'));
-
-                if (supabaseKey) {
-                    const authData = localStorage.getItem(supabaseKey);
-                    if (authData) {
-                        const parsed = JSON.parse(authData);
-                        const token = parsed?.access_token
-                            || parsed?.currentSession?.access_token
-                            || parsed?.session?.access_token;
-
-                        if (token) {
-                            // Cache the fallback result
-                            cachedSession = { token, timestamp: now };
-                            devLog('[baseService] Token from localStorage cached');
-                            return token;
-                        }
-                    }
-                }
-            } catch (e) {
-                devError('[baseService] localStorage fallback failed:', e);
-            }
-        }
-
+        devWarn('[baseService] getSession failed:', error);
         return undefined;
     }
 }
