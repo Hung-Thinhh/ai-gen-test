@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ZaloCTA } from './ZaloCTA';
+import Image from 'next/image'
 
 const testimonials = [
     {
@@ -38,7 +39,65 @@ import 'swiper/css/pagination';
 export const CommunitySection = () => {
     return (
         <section className="pt-20 bg-black text-white relative font-sans  mb-30">
-            <div className="container mx-auto max-w-[1300px] px-6">
+            {/* Benefits Grid */}
+            <motion.div
+                initial={{ opacity: 0, y: 50 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8 }}
+                className="benefit relative z-20 container max-w-[1300px] mx-auto px-6 mt-10 z-999 hidden md:block"
+            >
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-[1300px] mx-auto">
+                    {/* Item 1 */}
+                    <div className="group p-8 rounded-3xl bg-black/70 backdrop-blur-md border border-orange-600/60 hover:border-orange-600/40 transition-all duration-300 hover:transform hover:-translate-y-2">
+                        <div className="w-30 h-30 mx-auto mb-6 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.3)] group-hover:shadow-[0_0_25px_rgba(249,115,22,0.4)] transition-all duration-300">
+                            <Image
+                                src="/img/icon_1.png"
+                                width={500}
+                                height={500}
+                                alt="Picture of the author"
+                                className="w-20 h-20 object-contain"
+                            />
+                        </div>
+                        <p className="text-white text-lg font-medium leading-relaxed text-center">
+                            Tạo ảnh nhanh chóng,<br />số lượng lớn
+                        </p>
+                    </div>
+
+                    {/* Item 2 */}
+                    <div className="group p-8 rounded-3xl bg-black/70 backdrop-blur-md border border-orange-600/60 hover:border-orange-600/40 transition-all duration-300 hover:transform hover:-translate-y-2">
+                        <div className="w-30 h-30 mx-auto mb-6 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.3)] group-hover:shadow-[0_0_25px_rgba(249,115,22,0.4)] transition-all duration-300">
+                            <Image
+                                src="/img/icon_2.png"
+                                width={500}
+                                height={500}
+                                alt="Picture of the author"
+                                className="w-20 h-20  object-contain"
+                            />
+                        </div>
+                        <p className="text-white text-lg font-medium leading-relaxed text-center">
+                            Tiết kiệm chi phí<br />& thời gian
+                        </p>
+                    </div>
+
+                    {/* Item 3 */}
+                    <div className="group p-8 rounded-3xl bg-black/70 backdrop-blur-md border border-orange-600/60 hover:border-orange-600/40 transition-all duration-300 hover:transform hover:-translate-y-2">
+                        <div className="w-30 h-30 mx-auto mb-6 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.3)] group-hover:shadow-[0_0_25px_rgba(249,115,22,0.4)] transition-all duration-300">
+                            <Image
+                                src="/img/icon_3.png"
+                                width={500}
+                                height={500}
+                                alt="Picture of the author"
+                                className="w-20 h-20  object-contain"
+                            />
+                        </div>
+                        <p className="text-white text-lg font-medium leading-relaxed text-center">
+                            Dễ dàng thay đổi concept,<br />không phụ thuộc đội ngũ
+                        </p>
+                    </div>
+                </div>
+            </motion.div>
+            <div className="container mx-auto max-w-[1300px] px-6 md:pt-30">
 
                 {/* Header */}
                 <motion.h2

@@ -457,7 +457,7 @@ const Overview: React.FC = () => {
 
 
             {/* ===== COMMUNITY SECTION ===== */}
-            <CommunitySection />
+            <Community Section />
             {/* ===== PERSONAL GALLERY SECTION ===== */}
             <motion.section
                 className="gallery-section hidden"
