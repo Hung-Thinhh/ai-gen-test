@@ -86,11 +86,16 @@ const convertToWebP = async (fileOrBase64: string | Blob): Promise<string> => {
  * @param folder Optional folder path (Cloudinary handles this via preset or parameter, 
  *               but unsigned presets often override folders. We'll try passing it.)
  */
-export const uploadToCloudinary = async (fileOrBase64: string | Blob, folder: string = 'ai-gen-gallery'): Promise<string> => {
+export const uploadToCloudinary = async (fileOrBase64: string | Blob, folder: string = 'ai-gen-gallery', options: { skipOptimization?: boolean } = {}): Promise<string> => {
     try {
         let base64Data: string;
 
         // Convert File/Blob to base64 first if needed
+        if (typeof fileOrBase64 !== 'string' && !(fileOrBase64 instanceof Blob)) { // Assuming Blob check or similar logic if needed, but original was just string check
+            // Logic remains similar, but check options
+        }
+
+        // 1. Prepare Data
         if (typeof fileOrBase64 !== 'string') {
             console.log('[Cloudinary] Converting File to base64...');
             base64Data = await new Promise((resolve, reject) => {
@@ -103,17 +108,23 @@ export const uploadToCloudinary = async (fileOrBase64: string | Blob, folder: st
             base64Data = fileOrBase64;
         }
 
-        // Convert to WebP BEFORE upload to save storage
-        console.log('[Cloudinary] Converting image to WebP...');
-        const webpBase64 = await convertToWebP(base64Data);
-        console.log('[Cloudinary] WebP conversion complete');
+        let finalData = base64Data;
+
+        // 2. Optimization (WebP Conversion) - Only if NOT skipped
+        if (!options.skipOptimization) {
+            console.log('[Cloudinary] Converting image to WebP...');
+            finalData = await convertToWebP(base64Data);
+            console.log('[Cloudinary] WebP conversion complete');
+        } else {
+            console.log('[Cloudinary] Skipping WebP conversion (Raw Upload)');
+        }
 
         const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
 
         const formData = new FormData();
         formData.append('upload_preset', UPLOAD_PRESET);
-        // Upload WebP directly
-        formData.append('file', webpBase64);
+        // Upload data (WebP or Original)
+        formData.append('file', finalData);
 
         const response = await fetch(url, {
             method: 'POST',

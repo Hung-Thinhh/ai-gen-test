@@ -580,11 +580,9 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             // 1. Upload all new images to Cloudinary (Parallel)
             const uploadPromises = uniqueNewImages.map(async (img) => {
                 if (img.startsWith('data:image')) {
-                    // Note: uploadImageToCloud uses Cloudinary, doesn't need Supabase token?
-                    // Actually storageService.uploadImageToCloud uses cloudinaryService.
-                    // Let's verify if it needs token. `uploadToCloudinary` uses generic API usually.
-                    // But `addMultipleImagesToCloudGallery` NEEDS token.
-                    return await storageService.uploadImageToCloud(user.id, img);
+                    // Check if optimization should be skipped (e.g., for PNGs with metadata)
+                    const skipOptimization = img.startsWith('data:image/png');
+                    return await storageService.uploadImageToCloud(user.id, img, 'gallery', skipOptimization);
                 } else {
                     return img; // Already a URL
                 }
@@ -617,7 +615,9 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             const uploadPromises = uniqueNewImages.map(async (img) => {
                 if (img.startsWith('data:image')) {
                     try {
-                        const url = await storageService.uploadGuestImage(activeGuestId, img);
+                        // Check if optimization should be skipped (e.g., for PNGs with metadata)
+                        const skipOptimization = img.startsWith('data:image/png');
+                        const url = await storageService.uploadGuestImage(activeGuestId, img, skipOptimization);
                         // Also track session if possible, but here just persisting image
                         return url;
                     } catch (e) {

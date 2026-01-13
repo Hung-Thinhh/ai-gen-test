@@ -134,11 +134,11 @@ const executeWithRetry = async <T>(
  * @param base64Data The Base64 string of the image.
  * @param folder The folder path.
  */
-export const uploadImageToCloud = async (userId: string, base64Data: string, folder: string = "gallery"): Promise<string> => {
+export const uploadImageToCloud = async (userId: string, base64Data: string, folder: string = "gallery", skipOptimization: boolean = false): Promise<string> => {
     try {
         // Use Cloudinary Service
         const storagePath = `users/${userId}/${folder}`;
-        const downloadUrl = await uploadToCloudinary(base64Data, storagePath);
+        const downloadUrl = await uploadToCloudinary(base64Data, storagePath, { skipOptimization });
         return downloadUrl;
     } catch (error) {
         console.error("Error uploading image to cloud (Cloudinary):", error);
@@ -220,11 +220,11 @@ export const removeImageFromCloudGallery = async (userId: string, imageUrl: stri
 /**
  * Uploads a guest generated image to Cloudinary.
  */
-export const uploadGuestImage = async (guestId: string, base64Data: string): Promise<string> => {
+export const uploadGuestImage = async (guestId: string, base64Data: string, skipOptimization: boolean = false): Promise<string> => {
     try {
         // Use Cloudinary Service
         const storagePath = `guests/${guestId}`;
-        const downloadUrl = await uploadToCloudinary(base64Data, storagePath);
+        const downloadUrl = await uploadToCloudinary(base64Data, storagePath, { skipOptimization });
         return downloadUrl;
     } catch (error) {
         console.error("Error uploading guest image (Cloudinary):", error);
@@ -635,6 +635,11 @@ export const logGenerationHistory = async (userId: string | null, entry: any, to
     try {
         if (!userId) {
             console.log("[Storage] Guest history logging disabled.");
+            // [REMOVED] Legacy Supabase client usage. 
+            // History logging should now be handled by the server API (/api/gemini/generate-image)
+            // or via a dedicated API endpoint if needed from client.
+
+            // const client = getFreshClient(token);
             return;
         }
 
@@ -643,10 +648,12 @@ export const logGenerationHistory = async (userId: string | null, entry: any, to
 
         // If tool_id is missing or 0, try to resolve from appId provided in entry (if any)
         // entry usually comes from MainApp.tsx logGeneration which has appId
+        /*
         if (!resolvedToolId && entry.appId) {
             const foundId = await getToolId(entry.appId);
             if (foundId) resolvedToolId = foundId;
         }
+        */
 
         // Calculate credits_used = base_credit_cost * generation_count
         // [MOVED TO SERVER API]

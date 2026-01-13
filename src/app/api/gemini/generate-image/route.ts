@@ -132,58 +132,138 @@ export async function POST(req: NextRequest) {
             config: config
         });
 
-        // 5. Deduct credits ONLY after successful generation
-        console.log('[API DEBUG] Generation successful, deducting credits...');
+        // 5. Upload to Cloudinary (Server-side)
+        console.log('[API DEBUG] Uploading to Cloudinary...');
+
+        const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dmxmzannb';
+        const UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'AI-image';
+
+        // Helper to upload
+        const uploadToCloudinaryServer = async (base64Image: string) => {
+            const formData = new FormData();
+            formData.append('file', base64Image);
+            formData.append('upload_preset', UPLOAD_PRESET);
+
+            const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!uploadRes.ok) {
+                const errData = await uploadRes.json();
+                console.error('Cloudinary Upload Error:', errData);
+                throw new Error('Failed to upload image to storage');
+            }
+
+            const data = await uploadRes.json();
+            // Optimize URL (f_auto, q_auto)
+            return data.secure_url.replace('/upload/', '/upload/f_auto,q_auto/');
+        };
+
+        // We only upload the first image for now (gemini usually returns 1 in this setup)
+        const firstCandidate = response.candidates?.[0]?.content?.parts?.[0];
+        let imageUrl = '';
+
+        if (firstCandidate && firstCandidate.inlineData) {
+            const base64Image = `data:${firstCandidate.inlineData.mimeType};base64,${firstCandidate.inlineData.data}`;
+            imageUrl = await uploadToCloudinaryServer(base64Image);
+            console.log('[API DEBUG] Image uploaded:', imageUrl);
+        } else {
+            console.warn('[API DEBUG] No inlineData found in candidate, skipping upload');
+        }
+
+
+        // 6. Deduct credits AND Save to Gallery (Atomic-ish)
+        console.log('[API DEBUG] Generation successful, deducting credits and saving to gallery...');
 
         // DIRECT SQL UPDATE (Via Neon)
-        let newCredits = currentCredits - creditCost; // Default fallback
+        // We update credits AND append the new image URL to the gallery JSONB array relative to the user/guest
+        let newCredits = currentCredits - creditCost;
+
         try {
-            console.log(`[API] Deducting ${creditCost} credits directly (via Neon)...`);
+            console.log(`[API] Updating DB (Usage + Gallery)...`);
+            console.log(`[API DEBUG] DB Update Data - isGuest: ${isGuest}, guestId: ${guestId}, userId: ${userId}, imageUrl: ${imageUrl}, creditCost: ${creditCost}`);
+
             const { sql } = await import('@/lib/postgres/client');
 
-            if (isGuest && guestId) {
+            if (isGuest && guestId && imageUrl) {
                 // Atomic Update & Return
                 const result = await sql`
                     UPDATE guest_sessions
-                    SET credits = GREATEST(0, credits - ${creditCost})
+                    SET 
+                        credits = GREATEST(0, credits - ${creditCost}),
+                        gallery = COALESCE(gallery, '[]'::jsonb) || jsonb_build_array(${imageUrl}::text)
                     WHERE guest_id = ${guestId}
-                    RETURNING credits
+                    RETURNING credits,
+                    gallery->>-1 AS last_added_url;
                 `;
 
                 if (result.length > 0) {
                     newCredits = result[0].credits;
-                    console.log(`[API] Guest credits updated. New balance: ${newCredits}`);
+                    console.log(`[API] Guest updated. New balance: ${newCredits}, Image saved. Last URL: ${result[0].last_added_url}`);
                 } else {
-                    console.warn('[API] Guest ID not found during deduction:', guestId);
+                    console.warn('[API] Guest ID not found during update:', guestId);
                 }
 
-            } else if (userId) {
-                // Atomic Update & Return
-                const result = await sql`
+            } else if (userId && imageUrl) {
+                // 1. Update Credits in `users`
+                const creditResult = await sql`
                     UPDATE users
                     SET current_credits = GREATEST(0, current_credits - ${creditCost})
                     WHERE user_id = ${userId}
-                    RETURNING current_credits
+                    RETURNING current_credits;
                 `;
 
-                if (result.length > 0) {
-                    newCredits = result[0].current_credits;
-                    console.log(`[API] User credits updated. New balance: ${newCredits}`);
+                // 2. Add image to `profiles` (Gallery)
+                const galleryResult = await sql`
+                    INSERT INTO profiles (id, gallery, last_updated)
+                    VALUES (${userId}, jsonb_build_array(${imageUrl}::text), NOW())
+                    ON CONFLICT (id) 
+                    DO UPDATE SET 
+                        gallery = COALESCE(profiles.gallery, '[]'::jsonb) || jsonb_build_array(${imageUrl}::text),
+                        last_updated = NOW()
+                    RETURNING gallery;
+                `;
+
+                const oke1 = await sql`
+                    SELECT gallery->>-1 AS last_added_url 
+FROM profiles 
+WHERE id = ${userId};
+                `;
+
+                console.log('cccccccccccccccccccccccccccccccccc', oke1);
+
+                if (creditResult.length > 0) {
+                    newCredits = creditResult[0].current_credits;
+                    // Get last added URL from the returned gallery array
+                    const galleryArr = galleryResult[0]?.gallery;
+                    const lastUrl = Array.isArray(galleryArr) ? galleryArr[galleryArr.length - 1] : 'unknown';
+
+                    console.log(`[API] User updated. New balance: ${newCredits}, Image saved to profiles. Last URL: ${lastUrl}`);
                 } else {
-                    console.warn('[API] User ID not found during deduction:', userId);
+                    console.warn('[API] User ID not found during update:', userId);
+                }
+            } else {
+                // Fallback for credit deduction ONLY if image upload failed or no ID (shouldn't happen here logically)
+                if (isGuest && guestId) {
+                    await sql`UPDATE guest_sessions SET credits = GREATEST(0, credits - ${creditCost}) WHERE guest_id = ${guestId}`;
+                } else if (userId) {
+                    await sql`UPDATE users SET current_credits = GREATEST(0, current_credits - ${creditCost}) WHERE user_id = ${userId}`;
                 }
             }
         } catch (err: any) {
-            console.error('[API] CRITICAL: Neon Credit deduction failed:', err);
-            // We log but don't fail the request since image generated
+            console.error('[API] CRITICAL: DB Update failed:', err);
+            // We log but don't fail the request since image generated (maybe?) 
+            // Actually if DB fails, user gets image but no history. acceptable trade-off vs erroring out.
         }
 
-        console.log('[API DEBUG] Credits deducted successfully');
+        console.log('[API DEBUG] Process complete');
 
-        // Return only necessary data to avoid JSON serialization issues with large base64
+        // Return response
         return NextResponse.json({
             candidates: response.candidates,
-            newCredits // Add new credit balance to response
+            newCredits,
+            imageUrl // Return the persistent URL too
         });
 
     } catch (error: any) {
