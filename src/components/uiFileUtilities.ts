@@ -22,8 +22,8 @@ export const handleFileUpload = (
     if (e.target.files && e.target.files[0]) {
         const file = e.target.files[0];
 
-        // 1. Check size (Max 3MB)
-        const MAX_SIZE_MB = 3;
+        // 1. Check size (Max 15MB - increased from 3MB)
+        const MAX_SIZE_MB = 15;
         if (file.size > MAX_SIZE_MB * 1024 * 1024) {
             toast.error(`File quá lớn. Vui lòng upload ảnh dưới ${MAX_SIZE_MB}MB.`);
             e.target.value = ''; // Reset input
@@ -33,15 +33,17 @@ export const handleFileUpload = (
         const reader = new FileReader();
         reader.onloadend = () => {
             if (typeof reader.result === 'string') {
-                // 2. Check resolution and auto-scale if needed
+                // 2. Always process image to optimize size
                 const img = new Image();
                 img.onload = () => {
                     const MAX_DIMENSION = 2600; // Limit below 4K (3840px)
+                    const fileSizeMB = file.size / (1024 * 1024);
 
-                    // If image exceeds max dimension, scale it down
-                    if (img.width > MAX_DIMENSION || img.height > MAX_DIMENSION) {
-                        // toast('Đang tự động giảm kích thước ảnh...', { icon: '🔄' });
+                    // Determine if we need to scale or compress
+                    const needsScaling = img.width > MAX_DIMENSION || img.height > MAX_DIMENSION;
+                    const needsCompression = fileSizeMB > 5; // Compress if > 5MB
 
+                    if (needsScaling || needsCompression) {
                         const canvas = document.createElement('canvas');
                         const ctx = canvas.getContext('2d');
 
@@ -55,15 +57,17 @@ export const handleFileUpload = (
                         let newWidth = img.width;
                         let newHeight = img.height;
 
-                        if (img.width > img.height) {
-                            if (img.width > MAX_DIMENSION) {
-                                newWidth = MAX_DIMENSION;
-                                newHeight = (img.height * MAX_DIMENSION) / img.width;
-                            }
-                        } else {
-                            if (img.height > MAX_DIMENSION) {
-                                newHeight = MAX_DIMENSION;
-                                newWidth = (img.width * MAX_DIMENSION) / img.height;
+                        if (needsScaling) {
+                            if (img.width > img.height) {
+                                if (img.width > MAX_DIMENSION) {
+                                    newWidth = MAX_DIMENSION;
+                                    newHeight = (img.height * MAX_DIMENSION) / img.width;
+                                }
+                            } else {
+                                if (img.height > MAX_DIMENSION) {
+                                    newHeight = MAX_DIMENSION;
+                                    newWidth = (img.width * MAX_DIMENSION) / img.height;
+                                }
                             }
                         }
 
@@ -71,9 +75,22 @@ export const handleFileUpload = (
                         canvas.height = newHeight;
                         ctx.drawImage(img, 0, 0, newWidth, newHeight);
 
-                        // Convert to data URL with good quality
-                        const scaledDataUrl = canvas.toDataURL('image/jpeg', 0.92);
-                        // toast.success(`Đã giảm kích thước từ ${img.width}x${img.height} xuống ${Math.round(newWidth)}x${Math.round(newHeight)}px`);
+                        // Adjust quality based on file size
+                        // Larger files get more aggressive compression
+                        let quality = 0.92;
+                        if (fileSizeMB > 10) quality = 0.75;
+                        else if (fileSizeMB > 7) quality = 0.82;
+                        else if (fileSizeMB > 5) quality = 0.87;
+
+                        // Convert to data URL with adjusted quality
+                        const scaledDataUrl = canvas.toDataURL('image/jpeg', quality);
+
+                        if (needsScaling || needsCompression) {
+                            const originalSize = (file.size / 1024 / 1024).toFixed(2);
+                            const newSize = (scaledDataUrl.length * 0.75 / 1024 / 1024).toFixed(2); // Estimate
+                            toast.success(`Đã tối ưu ảnh: ${originalSize}MB → ~${newSize}MB`, { duration: 2000 });
+                        }
+
                         callback(scaledDataUrl);
                     } else {
                         // Image is within limits, use original
