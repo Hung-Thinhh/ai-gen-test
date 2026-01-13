@@ -163,7 +163,7 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ mediaUrl, caption, status, 
                             className="hidden md:flex p-2 items-center justify-center bg-neutral-800/80 rounded-full text-white hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
                             aria-label={`${t('common_edit')} ${caption}`}
                         >
-                            <EditorIcon className="h-5 w-5" />
+                            <EditorIcon className="h-5 w-5 pointer-events-none" />
                         </button>
                     )}
                     {hasMedia && onClear && (
@@ -175,7 +175,7 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ mediaUrl, caption, status, 
                             className="p-2 flex items-center justify-center bg-red-500/60 rounded-full text-white hover:bg-red-600/80 focus:outline-none focus:ring-2 focus:ring-red-400"
                             aria-label={t('common_clearImage')}
                         >
-                            <DeleteIcon className="h-5 w-5" />
+                            <DeleteIcon className="h-5 w-5 pointer-events-none" />
                         </button>
                     )}
                     {hasMedia && onSwapImage && (
@@ -187,7 +187,7 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ mediaUrl, caption, status, 
                             className="p-2 flex items-center justify-center bg-neutral-800/80 rounded-full text-white hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
                             aria-label={`${t('common_swapImage')} ${caption}`}
                         >
-                            <SwapIcon className="h-5 w-5" strokeWidth={2} />
+                            <SwapIcon className="h-5 w-5 pointer-events-none" strokeWidth={2} />
                         </button>
                     )}
                     {onSelectFromGallery && (
@@ -199,7 +199,7 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ mediaUrl, caption, status, 
                             className="p-2 flex items-center justify-center bg-neutral-800/80 rounded-full text-white hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
                             aria-label={t('common_selectFromGallery')}
                         >
-                            <GalleryIcon className="h-5 w-5" strokeWidth={2} />
+                            <GalleryIcon className="h-5 w-5 pointer-events-none" strokeWidth={2} />
                         </button>
                     )}
                     {onCaptureFromWebcam && (
@@ -212,7 +212,7 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ mediaUrl, caption, status, 
                             aria-label={t('common_captureFromWebcam')}
                         >
                             <WebcamIcon
-                                className="h-5 w-5"
+                                className="h-5 w-5 pointer-events-none"
                                 stroke="currentColor"
                                 strokeWidth="2"
                                 strokeLinecap="round"
@@ -229,7 +229,7 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ mediaUrl, caption, status, 
                             className="p-2 flex items-center justify-center bg-neutral-800/80 rounded-full text-white hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
                             aria-label={`${t('common_regenerate')} ${caption}`}
                         >
-                            <RegenerateIcon className="h-5 w-5" />
+                            <RegenerateIcon className="h-5 w-5 pointer-events-none" />
                         </button>
                     )}
                     {hasMedia && onDownload && (
@@ -241,7 +241,7 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ mediaUrl, caption, status, 
                             className="p-2 flex items-center justify-center bg-neutral-800/80 rounded-full text-white hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
                             aria-label={`${t('common_download')} ${caption}`}
                         >
-                            <DownloadIcon className="h-5 w-5" strokeWidth={2} />
+                            <DownloadIcon className="h-5 w-5 pointer-events-none" strokeWidth={2} />
                         </button>
                     )}
                 </div>

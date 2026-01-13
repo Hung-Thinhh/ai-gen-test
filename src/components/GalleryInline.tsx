@@ -6,6 +6,7 @@ import React, { useEffect, useState, useRef, ChangeEvent } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Masonry from 'react-masonry-css';
+import toast from 'react-hot-toast';
 import { downloadAllImagesAsZip, ImageForZip, useLightbox, useAppControls, useImageEditor, combineImages } from './uiUtils';
 import Lightbox from './Lightbox';
 import { ImageThumbnail } from './ImageThumbnail';
@@ -117,9 +118,44 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images })
         });
     };
 
-    const handleDeleteImage = (indexToDelete: number, e: React.MouseEvent) => {
+    const handleDeleteImage = async (indexToDelete: number, e: React.MouseEvent) => {
         e.stopPropagation();
-        removeImageFromGallery(indexToDelete);
+
+        // Show confirmation dialog
+        const confirmed = window.confirm(
+            'Bạn có chắc muốn xóa ảnh này vĩnh viễn?\n\nẢnh sẽ bị xóa khỏi database và Cloudinary storage, không thể khôi phục.'
+        );
+
+        if (!confirmed) return;
+
+        const imageUrl = images[indexToDelete];
+
+        // Show loading toast
+        const toastId = toast.loading('Đang xóa ảnh...');
+
+        try {
+            // Call API to delete from DB + Cloudinary
+            const response = await fetch('/api/gallery/deleteImage', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageUrl }),
+            });
+
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.message || 'Xóa ảnh thất bại');
+            }
+
+            // Remove from local state
+            removeImageFromGallery(indexToDelete);
+
+            // Show success toast
+            toast.success('Đã xóa ảnh thành công!', { id: toastId });
+        } catch (error: any) {
+            console.error('Delete failed:', error);
+            toast.error(`Lỗi xóa ảnh: ${error.message}`, { id: toastId });
+        }
     };
 
     const handleQuickView = (indexToView: number, e: React.MouseEvent) => {
@@ -272,24 +308,69 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images })
                     </div>
                     {/* Pagination Controls */}
                     {totalPages > 1 && (
-                        <div className="flex items-center justify-between px-4 py-3 border-t border-neutral-700 themed-bg">
-                            <button
-                                onClick={handlePrevPage}
-                                disabled={currentPage === 1}
-                                className="px-4 py-2 bg-neutral-800 text-neutral-300 rounded-lg hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            >
-                                ← Trang trước
-                            </button>
-                            <span className="text-neutral-300 text-sm">
-                                Trang {currentPage} / {totalPages} ({startIndex + 1}-{Math.min(endIndex, images.length)} của {images.length} ảnh)
-                            </span>
-                            <button
-                                onClick={handleNextPage}
-                                disabled={currentPage === totalPages}
-                                className="px-4 py-2 bg-neutral-800 text-neutral-300 rounded-lg hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            >
-                                Trang sau →
-                            </button>
+                        <div className="flex items-center justify-center px-4 py-4 border-t border-neutral-700 themed-bg">
+                            <div className="flex flex-col items-center gap-2">
+                                <span className="text-neutral-400 text-sm">
+                                    {startIndex + 1}-{Math.min(endIndex, images.length)} của {images.length} ảnh
+                                </span>
+                                <div className="flex gap-1">
+                                    {/* Previous button */}
+                                    <button
+                                        onClick={handlePrevPage}
+                                        disabled={currentPage === 1}
+                                        className="cur w-8 h-8 flex items-center justify-center bg-neutral-800 text-neutral-300 rounded-full hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                                    >
+                                        ←
+                                    </button>
+
+                                    {/* Page numbers */}
+                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => {
+                                        // Show first page, last page, current page, and pages around current
+                                        const showPage =
+                                            pageNum === 1 ||
+                                            pageNum === totalPages ||
+                                            Math.abs(pageNum - currentPage) <= 1;
+
+                                        // Show ellipsis
+                                        const showEllipsisBefore = pageNum === currentPage - 2 && currentPage > 3;
+                                        const showEllipsisAfter = pageNum === currentPage + 2 && currentPage < totalPages - 2;
+
+                                        if (!showPage && !showEllipsisBefore && !showEllipsisAfter) {
+                                            return null;
+                                        }
+
+                                        if (showEllipsisBefore || showEllipsisAfter) {
+                                            return (
+                                                <span key={`ellipsis-${pageNum}`} className="px-2 text-neutral-500">
+                                                    ...
+                                                </span>
+                                            );
+                                        }
+
+                                        return (
+                                            <button
+                                                key={pageNum}
+                                                onClick={() => handlePageChange(pageNum)}
+                                                className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors text-sm ${currentPage === pageNum
+                                                    ? 'bg-orange-500 text-white font-semibold'
+                                                    : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+                                                    }`}
+                                            >
+                                                {pageNum}
+                                            </button>
+                                        );
+                                    })}
+
+                                    {/* Next button */}
+                                    <button
+                                        onClick={handleNextPage}
+                                        disabled={currentPage === totalPages}
+                                        className="w-8 h-8 flex items-center justify-center bg-neutral-800 text-neutral-300 rounded-full hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                                    >
+                                        →
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </>
