@@ -180,9 +180,9 @@ export async function POST(req: NextRequest) {
 
         console.log('[API DEBUG] Credits deducted successfully');
 
-        // Return response with new credit balance
+        // Return only necessary data to avoid JSON serialization issues with large base64
         return NextResponse.json({
-            ...response,
+            candidates: response.candidates,
             newCredits // Add new credit balance to response
         });
 

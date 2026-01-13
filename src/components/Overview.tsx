@@ -201,7 +201,7 @@ const Overview: React.FC = () => {
     const popularTools = toolsToDisplay.slice(0, toolGridCount); // Use display list instead of settings directly
     console.log(popularTools);
     return (
-        <div className="overview-v2" suppressHydrationWarning>
+        <div className="overview-v2 !py-0" suppressHydrationWarning>
             {/* ===== MOBILE HOME HEADER ===== */}
             {isMobile && (
                 <MobileHomeHeader
@@ -348,28 +348,39 @@ const Overview: React.FC = () => {
                     </div>
 
                     {/* Category Filter Tabs */}
-                    <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
-                        <button
-                            onClick={() => setActiveCategory('all')}
-                            className={`px-4 !py-[5px] rounded-full text-sm  font-medium whitespace-nowrap w-[129px] cursor-pointer transition-all ${activeCategory === 'all'
-                                ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
-                                : 'bg-white/5 text-white/70 hover:bg-white/10'
-                                }`}
-                        >
-                            Tất cả
-                        </button>
-                        {categories.map((cat) => (
+                    <div className="flex items-center justify-between gap-4 mb-6">
+                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                             <button
-                                key={cat.id}
-                                onClick={() => setActiveCategory(cat.id)}
-                                className={`px-4 !py-[5px] rounded-full text-sm font-medium whitespace-nowrap w-auto cursor-pointer transition-all ${activeCategory === cat.id
+                                onClick={() => setActiveCategory('all')}
+                                className={`px-4 !py-[5px] rounded-full text-sm  font-medium whitespace-nowrap w-[129px] cursor-pointer transition-all ${activeCategory === 'all'
                                     ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
-                                    : 'border border-orange-500/60 text-white hover:bg-orange-500'
+                                    : 'bg-white/5 text-white/70 hover:bg-white/10'
                                     }`}
                             >
-                                {cat.name}
+                                Tất cả
                             </button>
-                        ))}
+                            {categories.map((cat) => (
+                                <button
+                                    key={cat.id}
+                                    onClick={() => setActiveCategory(cat.id)}
+                                    className={`px-4 !py-[5px] rounded-full text-sm font-medium whitespace-nowrap w-auto cursor-pointer transition-all ${activeCategory === cat.id
+                                        ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
+                                        : 'border border-orange-500/60 text-white hover:bg-orange-500'
+                                        }`}
+                                >
+                                    {cat.name}
+                                </button>
+                            ))}
+                        </div>
+                        <Link
+                            href="/prompt-library"
+                            className="px-4 py-2 text-sm font-medium text-orange-500 hover:text-orange-400 whitespace-nowrap transition-colors flex items-center gap-1"
+                        >
+                            Xem thêm
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                        </Link>
                     </div>
                 </div>
                 {loadingPrompts ? (
@@ -388,6 +399,20 @@ const Overview: React.FC = () => {
                                     whileHover={{ y: -5 }}
                                     onClick={() => handleCopyPrompt(prompt)}
                                 >
+                                    {/* Copy Button */}
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleCopyPrompt(prompt);
+                                        }}
+                                        className="absolute top-2 right-2 z-20 p-2 bg-black/60 hover:bg-orange-500/90 backdrop-blur-sm rounded-lg transition-all duration-200 group/copy"
+                                        title="Copy prompt"
+                                    >
+                                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                        </svg>
+                                    </button>
+
                                     {/* Copied Overlay */}
                                     {copiedId === prompt.id && (
                                         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">

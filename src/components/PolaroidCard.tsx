@@ -150,7 +150,7 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ mediaUrl, caption, status, 
 
                 {/* --- BUTTON CONTAINER --- */}
                 <div className={cn(
-                    "absolute top-2 right-2 z-20 flex flex-col gap-2 transition-opacity duration-300",
+                    "absolute top-2 right-2 z-30 flex flex-col gap-2 transition-opacity duration-300",
                     // Mobile: always visible. Desktop (md+): hidden by default, visible on hover
                     (hasMedia || onSelectFromGallery || onCaptureFromWebcam) ? 'md:opacity-0 md:group-hover:opacity-100' : 'opacity-0 pointer-events-none'
                 )}>

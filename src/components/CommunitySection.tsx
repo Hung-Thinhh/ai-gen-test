@@ -45,7 +45,7 @@ export const CommunitySection = () => {
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className="text-3xl md:text-4xl font-bold text-center mb-16 bg-gradient-to-r from-orange-400 to-orange-600 bg-clip-text text-transparent"
+                    className="text-3xl leading-12 md:text-4xl font-bold text-center mb-16 bg-gradient-to-r from-orange-400 to-orange-600 bg-clip-text text-transparent"
                 >
                     Gia nhập cộng đồng với chúng tôi
                 </motion.h2>

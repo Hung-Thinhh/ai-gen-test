@@ -21,11 +21,12 @@ const ToolCard = ({
 }) => {
     return (
         <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.6 }}
-            className={`flex flex-col ${reverse ? 'md:flex-row-reverse' : 'md:flex-row'} gap-8 md:gap-16 items-center md:p-20 p-10 border border-white/20 hover:border-orange-400/70 transition-all duration-300 rounded-3xl bg-black/80 backdrop-blur-xl shadow-2xl`}
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true, margin: "0px" }}
+            transition={{ duration: 0.2 }}
+            style={{ willChange: 'opacity' }}
+            className={`flex flex-col ${reverse ? 'md:flex-row-reverse' : 'md:flex-row'} gap-8 md:gap-16 items-center md:p-20 p-10 border border-white/20 hover:border-orange-400/70 transition-colors duration-200 rounded-3xl bg-black/80 shadow-2xl`}
         >
             {/* Context/Text Section */}
             <div className="w-full md:flex-[35] text-left">
@@ -61,7 +62,10 @@ const ToolCard = ({
                     <img
                         src={image}
                         alt={title}
-                        className="w-full h-auto object-cover transform transition-transform duration-700 group-hover:scale-105"
+                        loading="lazy"
+                        decoding="async"
+                        style={{ willChange: 'transform' }}
+                        className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105"
                     />
 
                     {/* Interactive Cursor Mockup (Optional) */}

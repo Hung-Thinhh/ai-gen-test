@@ -20,6 +20,7 @@ export default function StudioDetailPage() {
             setLoading(true);
             try {
                 const data = await getStudioBySlug(slug);
+                console.log('dataaaaaaaaaaaaaaaaaaaaaaaaaaaa', slug, data);
                 if (data) {
                     setStudio(data);
                 } else {

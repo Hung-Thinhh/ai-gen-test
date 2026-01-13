@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { useAppControls } from './uiUtils';
 import { useAuth } from '../contexts/AuthContext';
 import { useSession } from 'next-auth/react';
-
+import Link from 'next/link'
 export const LeonardoHeader = () => {
     const [scrolled, setScrolled] = useState(false);
     const router = useRouter();
@@ -67,22 +67,22 @@ export const LeonardoHeader = () => {
         >
             <div className="container mx-auto px-6 h-16 flex items-center justify-between">
                 {/* Logo */}
-                <button
-                    onClick={() => router.push('/')}
-                    className="flex items-center gap-3 group cursor-pointer"
-                >
-                    <div className="w-12 h-12 p-2 rounded-xl overflow-hidden shadow-lg shadow-orange-500/30 group-hover:shadow-orange-500/50 transition-all duration-300">
-                        <img
-                            src="/img/logo_site.webp"
-                            alt="Duky AI Logo"
-                            className="w-full h-full object-cover"
-                        />
-                    </div>
-                    <span className="text-xl font-bold bg-gradient-to-r from-orange-400 to-orange-600 bg-clip-text text-transparent">
-                        Duky AI
-                    </span>
-                </button>
-
+                <Link href="/">
+                    <button
+                        className="flex items-center gap-3 group cursor-pointer"
+                    >
+                        <div className="w-12 h-12 p-2 rounded-xl overflow-hidden shadow-lg shadow-orange-500/30 group-hover:shadow-orange-500/50 transition-all duration-300">
+                            <img
+                                src="/img/logo_site.webp"
+                                alt="Duky AI Logo"
+                                className="w-full h-full object-cover"
+                            />
+                        </div>
+                        <span className="text-xl font-bold bg-gradient-to-r from-orange-400 to-orange-600 bg-clip-text text-transparent">
+                            Duky AI
+                        </span>
+                    </button>
+                </Link>
                 {/* Navigation */}
                 <nav className="hidden md:flex items-center gap-8">
                     <NavLink href="/tool" isActive={pathname?.startsWith('/tool')}>
@@ -94,7 +94,7 @@ export const LeonardoHeader = () => {
                     <NavLink href="/learn" isActive={pathname === '/learn'}>
                         Hướng dẫn
                     </NavLink>
-                    <NavLink href="/gallery" isActive={pathname === '/gallery'}>
+                    <NavLink href="/prompt-library" isActive={pathname === '/prompt-library'}>
                         Thư viện
                     </NavLink>
                     <NavLink href="/pricing" isActive={pathname === '/pricing'}>
@@ -209,13 +209,14 @@ export const LeonardoHeader = () => {
     );
 };
 
+
 const NavLink = ({ href, isActive, children }: { href: string; isActive?: boolean; children: React.ReactNode }) => {
-    const router = useRouter();
+    // Không cần dùng useRouter và router.push nữa
     return (
-        <button
-            onClick={() => router.push(href)}
+        <Link
+            href={href}
             className={cn(
-                "transition-colors relative group",
+                "transition-colors relative group inline-block", // Thêm inline-block để padding/span hoạt động chuẩn
                 isActive ? "text-orange-400 font-medium" : "text-gray-400 hover:text-orange-400"
             )}
         >
@@ -224,7 +225,7 @@ const NavLink = ({ href, isActive, children }: { href: string; isActive?: boolea
                 "absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-orange-400 to-orange-600 transition-all duration-300",
                 isActive ? "w-full" : "w-0 group-hover:w-full"
             )} />
-        </button>
+        </Link>
     );
 };
 

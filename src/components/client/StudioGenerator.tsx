@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { generateStudioImage } from '../../services/geminiService';
 import ActionablePolaroidCard from '../ActionablePolaroidCard';
 import Lightbox from '../Lightbox';
+import SearchableSelect from '../SearchableSelect';
 import {
     useMediaQuery,
     AppScreenHeader,
@@ -145,13 +146,11 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
         handleFileUpload(e, handleImageSelectedForUploader);
     }, []);
 
-    const activeTab = appState.activeTab || 'female';
-
     const handleUploadedImageChange = (newUrl: string | null) => {
         setAppState(prev => ({
             ...prev,
             uploadedImage: newUrl,
-            stage: (newUrl && (activeTab !== 'couple' || prev.uploadedImage2)) ? 'configuring' : 'idle'
+            stage: newUrl ? 'configuring' : 'idle'
         }));
     };
 
@@ -160,15 +159,6 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
             ...prev,
             uploadedImage2: newUrl,
             stage: (newUrl && prev.uploadedImage) ? 'configuring' : 'idle'
-        }));
-    };
-
-    const handleTabChange = (tab: 'female' | 'male' | 'couple') => {
-        setSelectedStyleImages([]); // Clear multi-selection when switching tabs
-        setAppState(prev => ({
-            ...prev,
-            activeTab: tab,
-            selectedStyleImage: null
         }));
     };
 
@@ -193,13 +183,16 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
         }));
     };
 
-    const handleGenerate = async () => {
-        const isCoupleMode = activeTab === 'couple';
-        const hasRequiredImages = isCoupleMode
-            ? (appState.uploadedImage && appState.uploadedImage2)
-            : appState.uploadedImage;
+    const handleTabChange = (tab: 'female' | 'male') => {
+        setSelectedStyleImages([]); // Clear selection when switching
+        setAppState(prev => ({
+            ...prev,
+            activeTab: tab
+        }));
+    };
 
-        if (!hasRequiredImages || selectedStyleImages.length === 0) {
+    const handleGenerate = async () => {
+        if (!appState.uploadedImage || selectedStyleImages.length === 0) {
             console.warn("Missing inputs - aborting generation");
             return;
         }
@@ -218,7 +211,7 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
         setGeneratedImages([]);
         setPendingCount(imageCount);
 
-        const secondImage = isCoupleMode ? appState.uploadedImage2 : undefined;
+
         const results: string[] = [];
         let errorCount = 0;
 
@@ -235,7 +228,7 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                     appState.options.customPrompt,
                     appState.options.removeWatermark,
                     appState.options.aspectRatio,
-                    secondImage
+                    undefined
                 );
 
                 const settingsToEmbed = {
@@ -274,7 +267,13 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
     const isLoading = appState.stage === 'generating';
     const hasResults = generatedImages.length > 0;
 
-    const currentTemplates = TEMPLATES.filter((t: any) => (t.gender || 'female') === activeTab);
+    const { activeTab } = appState;
+
+    // Filter templates by gender
+    const currentTemplates = TEMPLATES.filter((t: any) => {
+        const gender = t.gender || 'female'; // Default to female if not specified
+        return gender === activeTab;
+    });
 
     return (
         <div className="flex flex-col items-center justify-center w-full h-full flex-1 min-h-screen mb-40" id="studio-top">
@@ -309,7 +308,7 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                 {!isLoading && (
                     <AppScreenHeader
                         mainTitle={studio.name}
-                        subtitle={studio.description || "Create amazing photos with AI"}
+                        subtitle={studio.description || "Tạo ảnh cực chất cùng Duky AI"}
                         useSmartTitleWrapping={true}
                         smartTitleWrapWords={4}
                     />
@@ -326,84 +325,31 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                     {/* 1. Inputs Section */}
                     {(!isLoading && appState.stage !== 'results') && (
                         <div className="w-full max-w-4xl flex flex-col items-center">
-                            {/* Tabs */}
-                            <div className="flex gap-2 mb-6 bg-neutral-900/40 p-1.5 rounded-full border border-neutral-800">
-                                {[
-                                    { id: 'female', label: 'Nữ' },
-                                    { id: 'male', label: 'Nam' },
-                                    { id: 'couple', label: 'Cặp đôi' }
-                                ].map((tab) => (
-                                    <button
-                                        key={tab.id}
-                                        onClick={() => handleTabChange(tab.id as any)}
-                                        className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${activeTab === tab.id
-                                            ? 'bg-orange-400 text-black shadow-lg shadow-orange-400/20'
-                                            : 'text-neutral-400 hover:text-white hover:bg-white/5'
-                                            }`}
-                                    >
-                                        {tab.label}
-                                    </button>
-                                ))}
-                            </div>
-
-                            <div className={`grid gap-6 w-full ${activeTab === 'couple' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:max-w-md mx-auto'}`}>
-                                {activeTab === 'couple' ? (
-                                    <>
-                                        <div className="themed-card backdrop-blur-md p-4 rounded-2xl flex flex-col items-center gap-4">
-                                            <h3 className="text-lg font-bold text-orange-400">1. Ảnh Nữ (Chính)</h3>
-                                            <ActionablePolaroidCard
-                                                type={appState.uploadedImage ? 'photo-input' : 'uploader'}
-                                                mediaUrl={appState.uploadedImage ?? undefined}
-                                                caption="Ảnh nữ"
-                                                placeholderType="person"
-                                                status="done"
-                                                onClick={appState.uploadedImage ? () => openLightbox(lightboxImages.indexOf(appState.uploadedImage!)) : undefined}
-                                                onImageChange={handleUploadedImageChange}
-                                                isMobile={isMobile}
-                                            />
-                                        </div>
-                                        <div className="themed-card backdrop-blur-md p-4 rounded-2xl flex flex-col items-center gap-4">
-                                            <h3 className="text-lg font-bold text-orange-400">2. Ảnh Nam (Phụ)</h3>
-                                            <ActionablePolaroidCard
-                                                type={appState.uploadedImage2 ? 'photo-input' : 'uploader'}
-                                                mediaUrl={appState.uploadedImage2 ?? undefined}
-                                                caption="Ảnh nam"
-                                                placeholderType="person"
-                                                status="done"
-                                                onClick={appState.uploadedImage2 ? () => openLightbox(lightboxImages.indexOf(appState.uploadedImage2!)) : undefined}
-                                                onImageChange={handleImage2Change}
-                                                isMobile={isMobile}
-                                            />
-                                        </div>
-                                    </>
-                                ) : (
-                                    <>
-                                        <div className="themed-card backdrop-blur-md p-4 rounded-2xl flex flex-col items-center gap-4">
-                                            <h3 className="text-lg font-bold text-orange-400">1. Tải ảnh lên</h3>
-                                            <ActionablePolaroidCard
-                                                type={appState.uploadedImage ? 'photo-input' : 'uploader'}
-                                                mediaUrl={appState.uploadedImage ?? undefined}
-                                                caption="Tải ảnh của bạn"
-                                                placeholderType="person"
-                                                status="done"
-                                                onClick={appState.uploadedImage ? () => openLightbox(lightboxImages.indexOf(appState.uploadedImage!)) : undefined}
-                                                onImageChange={handleUploadedImageChange}
-                                                isMobile={isMobile}
-                                            />
-                                        </div>
-                                    </>
-                                )}
+                            <div className="grid gap-6 w-full grid-cols-1 md:max-w-md mx-auto">
+                                <div className="themed-card backdrop-blur-md p-4 rounded-2xl flex flex-col items-center gap-4">
+                                    <h3 className="text-lg font-bold text-orange-400">Tải ảnh lên</h3>
+                                    <ActionablePolaroidCard
+                                        type={appState.uploadedImage ? 'photo-input' : 'uploader'}
+                                        mediaUrl={appState.uploadedImage ?? undefined}
+                                        caption="Tải ảnh của bạn"
+                                        placeholderType="person"
+                                        status="done"
+                                        onClick={appState.uploadedImage ? () => openLightbox(lightboxImages.indexOf(appState.uploadedImage!)) : undefined}
+                                        onImageChange={handleUploadedImageChange}
+                                        isMobile={isMobile}
+                                    />
+                                </div>
                             </div>
                         </div>
                     )}
 
-                    {/* 2. Loading State - Show header, inputs and loading output */}
-                    {isLoading && (
+                    {/* 2. Loading/Results State - Show header, inputs and output */}
+                    {(isLoading || appState.stage === 'results') && (
                         <div className="w-full max-w-4xl">
                             {/* Title */}
                             <div className="text-center mb-6">
                                 <h1 className="text-2xl md:text-3xl font-bold text-white">{studio.name}</h1>
-                                <p className="text-neutral-400 mt-2">{studio.description || "Đang tạo ảnh..."}</p>
+                                <p className="text-neutral-400 mt-2">{studio.description || (isLoading ? "Đang tạo ảnh..." : "Đã tạo xong!")}</p>
                             </div>
 
                             {/* Input/Output Grid */}
@@ -438,30 +384,81 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                                     )}
                                 </div>
 
-                                {/* Output Section - Loading */}
+                                {/* Output Section - Loading or Results */}
                                 <div className="themed-card backdrop-blur-md p-4 rounded-2xl flex flex-col items-center gap-4">
-                                    <h3 className="text-lg font-bold text-orange-400">Kết quả ({pendingCount} ảnh)</h3>
-                                    <div className={`grid gap-2 w-full ${pendingCount > 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                                        {Array.from({ length: pendingCount }).map((_, idx) => (
-                                            <div key={idx} className="aspect-[3/4] bg-neutral-900/50 rounded-xl border border-neutral-700 flex flex-col items-center justify-center gap-2">
-                                                <div className="w-10 h-10 border-4 border-orange-400 border-t-transparent rounded-full animate-spin" />
-                                                <p className="text-neutral-300 text-xs">Đang tạo...</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <button
-                                        onClick={() => { setAppState(prev => ({ ...prev, stage: 'configuring', error: null })); setPendingCount(0); }}
-                                        className="mt-2 px-6 py-2 bg-neutral-700 text-white rounded-full hover:bg-neutral-600 transition-colors text-sm"
-                                    >
-                                        Hủy
-                                    </button>
+                                    <h3 className="text-lg font-bold text-orange-400">
+                                        {isLoading ? `Kết quả (${pendingCount} ảnh)` : `Kết quả (${generatedImages.length} ảnh)`}
+                                    </h3>
+
+                                    {/* Show loading spinners */}
+                                    {isLoading && (
+                                        <div className={`grid gap-2 w-full ${pendingCount > 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                                            {Array.from({ length: pendingCount }).map((_, idx) => (
+                                                <div key={idx} className="aspect-[3/4] bg-neutral-900/50 rounded-xl border border-neutral-700 flex flex-col items-center justify-center gap-2">
+                                                    <div className="w-10 h-10 border-4 border-orange-400 border-t-transparent rounded-full animate-spin" />
+                                                    <p className="text-neutral-300 text-xs">Đang tạo...</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Show generated images */}
+                                    {!isLoading && generatedImages.length > 0 && (
+                                        <div className="grid grid-cols-2 gap-2 w-full">
+                                            {generatedImages.map((img, idx) => (
+                                                <div key={idx} className="w-full aspect-[9/16]">
+                                                    <ActionablePolaroidCard
+                                                        type="output"
+                                                        caption={`Kết quả ${idx + 1}`}
+                                                        status="done"
+                                                        mediaUrl={img}
+                                                        onClick={() => openLightbox(lightboxImages.indexOf(img))}
+                                                        isMobile={isMobile}
+                                                        onGenerateVideoFromPrompt={(prompt) => generateVideo(img, prompt)}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Action buttons */}
+                                    {isLoading ? (
+                                        <button
+                                            onClick={() => { setAppState(prev => ({ ...prev, stage: 'configuring', error: null })); setPendingCount(0); }}
+                                            className="mt-2 px-6 py-2 bg-neutral-700 text-white rounded-full hover:bg-neutral-600 transition-colors text-sm"
+                                        >
+                                            Hủy
+                                        </button>
+                                    ) : (
+                                        <div className="flex gap-2 mt-2">
+                                            <button
+                                                onClick={() => setAppState(prev => ({ ...prev, stage: 'configuring' }))}
+                                                className="px-6 py-2 bg-neutral-600 cursor-pointer text-white rounded-full hover:bg-neutral-500 transition-colors text-sm"
+                                            >
+                                                Sửa
+                                            </button>
+                                            <button
+                                                onClick={handleReset}
+                                                className="px-6 py-2 bg-gradient-to-r from-orange-400 to-orange-600 hover:from-orange-600 hover:to-orange-400 text-white rounded-full cursor-pointer transition-colors text-sm"
+                                            >
+                                                Bắt đầu lại
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
+
+                            {/* Error message */}
+                            {appState.error && (
+                                <div className="w-full p-4 mt-4 bg-red-500/20 border border-red-500/50 rounded-xl text-red-300 text-center">
+                                    {appState.error}
+                                </div>
+                            )}
                         </div>
                     )}
 
-                    {/* 3. Results Section */}
-                    {!isLoading && appState.stage === 'results' && (
+                    {/* 3. Old Results Section - REMOVE */}
+                    {false && !isLoading && appState.stage === 'results' && (
                         <div className="w-full max-w-4xl mt-6">
                             <div className="themed-card backdrop-blur-md rounded-2xl p-6 relative border-dashed! border-orange-600! px-0!">
                                 <h3 className="base-font font-bold text-xl text-orange-400 mb-4 text-center">Kết quả</h3>
@@ -473,7 +470,7 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                                 )}
 
                                 {generatedImages.length > 0 && (
-                                    <div className={`grid gap-4 mb-6 ${generatedImages.length > 2 ? 'grid-cols-2' : 'grid-cols-1 max-w-sm mx-auto'}`}>
+                                    <div className="grid grid-cols-2 gap-4 mb-6">
                                         {generatedImages.map((img, idx) => (
                                             <div key={idx} className="w-full">
                                                 <ActionablePolaroidCard
@@ -508,6 +505,28 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                     {/* 4. Template Grid & Options */}
                     {(!isLoading && appState.stage !== 'results') && (
                         <div className="w-full max-w-4xl space-y-6 mt-6">
+                            {/* Gender Tabs */}
+                            <div className="flex justify-center gap-2 mb-6">
+                                <button
+                                    onClick={() => handleTabChange('female')}
+                                    className={`px-6 py-2 rounded-full font-medium transition-all ${activeTab === 'female'
+                                        ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/30'
+                                        : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
+                                        }`}
+                                >
+                                    Nữ
+                                </button>
+                                <button
+                                    onClick={() => handleTabChange('male')}
+                                    className={`px-6 py-2 rounded-full font-medium transition-all ${activeTab === 'male'
+                                        ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/30'
+                                        : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
+                                        }`}
+                                >
+                                    Nam
+                                </button>
+                            </div>
+
                             <div>
                                 <div className="flex items-center justify-between mb-3">
                                     <h3 className="text-lg font-bold text-neutral-300 ml-1">Danh sách mẫu ({currentTemplates.length})</h3>
@@ -539,7 +558,7 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                                                     key={idx}
                                                     onClick={() => handleStyleSelect(templateUrl)}
                                                     disabled={isAtLimit}
-                                                    className={`relative rounded-xl overflow-hidden border-2 transition-all duration-200 aspect-[9/16] ${isSelected ? 'border-orange-400 scale-105 shadow-lg shadow-orange-400/20' : isAtLimit ? 'border-neutral-800 opacity-50 cursor-not-allowed' : 'border-neutral-700 hover:border-neutral-500'}`}
+                                                    className={`relative rounded-xl overflow-hidden border-2 !p-0 transition-all duration-200 aspect-[9/16] ${isSelected ? 'border-orange-400 scale-105 shadow-lg shadow-orange-400/20' : isAtLimit ? 'border-neutral-800 opacity-50 cursor-not-allowed' : 'border-neutral-700 hover:border-neutral-500'}`}
                                                 >
                                                     <img src={templateUrl} alt={`Template ${idx + 1}`} className="w-full h-full object-cover" />
                                                     {isSelected && (
@@ -572,16 +591,14 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                                     </div>
                                     <div className="flex flex-wrap gap-6">
                                         <div>
-                                            <label className="block text-sm font-medium text-neutral-300 mb-1">Tỉ lệ khung hình</label>
-                                            <select
-                                                value={appState.options.aspectRatio}
-                                                onChange={(e) => handleOptionChange('aspectRatio', e.target.value)}
-                                                className="bg-neutral-900/50 border border-neutral-700 rounded-xl px-4 py-2 text-white focus:border-orange-400 focus:outline-none"
-                                            >
-                                                {Array.isArray(ASPECT_RATIO_OPTIONS) && ASPECT_RATIO_OPTIONS.map((opt: string) => (
-                                                    <option key={opt} value={opt}>{opt}</option>
-                                                ))}
-                                            </select>
+                                            <SearchableSelect
+                                                id="aspectRatio"
+                                                label="Tỉ lệ khung hình"
+                                                options={ASPECT_RATIO_OPTIONS}
+                                                value={appState.options.aspectRatio || ''}
+                                                onChange={(val) => handleOptionChange('aspectRatio', val)}
+                                                placeholder="Chọn tỉ lệ..."
+                                            />
                                         </div>
                                         <div className="flex items-center pt-6">
                                             <label className="flex items-center gap-2 cursor-pointer">

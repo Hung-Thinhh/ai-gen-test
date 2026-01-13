@@ -5,8 +5,6 @@ import {
     Box,
     Typography,
     Container,
-    Tabs,
-    Tab,
     Grid,
     Card,
     CardMedia,
@@ -19,7 +17,6 @@ import {
 } from '@mui/material';
 import { getAllStudios, getAllCategories } from '../../services/storageService';
 import { useRouter } from 'next/navigation';
-import { Male, Female, Favorite as CoupleIcon } from '@mui/icons-material';
 
 interface Studio {
     id: string;
@@ -41,7 +38,6 @@ interface Category {
 
 export default function StudioList() {
     const router = useRouter();
-    const [activeTab, setActiveTab] = useState<'female' | 'male' | 'couple'>('female');
     const [studios, setStudios] = useState<Studio[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
@@ -65,26 +61,8 @@ export default function StudioList() {
         fetchData();
     }, []);
 
-    // Filter studios based on active Gender Tab
-    // A studio appears in 'female' tab IF it has at least one prompt with gender='female' (or no gender specified? No, user said "only show if prompts have gender male")
-    // User logic: "ở nam sẽ chỉ hiện các tool con mà trong prompts có 1 prompt gender male"
-    // So distinct filtering logic.
-    const getFilteredStudios = () => {
-        return studios.filter(studio => {
-            let prompts = [];
-            try {
-                prompts = typeof studio.prompts === 'string' ? JSON.parse(studio.prompts) : studio.prompts;
-            } catch (e) {
-                prompts = [];
-            }
-            if (!Array.isArray(prompts)) prompts = [];
-
-            // Check if ANY prompt matches the active tab gender
-            return prompts.some((p: any) => p.gender === activeTab);
-        });
-    };
-
-    const filteredStudios = getFilteredStudios();
+    // Show all studios without gender filtering
+    const filteredStudios = studios;
 
     // Group by Category
     const studiosByCategory: Record<string, Studio[]> = {};
@@ -123,40 +101,6 @@ export default function StudioList() {
             <Typography variant="body1" align="center" sx={{ mb: 4, color: 'var(--text-secondary)' }}>
                 Chọn phong cách bạn yêu thích và bắt đầu sáng tạo
             </Typography>
-
-            {/* Gender Tabs */}
-            <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 4 }}>
-                <Tabs
-                    value={activeTab}
-                    onChange={(_, val) => setActiveTab(val)}
-                    centered
-                    variant="fullWidth"
-                    sx={{
-                        '& .MuiTab-root': { py: 2, fontSize: '1rem', fontWeight: 600, color: 'var(--text-tertiary)' },
-                        '& .Mui-selected': { color: 'var(--accent-primary) !important' },
-                        '& .MuiTabs-indicator': { backgroundColor: 'var(--accent-primary)' }
-                    }}
-                >
-                    <Tab
-                        icon={<Female />}
-                        iconPosition="start"
-                        label="Nữ (Female)"
-                        value="female"
-                    />
-                    <Tab
-                        icon={<Male />}
-                        iconPosition="start"
-                        label="Nam (Male)"
-                        value="male"
-                    />
-                    <Tab
-                        icon={<CoupleIcon />}
-                        iconPosition="start"
-                        label="Cặp đôi (Couple)"
-                        value="couple"
-                    />
-                </Tabs>
-            </Box>
 
             {loading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>

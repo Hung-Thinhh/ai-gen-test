@@ -87,6 +87,7 @@ export const PromptLibrary: React.FC<PromptLibraryProps> = ({ onClose }) => {
     }, [activeCategory, prompts]);
 
     const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
     const observerTarget = React.useRef<HTMLDivElement>(null);
 
     // Reset visible count when category changes
@@ -106,7 +107,13 @@ export const PromptLibrary: React.FC<PromptLibraryProps> = ({ onClose }) => {
         const observer = new IntersectionObserver(
             entries => {
                 if (entries[0].isIntersecting && visibleCount < filteredPrompts.length) {
+                    setIsLoadingMore(true);
                     setVisibleCount(prev => Math.min(prev + ITEMS_PER_PAGE, filteredPrompts.length));
+
+                    // Keep loading indicator for 1.5s to let images load
+                    setTimeout(() => {
+                        setIsLoadingMore(false);
+                    }, 1500);
                 }
             },
             { threshold: 0.1 }
@@ -149,7 +156,7 @@ export const PromptLibrary: React.FC<PromptLibraryProps> = ({ onClose }) => {
     };
 
     return (
-        <div className="w-full h-full flex flex-col themed-bg">
+        <div className="w-full h-full flex flex-col themed-bg max-w-[1300px] mx-auto">
             {/* Header */}
             <div className="flex-shrink-0 border-b border-white/10">
                 <div className="flex justify-center items-center pt-10">
@@ -203,20 +210,49 @@ export const PromptLibrary: React.FC<PromptLibraryProps> = ({ onClose }) => {
                                 {visiblePrompts.map((prompt, index) => (
                                     <motion.div
                                         key={prompt.id}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -20 }}
-                                        transition={{ delay: index * 0.05 }}
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        transition={{ duration: 0.2 }}
                                         className="themed-card rounded-lg overflow-hidden group cursor-pointer"
                                     >
                                         {/* Image */}
                                         <div className="relative aspect-[9/16] overflow-hidden bg-gray-800">
+                                            {/* Skeleton Loader */}
+                                            <div className="absolute inset-0 bg-gradient-to-br from-gray-800 via-gray-700 to-gray-800 animate-pulse" />
+
                                             <img
                                                 src={prompt.imageUrl}
                                                 alt={prompt.text}
                                                 loading="lazy"
-                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 relative z-10"
+                                                onLoad={(e) => {
+                                                    // Hide skeleton when image loads
+                                                    const skeleton = e.currentTarget.previousElementSibling as HTMLElement;
+                                                    if (skeleton) skeleton.style.display = 'none';
+                                                }}
                                             />
+
+                                            {/* Copy Button - Top Right */}
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleCopyPrompt(prompt);
+                                                }}
+                                                className="absolute cursor-pointer top-2 right-2 z-20 p-2 bg-black/60 hover:bg-orange-500/90 backdrop-blur-sm rounded-lg transition-all duration-200 group/copy"
+                                                title="Copy prompt"
+                                            >
+                                                {copiedId === prompt.id ? (
+                                                    <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                ) : (
+                                                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                    </svg>
+                                                )}
+                                            </button>
+
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <div className="absolute bottom-0 left-0 right-0 p-3">
                                                     <p className="text-white text-xs line-clamp-3">{prompt.text}</p>
@@ -225,7 +261,7 @@ export const PromptLibrary: React.FC<PromptLibraryProps> = ({ onClose }) => {
                                         </div>
 
                                         {/* Action Buttons - Vertical Stack */}
-                                        <div className="flex flex-col gap-1.5">
+                                        <div className="flex flex-col gap-1.5 p-2">
                                             {/* Use Now Button - Primary Action */}
                                             <button
                                                 onClick={() => handleUsePrompt(prompt)}
@@ -237,30 +273,7 @@ export const PromptLibrary: React.FC<PromptLibraryProps> = ({ onClose }) => {
                                                 <span className="text-sm font-semibold">Dùng ngay</span>
                                             </button>
 
-                                            {/* Copy Button - Secondary Action */}
-                                            <button
-                                                onClick={() => handleCopyPrompt(prompt)}
-                                                className="w-full cursor-pointer py-2.5 flex items-center justify-center gap-2 transition-all duration-200 rounded-lg border"
-                                                style={{
-                                                    backgroundColor: copiedId === prompt.id ? 'rgba(34, 197, 94, 0.15)' : 'rgba(249, 115, 22, 0.08)',
-                                                    color: copiedId === prompt.id ? 'rgb(34, 197, 94)' : 'var(--accent-primary)',
-                                                    borderColor: copiedId === prompt.id ? 'rgba(34, 197, 94, 0.3)' : 'rgba(249, 115, 22, 0.2)'
-                                                }}
-                                            >
-                                                {copiedId === prompt.id ? (
-                                                    <>
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                        </svg>
-                                                        <span className="text-sm font-medium">Đã sao chép</span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <DocumentTextIcon className="w-4 h-4" />
-                                                        <span className="text-sm">Sao chép</span>
-                                                    </>
-                                                )}
-                                            </button>
+
                                         </div>
                                     </motion.div>
                                 ))}
@@ -268,9 +281,12 @@ export const PromptLibrary: React.FC<PromptLibraryProps> = ({ onClose }) => {
                         </div>
 
                         {/* Intersection Observer Target */}
-                        {visibleCount < filteredPrompts.length && (
-                            <div ref={observerTarget} className="h-20 flex items-center justify-center mt-4">
-                                <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                        {(visibleCount < filteredPrompts.length || isLoadingMore) && (
+                            <div ref={observerTarget} className="h-32 flex flex-col items-center justify-center mt-8 mb-8">
+                                <div className="flex flex-col items-center gap-3 p-4 bg-white/5 rounded-xl backdrop-blur-sm">
+                                    <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                                    <p className="text-white/70 text-sm">Đang tải thêm...</p>
+                                </div>
                             </div>
                         )}
 
