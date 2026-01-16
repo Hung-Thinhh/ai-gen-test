@@ -64,7 +64,8 @@ export async function generateKhmerImage(
     customPrompt: string,
     removeWatermark?: boolean,
     aspectRatio?: string,
-    secondImageDataUrl?: string | null
+    secondImageDataUrl?: string | null,
+    toolKey?: string
 ): Promise<string> {
     const { mimeType: userMime, data: userData } = await import('./baseService').then(m => m.normalizeImageInput(userImageDataUrl));
     const userImagePart = { inlineData: { mimeType: userMime, data: userData } };
@@ -81,6 +82,9 @@ export async function generateKhmerImage(
     const validRatios = ['1:1', '3:4', '4:3', '9:16', '16:9', '2:3', '4:5', '3:2', '5:4', '21:9'];
     if (aspectRatio && aspectRatio !== 'Giữ nguyên' && validRatios.includes(aspectRatio)) {
         config.imageConfig = { aspectRatio };
+    }
+    if (toolKey) {
+        config.tool_key = toolKey;
     }
 
     const hasSecondImage = !!secondImageDataUrl;

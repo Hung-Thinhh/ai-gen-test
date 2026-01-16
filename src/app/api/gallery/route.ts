@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 /**
- * GET /api/gallery - Get user's gallery images
+ * GET /api/gallery - Get user's gallery images from generation_history
  */
 export async function GET(req: NextRequest) {
     try {
@@ -20,24 +20,85 @@ export async function GET(req: NextRequest) {
         }
         const userId = userCheck[0].user_id;
 
-        // Get gallery images
+        // Get gallery images from generation_history with prompts
         const data = await sql`
-            SELECT * FROM user_gallery 
-            WHERE user_id = ${userId} 
+            SELECT 
+                history_id,
+                output_images,
+                input_prompt,
+                created_at,
+                tool_key
+            FROM generation_history 
+            WHERE user_id = ${userId}
             ORDER BY created_at DESC
+            LIMIT 500
         `;
 
-        return NextResponse.json({ images: data || [] });
+        // Transform to frontend format with extracted images and their prompts
+        const imagesList = [];
+        const promptsList = [];
+        let baseCount = 0;
+        let urlCount = 0;
+        
+        for (const record of data) {
+            if (record.output_images && Array.isArray(record.output_images)) {
+                for (let i = 0; i < record.output_images.length; i++) {
+                    const img = record.output_images[i];
+                    
+                    // Filter out base64 images, only keep R2 URLs
+                    if (!img || typeof img !== 'string') continue;
+                    if (img.startsWith('data:')) {
+                        baseCount++;
+                        continue; // Skip base64
+                    }
+                    if (!img.startsWith('https://')) {
+                        continue;
+                    }
+                    
+                    urlCount++;
+                    imagesList.push({
+                        id: `${record.history_id}_${i}`,
+                        history_id: record.history_id,
+                        url: img,
+                        created_at: record.created_at,
+                        tool_key: record.tool_key
+                    });
+                    // Map each image with its prompt
+                    promptsList.push(record.input_prompt || null);
+                }
+            }
+        }
+
+        console.log(`[API] GET /api/gallery: Found ${imagesList.length} URL images (skipped ${baseCount} base64 images)`);
+        console.log('[API] Sample images:', imagesList.slice(0, 2).map(img => ({ 
+            url: img.url.substring(0, 60) + '...', 
+            tool: img.tool_key 
+        })));
+        console.log('[API] Sample prompts:', promptsList.slice(0, 2).map(p => p?.substring(0, 50) + '...' || 'null'));
+
+        const response = { 
+            images: imagesList,
+            prompts: promptsList,
+            total: imagesList.length 
+        };
+        
+        console.log('[API] Response summary:', {
+            total: response.total,
+            prompts_count: promptsList.filter(p => p).length,
+            skipped_base64: baseCount,
+            format: 'R2 URLs with prompts'
+        });
+
+        return NextResponse.json(response);
 
     } catch (error: any) {
         console.error('[API] Error in GET /api/gallery:', error);
-        // If table doesn't exist, return empty array instead of 500? No, stick to error logging.
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
 
 /**
- * POST /api/gallery - Add images to gallery
+ * POST /api/gallery - Add images to gallery (generates history entry)
  */
 export async function POST(req: NextRequest) {
     try {
@@ -54,39 +115,35 @@ export async function POST(req: NextRequest) {
         const userId = userCheck[0].user_id;
 
         const body = await req.json();
-        const { images } = body;
+        const { images, prompt, tool_key } = body;
 
         if (!images || !Array.isArray(images) || images.length === 0) {
             return NextResponse.json({ error: 'Images array required' }, { status: 400 });
         }
 
-        // Insert images loop (Neon doesn't support bulk insert with json mapping easily in tagged template without helper)
-        // Check if we can use VALUES (...), (...), ...
-        // We can construct the query dynamically.
+        // Insert into generation_history
+        const result = await sql`
+            INSERT INTO generation_history (
+                user_id, output_images, input_prompt, tool_key, created_at
+            ) VALUES (
+                ${userId},
+                ${JSON.stringify(images)}::jsonb,
+                ${prompt || null},
+                ${tool_key || null},
+                NOW()
+            )
+            RETURNING history_id, output_images, input_prompt, created_at, tool_key
+        `;
 
-        const insertedImages = [];
-
-        for (const img of images) {
-            const result = await sql`
-                INSERT INTO user_gallery (
-                    user_id, image_url, thumbnail_url, metadata, created_at
-                ) VALUES (
-                    ${userId},
-                    ${img.image_url},
-                    ${img.thumbnail_url || img.image_url},
-                    ${JSON.stringify(img.metadata || {})}::jsonb,
-                    NOW()
-                )
-                RETURNING *
-            `;
-            if (result.length > 0) insertedImages.push(result[0]);
+        if (result.length > 0) {
+            return NextResponse.json({
+                success: true,
+                history: result[0],
+                count: images.length
+            }, { status: 201 });
         }
 
-        return NextResponse.json({
-            success: true,
-            images: insertedImages,
-            count: insertedImages.length
-        }, { status: 201 });
+        return NextResponse.json({ error: 'Failed to insert history' }, { status: 500 });
 
     } catch (error: any) {
         console.error('[API] Error in POST /api/gallery:', error);
@@ -95,7 +152,7 @@ export async function POST(req: NextRequest) {
 }
 
 /**
- * DELETE /api/gallery - Delete images from gallery
+ * DELETE /api/gallery - Delete history entry (images)
  */
 export async function DELETE(req: NextRequest) {
     try {
@@ -112,28 +169,21 @@ export async function DELETE(req: NextRequest) {
         const userId = userCheck[0].user_id;
 
         const body = await req.json();
-        const { imageIds } = body;
+        const { historyIds } = body;
 
-        if (!imageIds || !Array.isArray(imageIds) || imageIds.length === 0) {
-            return NextResponse.json({ error: 'Image IDs array required' }, { status: 400 });
+        if (!historyIds || !Array.isArray(historyIds) || historyIds.length === 0) {
+            return NextResponse.json({ error: 'History IDs array required' }, { status: 400 });
         }
 
-        // Delete loop or WHERE IN
-        // For simplicity and safety with varying array length, loop or explicit query construction.
-        // Let's use simple loop for now as batch delete is rare or small numbers.
-        // OR: WHERE id = ANY(${imageIds}) if imageIds is string[].
-
-        // Ensure imageIds are strictly strings/uuids to prevent injection if not parameterized properly by driver (Neon driver handles arrays usually?)
-        // Neon driver: `WHERE id = ANY(${imageIds})` works for Postgres arrays.
-
-        await sql`
-            DELETE FROM user_gallery 
-            WHERE user_id = ${userId} AND id = ANY(${imageIds}::uuid[])
+        // Delete from generation_history
+        const result = await sql`
+            DELETE FROM generation_history 
+            WHERE user_id = ${userId} AND history_id = ANY(${historyIds}::uuid[])
         `;
 
         return NextResponse.json({
             success: true,
-            deleted: imageIds.length
+            deleted: historyIds.length
         });
 
     } catch (error: any) {

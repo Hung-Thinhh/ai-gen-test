@@ -522,6 +522,11 @@ export interface KhmerPhotoMergeState {
     error: string | null;
 }
 
+export interface MilkTeaPosterState {
+    stage: 'idle' | 'configuring' | 'generating' | 'results';
+    error: string | null;
+}
+
 // --- Storyboarding Types ---
 export interface FrameState {
     description: string;
@@ -580,7 +585,8 @@ export type AnyAppState =
     | PoseAnimatorState
     | PosterCreatorState
     | IDPhotoCreatorState
-    | KhmerPhotoMergeState;
+    | KhmerPhotoMergeState
+    | MilkTeaPosterState;
 
 // --- App Navigation & State Types (Moved from App.tsx) ---
 export type HomeView = { viewId: 'home'; state: HomeState };
@@ -609,6 +615,7 @@ export type PromptLibraryView = { viewId: 'prompt-library'; state: HomeState };
 export type PosterCreatorView = { viewId: 'poster-creator'; state: PosterCreatorState };
 export type IDPhotoCreatorView = { viewId: 'id-photo-creator'; state: IDPhotoCreatorState };
 export type KhmerPhotoMergeView = { viewId: 'khmer-photo-merge'; state: KhmerPhotoMergeState };
+export type MilkTeaPosterView = { viewId: 'milk-tea-poster'; state: MilkTeaPosterState };
 export type ProfileView = { viewId: 'profile'; state: HomeState };
 export type SettingsView = { viewId: 'settings'; state: HomeState };
 export type PricingView = { viewId: 'pricing'; state: HomeState };
@@ -640,6 +647,7 @@ export type ViewState =
     | PosterCreatorView
     | IDPhotoCreatorView
     | KhmerPhotoMergeView
+    | MilkTeaPosterView
     | ProfileView
     | SettingsView
     | PricingView;
@@ -810,6 +818,11 @@ export const getInitialStateForApp = (viewId: string): AnyAppState => {
                 },
                 error: null
             } as KhmerPhotoMergeState;
+        case 'milk-tea-poster':
+            return {
+                stage: 'idle',
+                error: null
+            } as MilkTeaPosterState;
         default:
             return { stage: 'home' };
     }
@@ -834,6 +847,7 @@ export interface GenerationHistoryEntry {
     error_message?: string;
     output_images?: any; // jsonb
     generation_count?: number;
+    input_prompt?: string;
 }
 
 export type ModelVersion = 'v2' | 'v3';
@@ -886,7 +900,7 @@ export interface AppControlContextType {
     addGenerationToHistory: (entryData: Omit<GenerationHistoryEntry, 'id' | 'timestamp'>) => Promise<void>;
     refreshGallery: () => Promise<void>; // NEW
     refreshCredits: () => Promise<void>; // NEW
-    addImagesToGallery: (newImages: string[]) => Promise<string[] | undefined>;
+    addImagesToGallery: (newImages: string[], persist?: boolean) => Promise<string[] | undefined>;
     removeImageFromGallery: (imageIndex: number) => void;
     replaceImageInGallery: (imageIndex: number, newImageUrl: string) => void;
     handleThemeChange: (newTheme: Theme) => void;

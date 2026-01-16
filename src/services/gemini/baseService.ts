@@ -23,6 +23,8 @@ export const setGlobalModelConfig = (config: Partial<GlobalConfig>) => {
 export const getModelConfig = () => globalConfig;
 
 export const getTextModel = () => globalConfig.modelVersion === 'v3' ? 'gemini-3-pro-preview' : 'gemini-2.5-flash';
+// CRITICAL: Only imagen-* models work on Vertex AI. gemini-*-image models do NOT exist on Vertex AI!
+// For Gemini API: v3 uses Nano Banana Pro (gemini-3-pro-image-preview), v2 uses Flash Image
 export const getImageModel = () => globalConfig.modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image';
 
 // --- Development Mode Detection ---
@@ -138,6 +140,11 @@ export async function normalizeImageInput(input: string): Promise<{ mimeType: st
  * @returns A data URL string for the generated image.
  */
 export function processGeminiResponse(response: GenerateContentResponse): string {
+    // Check for optimized R2 URL first (Server-side optimization)
+    if ((response as any).imageUrl) {
+        return (response as any).imageUrl;
+    }
+
     const imagePartFromResponse = response.candidates?.[0]?.content?.parts?.find(part => part.inlineData);
 
     if (imagePartFromResponse?.inlineData) {
@@ -222,6 +229,15 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
     // Extract aspectRatio from config if present
     const { aspectRatio, ...restConfig } = config;
 
+    // Filter out text-generation specific properties that shouldn't be used for image generation
+    const cleanRestConfig = Object.keys(restConfig).reduce((acc: any, key: string) => {
+        // Exclude responseMimeType, responseSchema, and responseModalities which are for text-based APIs
+        if (!['responseMimeType', 'responseSchema', 'responseModalities'].includes(key)) {
+            acc[key] = restConfig[key];
+        }
+        return acc;
+    }, {});
+
     // For v3: use imageConfig with imageSize and aspectRatio
     // For v2: aspectRatio still goes in config but without imageSize wrapper
     const extraConfig = globalConfig.modelVersion === 'v3'
@@ -234,9 +250,10 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
         }
         : (aspectRatio ? { aspectRatio } : {}); // v2: add aspectRatio at root level
 
+    // Don't include responseModalities for image generation - it confuses the API
+    // The image models generate images natively without needing this config
     const finalConfig = {
-        responseModalities: [Modality.IMAGE, Modality.TEXT],
-        ...restConfig,
+        ...cleanRestConfig,
         ...extraConfig
     };
 
@@ -277,6 +294,7 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
 
             let response;
             try {
+                const fetchStart = Date.now();
                 devLog('📡📡📡 [BASESERVICE] ĐANG GỌI FETCH /api/gemini/generate-image 📡📡📡');
                 devLog('[BASESERVICE] Request body:', { parts: parts.length, config: finalConfig, model });
 
@@ -286,12 +304,16 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
                     body: JSON.stringify({
                         parts,
                         config: finalConfig,
-                        model: model
+                        model: model,
+                        tool_key: config.tool_key || undefined // Forward tool_key to API
                     }),
                     signal: controller.signal
                 });
 
                 clearTimeout(timeoutId);
+
+                const fetchDuration = Date.now() - fetchStart;
+                devLog(`⏱️ [PERF] Fetch completed in ${fetchDuration}ms`);
 
                 devLog('✅✅✅ [BASESERVICE] NHẬN ĐƯỢC RESPONSE TỪ API ✅✅✅');
                 devLog('[BASESERVICE] Response status:', response.status);
@@ -300,7 +322,8 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
                 devLog('[Gemini Debug] Response received:', {
                     status: response.status,
                     statusText: response.statusText,
-                    ok: response.ok
+                    ok: response.ok,
+                    duration: `${fetchDuration}ms`
                 });
 
                 if (!response.ok) {
@@ -327,6 +350,13 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
 
             // Validate that the response contains an image.
             const imagePart = data.candidates?.[0]?.content?.parts?.find((part: any) => part.inlineData);
+
+            // PRIORITY: Check for Server-Side R2 URL first (Optimized flow)
+            if ((data as any).imageUrl) {
+                // Return data as is, the service will use imageUrl
+                return data;
+            }
+
             if (imagePart?.inlineData) {
                 // SUCCESS: Update credits in UI immediately
                 try {

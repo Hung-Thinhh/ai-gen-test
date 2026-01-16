@@ -143,7 +143,12 @@ const DressTheModel: React.FC<DressTheModelProps> = (props) => {
 
         try {
             // No need to transform options, the service handles '' and 'Tự động' correctly
-            const resultUrl = await generateDressedModelImage(appState.modelImage, appState.clothingImage, appState.options);
+            const resultUrl = await generateDressedModelImage(
+                appState.modelImage,
+                appState.clothingImage,
+                appState.options,
+                'dress-the-model'
+            );
             const settingsToEmbed = {
                 viewId: 'dress-the-model',
                 state: { ...appState, stage: 'configuring', generatedImage: null, historicalImages: [], error: null },
@@ -152,7 +157,7 @@ const DressTheModel: React.FC<DressTheModelProps> = (props) => {
             logGeneration('dress-the-model', preGenState, urlWithMetadata, {
                 credits_used: creditCostPerImage,
                 generation_count: 1,
-                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
             });
             onStateChange({ ...appState, stage: 'results', generatedImage: urlWithMetadata, historicalImages: [...appState.historicalImages, urlWithMetadata] });
             addImagesToGallery([urlWithMetadata]);
@@ -185,7 +190,7 @@ const DressTheModel: React.FC<DressTheModelProps> = (props) => {
             logGeneration('dress-the-model', preGenState, urlWithMetadata, {
                 credits_used: creditCostPerImage,
                 generation_count: 1,
-                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
             });
             onStateChange({ ...appState, stage: 'results', generatedImage: urlWithMetadata, historicalImages: [...appState.historicalImages, urlWithMetadata] });
             addImagesToGallery([urlWithMetadata]);

@@ -192,7 +192,7 @@ const ToyModelCreator: React.FC<ToyModelCreatorProps> = (props) => {
 
         try {
             // No need to transform options, the service handles '' and 'Tự động' correctly
-            const resultUrl = await generateToyModelImage(appState.uploadedImage, appState.concept, appState.options);
+            const resultUrl = await generateToyModelImage(appState.uploadedImage, appState.concept, appState.options, 'toy-model-creator');
             const settingsToEmbed = {
                 viewId: 'toy-model-creator',
                 state: { ...appState, stage: 'configuring', generatedImage: null, historicalImages: [], error: null },
@@ -201,7 +201,7 @@ const ToyModelCreator: React.FC<ToyModelCreatorProps> = (props) => {
             logGeneration('toy-model-creator', preGenState, urlWithMetadata, {
                 credits_used: creditCostPerImage,
                 generation_count: 1,
-                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
             });
             onStateChange({
                 ...appState,
@@ -240,7 +240,7 @@ const ToyModelCreator: React.FC<ToyModelCreatorProps> = (props) => {
             logGeneration('toy-model-creator', preGenState, urlWithMetadata, {
                 credits_used: creditCostPerImage,
                 generation_count: 1,
-                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
             });
             onStateChange({
                 ...appState,

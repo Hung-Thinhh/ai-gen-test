@@ -354,6 +354,7 @@ interface PosterCreatorProps {
         api_model_used?: string;
         credits_used?: number;
         generation_count?: number;
+        input_prompt?: string;
     }) => void;
 }
 
@@ -401,10 +402,17 @@ const PosterCreator: React.FC<PosterCreatorProps> = (props) => {
     }, [appState.options]);
 
     // Memoize lightboxImages to prevent unnecessary re-creation
-    const lightboxImages = useMemo(() =>
-        [...appState.productImages, ...displayImages].filter((img): img is string => !!img),
-        [appState.productImages, displayImages]
-    );
+    const lightboxImages = useMemo(() => {
+        const images = [...appState.productImages, ...displayImages].filter((img): img is string => !!img);
+
+        // Extract video URLs and wrap them with type info
+        const videos = displayImages
+            .map(imgUrl => videoTasks[imgUrl]?.resultUrl)
+            .filter((url): url is string => !!url)
+            .map(url => ({ src: url, type: 'video' as const }));
+
+        return [...images, ...videos];
+    }, [appState.productImages, displayImages, videoTasks]);
     const ASPECT_RATIO_OPTIONS_DISPLAY = t('aspectRatioOptions') || [
         'Giữ nguyên theo ảnh tham khảo',
         '1:1 (Vuông - Instagram)',
@@ -506,8 +514,9 @@ const PosterCreator: React.FC<PosterCreatorProps> = (props) => {
             const creditCost = modelVersion === 'v3' ? 2 : 1;
             logGeneration('poster-creator', appState, urlWithMetadata, {
                 credits_used: creditCost,
-                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image',
-                generation_count: 1
+                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
+                generation_count: 1,
+                input_prompt: customPrompt
             });
 
             // Add to display images
@@ -1002,7 +1011,8 @@ ${aspectRatioPrompt}
                         prompt,
                         imagesToUse,
                         `Style: ${selectedStyle} - Variation ${index}`,
-                        geminiAspectRatio // Pass aspect ratio to API (undefined = no constraint)
+                        geminiAspectRatio, // Pass aspect ratio to API (undefined = no constraint)
+                        'poster-creator'   // toolKey
                     );
 
                     let imageUrlForDisplay = '';
@@ -1034,7 +1044,8 @@ ${aspectRatioPrompt}
                         logGeneration('poster-creator', preGenState, imageUrlForDisplay, {
                             credits_used: creditCostPerImage,
                             generation_count: 1,
-                            api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                            api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
+                            input_prompt: prompt
                         });
                     } catch (e) {
                         console.error("Failed to log generation", e);
@@ -1263,6 +1274,33 @@ ${aspectRatioPrompt}
                                                 onGenerateVideoFromPrompt={(prompt) => generateVideo(imgUrl, prompt)}
                                             />
                                         ))}
+
+                                        {/* Show Video Tasks */}
+                                        {displayImages.map((imgUrl, index) => {
+                                            const videoTask = videoTasks[imgUrl];
+                                            if (!videoTask) return null;
+
+                                            // Determine caption based on status
+                                            let caption = t('common_video') || 'Video';
+                                            if (videoTask.status === 'pending') caption = t('common_creatingVideo') || 'Đang tạo Video...';
+                                            if (videoTask.status === 'error') caption = t('common_error') || 'Lỗi';
+
+                                            return (
+                                                <ActionablePolaroidCard
+                                                    key={`video-${index}`}
+                                                    type="output"
+                                                    status={videoTask.status}
+                                                    mediaUrl={videoTask.resultUrl}
+                                                    error={videoTask.error}
+                                                    caption={caption}
+                                                    onClick={videoTask.resultUrl ? () => {
+                                                        const idx = lightboxImages.findIndex(item => (typeof item === 'string' ? item : item.src) === videoTask.resultUrl);
+                                                        if (idx !== -1) openLightbox(idx);
+                                                    } : undefined}
+                                                    isMobile={false} // Assuming desktop for now or pass props
+                                                />
+                                            );
+                                        })}
                                         {/* Show loading cards for pending images */}
                                         {Array.from({ length: pendingImageSlots }).map((_, index) => (
                                             <div

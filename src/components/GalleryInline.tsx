@@ -24,12 +24,34 @@ const masonryBreakpoints = {
     0: 2,        // 2 columns for smallest screens
 };
 
-interface GalleryInlineProps {
-    onClose: () => void;
-    images: string[];
+interface GalleryItem {
+    history_id: string;
+    output_images: string[];
+    input_prompt?: string;
+    [key: string]: any; // Allow other properties
 }
 
-export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images }) => {
+interface GalleryInlineProps {
+    onClose: () => void;
+    images: GalleryItem[] | string[];
+}
+
+export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images: rawImages }) => {
+    // Normalize images to GalleryItem[] to support legacy string[] input
+    const images: GalleryItem[] = React.useMemo(() => {
+        if (!rawImages || rawImages.length === 0) return [];
+        // Check if the first item is a string essentially checks the array type
+        // (Assuming homogeneous array)
+        if (typeof rawImages[0] === 'string') {
+            return (rawImages as string[]).map((url, index) => ({
+                history_id: `legacy-${index}-${url.substring(url.length - 10)}`,
+                output_images: [url],
+                input_prompt: '',
+            }));
+        }
+        return rawImages as GalleryItem[];
+    }, [rawImages]);
+
     const {
         lightboxIndex: selectedImageIndex,
         openLightbox,
@@ -48,12 +70,17 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images })
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
     const [isCombining, setIsCombining] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     // Initial Fetch (Strictly from DB)
     useEffect(() => {
-        refreshGallery();
+        setIsLoading(true);
+        refreshGallery().finally(() => {
+            // Add small delay for better UX
+            setTimeout(() => setIsLoading(false), 300);
+        });
     }, [refreshGallery]);
 
     // Pagination state (simpler than infinite scroll)
@@ -96,18 +123,21 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images })
     };
 
     const handleDownloadAll = () => {
-        const imagesToZip: ImageForZip[] = images.map((url, index) => ({
-            url,
-            filename: `Duky-gallery-image-${index + 1}`,
-            folder: 'gallery',
-            extension: url.startsWith('blob:') ? 'mp4' : undefined,
-        }));
+        const imagesToZip: ImageForZip[] = images
+            .filter(item => item?.output_images?.[0])  // Filter out invalid items
+            .map((item, index) => ({
+                url: item.output_images![0],
+                filename: `Duky-gallery-image-${index + 1}`,
+                folder: 'gallery',
+                extension: item.output_images![0].startsWith('blob:') ? 'mp4' : undefined,
+            }));
         downloadAllImagesAsZip(imagesToZip, 'Duky-gallery.zip');
     };
 
     const handleEditImage = (indexToEdit: number, e: React.MouseEvent) => {
         e.stopPropagation();
-        const urlToEdit = images[indexToEdit];
+        const itemToEdit = images[indexToEdit];
+        const urlToEdit = itemToEdit?.output_images[0];
         if (!urlToEdit || urlToEdit.startsWith('blob:')) {
             alert(t('galleryModal_cannotEditVideo'));
             return;
@@ -128,7 +158,12 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images })
 
         if (!confirmed) return;
 
-        const imageUrl = images[indexToDelete];
+        const imageUrl = images[indexToDelete]?.output_images?.[0];
+
+        if (!imageUrl) {
+            alert('Không tìm thấy URL ảnh để xóa.');
+            return;
+        }
 
         // Show loading toast
         const toastId = toast.loading('Đang xóa ảnh...');
@@ -194,10 +229,13 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images })
         if (selectedIndices.length < 2) return;
         setIsCombining(true);
         try {
-            const itemsToCombine = selectedIndices.map(index => ({
-                url: images[index],
-                label: ''
-            }));
+            const itemsToCombine = selectedIndices
+                .map(index => images[index])
+                .filter(item => item?.output_images?.[0])  // Filter valid items
+                .map(item => ({
+                    url: item.output_images![0],
+                    label: ''
+                }));
             const resultUrl = await combineImages(itemsToCombine, {
                 layout: direction,
                 gap: 0,
@@ -289,11 +327,17 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images })
                         >
                             {displayedImages.map((img, index) => {
                                 const actualIndex = startIndex + index;
+                                // Safety check: ensure output_images exists and has at least one element
+                                const imageUrl = img?.output_images?.[0];
+                                if (!imageUrl) {
+                                    console.warn(`[GalleryInline] Item ${index} missing output_images:`, img);
+                                    return null;
+                                }
                                 return (
                                     <ImageThumbnail
-                                        key={`${img.slice(-20)}-${actualIndex}`}
+                                        key={`${img.history_id}`}
                                         index={actualIndex}
-                                        imageUrl={img}
+                                        imageUrl={imageUrl}
                                         isSelectionMode={isSelectionMode}
                                         isSelected={selectedIndices.includes(actualIndex)}
                                         hideActions={isMobile}
@@ -374,6 +418,20 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images })
                         </div>
                     )}
                 </>
+            ) : isLoading ? (
+                <div className="flex-1 overflow-y-auto p-4">
+                    <Masonry
+                        breakpointCols={masonryBreakpoints}
+                        className="gallery-masonry"
+                        columnClassName="gallery-masonry-column"
+                    >
+                        {Array.from({ length: 15 }).map((_, i) => (
+                            <div key={i} className="relative overflow-hidden bg-neutral-800 rounded-lg mb-4" style={{ aspectRatio: '1' }}>
+                                <div className="absolute inset-0 bg-gradient-to-r from-neutral-800 via-neutral-700 to-neutral-800 animate-shimmer bg-[length:200%_100%]" />
+                            </div>
+                        ))}
+                    </Masonry>
+                </div>
             ) : (
                 <div className="text-center text-neutral-400 py-8 flex-1 flex items-center justify-center">
                     <p>{t('galleryModal_empty')}<br />{t('galleryModal_empty_dragDrop')}</p>
@@ -387,7 +445,7 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images })
                     </motion.div>
                 )}
             </AnimatePresence>
-            <Lightbox images={images} selectedIndex={selectedImageIndex} onClose={closeLightbox} onNavigate={navigateLightbox} />
+            <Lightbox images={images.filter(item => item?.output_images?.[0]).map(item => item.output_images![0])} selectedIndex={selectedImageIndex} prompts={images.map(item => item.input_prompt || null)} onClose={closeLightbox} onNavigate={navigateLightbox} />
         </div>
     );
 };

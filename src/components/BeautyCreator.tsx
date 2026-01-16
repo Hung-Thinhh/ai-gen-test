@@ -169,7 +169,7 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
             }
 
             try {
-                const resultUrl = await generateBeautyImage(appState.uploadedImage, '', appState.options, appState.styleReferenceImage);
+                const resultUrl = await generateBeautyImage(appState.uploadedImage, '', appState.options, appState.styleReferenceImage, 'beauty-creator');
                 const settingsToEmbed = {
                     viewId: 'beauty-creator',
                     state: { ...preGenState, stage: 'configuring', generatedImages: {}, historicalImages: [], error: null },
@@ -178,7 +178,7 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
                 logGeneration('beauty-creator', preGenState, urlWithMetadata, {
                     credits_used: creditCostPerImage,
                     generation_count: 1,
-                    api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                    api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
                 });
                 onStateChange({
                     ...generatingState,
@@ -292,14 +292,14 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
                     }
                 }
 
-                const resultUrl = await generateBeautyImage(appState.uploadedImage!, idea, appState.options);
+                const resultUrl = await generateBeautyImage(appState.uploadedImage!, idea, appState.options, null, 'beauty-creator');
                 const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
 
                 if (!hasLoggedGeneration.current) {
                     logGeneration('beauty-creator', preGenState, urlWithMetadata, {
                         generation_count: 1,
                         credits_used: creditCostPerImage,
-                        api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                        api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
                     });
                     hasLoggedGeneration.current = true;
                 }
@@ -364,7 +364,7 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
             logGeneration('beauty-creator', preGenState, urlWithMetadata, {
-                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
             });
             onStateChange({
                 ...appState,

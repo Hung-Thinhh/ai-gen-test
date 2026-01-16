@@ -45,13 +45,13 @@ Create a professional studio photoshoot of the person in the provided image.
 ${appState.options.notes ? `- Additional notes: ${appState.options.notes}` : ''}
 
 **QUALITY:** High resolution, professional photography, photorealistic result.`;
-            const result = await generateStyledImage(prompt, [appState.subjectImage]);
+            const result = await generateStyledImage(prompt, [appState.subjectImage], undefined, undefined, 'studio-photoshoot');
             onStateChange({ ...appState, stage: 'results', resultImage: result });
             addImagesToGallery([result]);
             logGeneration('studio-photoshoot', preGenState, result, {
                 credits_used: creditCostPerImage,
                 generation_count: 1,
-                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
             });
         } catch (err) {
             onStateChange({ ...appState, stage: 'results', error: err instanceof Error ? err.message : "Lỗi." });

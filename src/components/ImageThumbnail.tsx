@@ -38,7 +38,9 @@ export const ImageThumbnail: React.FC<ImageThumbnailProps> = ({
                 "gallery-grid-item group",
                 isSelectionMode ? 'cursor-pointer' : ''
             )}
-            onClick={() => onSelect(index)}
+            onClick={() => {
+                onSelect(index);
+            }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
@@ -48,7 +50,13 @@ export const ImageThumbnail: React.FC<ImageThumbnailProps> = ({
             {isVideo ? (
                 <video src={imageUrl} autoPlay loop muted playsInline className="w-full h-auto block" />
             ) : (
-                <img src={imageUrl} alt={`Generated image ${index + 1}`} loading="lazy" />
+                <img
+                    src={imageUrl}
+                    alt={`Generated image ${index + 1}`}
+                    loading="lazy"
+                    onError={() => console.error(`[ImageThumbnail] Failed to load image ${index}:`, imageUrl)}
+                    onLoad={() => console.log(`[ImageThumbnail] Image ${index} loaded successfully`)}
+                />
             )}
 
             <AnimatePresence>

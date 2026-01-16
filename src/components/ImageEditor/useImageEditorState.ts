@@ -1395,7 +1395,7 @@ export const useImageEditorState = (
                 logGeneration('image-editor-ai-edit', { imageToEdit: internalImageUrl, prompt: aiEditPrompt }, resultUrl, {
                     credits_used: creditCost,
                     generation_count: 1,
-                    api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                    api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
                 });
 
                 setAiEditPrompt('');
@@ -1650,7 +1650,7 @@ export const useImageEditorState = (
                 logGeneration('image-editor-bg-remove', { imageToEdit: internalImageUrl }, resultUrl, {
                     credits_used: creditCost,
                     generation_count: 1,
-                    api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                    api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
                 });
             } catch (err) { alert(`Error removing background: ${err instanceof Error ? err.message : "An unknown error occurred."}`); }
             finally { setIsLoading(false); }

@@ -189,7 +189,8 @@ const ImageInterpolation: React.FC<ImageInterpolationProps> = (props) => {
                 referenceImageToUse,
                 finalPromptText,
                 appState.options.aspectRatio,
-                appState.options.removeWatermark
+                appState.options.removeWatermark,
+                'image-interpolation'
             );
 
             const settingsToEmbed = {
@@ -200,7 +201,7 @@ const ImageInterpolation: React.FC<ImageInterpolationProps> = (props) => {
             logGeneration('image-interpolation', preGenState, urlWithMetadata, {
                 credits_used: creditCostPerImage,
                 generation_count: 1,
-                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
             });
 
             const newHistory = [...appState.historicalImages, { url: urlWithMetadata, prompt: finalPromptText }];
@@ -243,7 +244,8 @@ const ImageInterpolation: React.FC<ImageInterpolationProps> = (props) => {
                 appState.generatedImage,
                 prompt,
                 appState.options.aspectRatio,
-                appState.options.removeWatermark
+                appState.options.removeWatermark,
+                'image-interpolation'
             );
 
             const settingsToEmbed = {
@@ -254,7 +256,7 @@ const ImageInterpolation: React.FC<ImageInterpolationProps> = (props) => {
             logGeneration('image-interpolation', preGenState, urlWithMetadata, {
                 credits_used: creditCostPerImage,
                 generation_count: 1,
-                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
             });
 
             const newHistory = [...appState.historicalImages, { url: urlWithMetadata, prompt: prompt }];

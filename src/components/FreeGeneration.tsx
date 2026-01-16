@@ -40,7 +40,7 @@ interface FreeGenerationProps {
     uploaderDescription3: string;
     uploaderCaption4: string;
     uploaderDescription4: string;
-    addImagesToGallery: (images: string[]) => void;
+    addImagesToGallery: (images: string[], persist?: boolean) => void;
     appState: FreeGenerationState;
     onStateChange: (newState: FreeGenerationState) => void;
     onReset: () => void;
@@ -53,6 +53,7 @@ interface FreeGenerationProps {
         error_message?: string;
         output_images?: any;
         generation_count?: number;
+        input_prompt?: string;
     }) => void;
 }
 
@@ -207,7 +208,8 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
                 appState.image2 || undefined,
                 appState.image3 || undefined,
                 appState.image4 || undefined,
-                appState.options.removeWatermark
+                appState.options.removeWatermark,
+                'free-generation'
             );
 
             const settingsToEmbed = {
@@ -221,11 +223,16 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
 
             if (urlsWithMetadata.length > 0) {
                 const creditCost = modelVersion === 'v3' ? 2 * urlsWithMetadata.length : 1 * urlsWithMetadata.length;
+
+                // DEBUG: Verify we're passing R2 URLs
+                console.log('[FreeGen] Logging to history with R2 URLs:', resultUrls);
+
                 logGeneration('free-generation', preGenState, urlsWithMetadata[0], {
                     credits_used: creditCost,
-                    api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image',
+                    api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
                     generation_count: urlsWithMetadata.length,
-                    output_images: urlsWithMetadata
+                    output_images: resultUrls, // Use R2 URLs instead of base64
+                    input_prompt: finalPrompt
                 });
             }
 
@@ -235,7 +242,7 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
                 generatedImages: urlsWithMetadata,
                 historicalImages: limitHistoricalImages(appState.historicalImages, urlsWithMetadata),
             });
-            addImagesToGallery(urlsWithMetadata);
+            addImagesToGallery(resultUrls, false);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
 
@@ -274,7 +281,7 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
         }
 
         try {
-            const resultUrl = await editImageWithPrompt(url, prompt, undefined, appState.options.removeWatermark);
+            const resultUrl = await editImageWithPrompt(url, prompt, undefined, appState.options.removeWatermark, 'free-generation');
             const settingsToEmbed = {
                 viewId: 'free-generation',
                 state: { ...appState, stage: 'configuring', generatedImages: [], historicalImages: [], error: null },
@@ -283,9 +290,10 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
             const creditCost = modelVersion === 'v3' ? 2 : 1;
             logGeneration('free-generation', preGenState, urlWithMetadata, {
                 credits_used: creditCost,
-                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image',
+                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
                 generation_count: 1,
-                output_images: [urlWithMetadata]
+                output_images: [resultUrl], // Use R2 URL instead of base64
+                input_prompt: prompt
             });
 
             const newGeneratedImages = [...originalGeneratedImages];

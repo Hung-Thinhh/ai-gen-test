@@ -131,7 +131,7 @@ const PhotoRestoration: React.FC<PhotoRestorationProps> = (props) => {
         onStateChange({ ...appState, stage: 'generating', error: null });
 
         try {
-            const resultUrl = await restoreOldPhoto(appState.uploadedImage, appState.options);
+            const resultUrl = await restoreOldPhoto(appState.uploadedImage, appState.options, 'photo-restoration');
             const settingsToEmbed = {
                 viewId: 'photo-restoration',
                 state: { ...appState, stage: 'configuring', generatedImage: null, historicalImages: [], error: null },
@@ -140,7 +140,7 @@ const PhotoRestoration: React.FC<PhotoRestorationProps> = (props) => {
             logGeneration('photo-restoration', preGenState, urlWithMetadata, {
                 credits_used: creditCostPerImage,
                 generation_count: 1,
-                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
             });
             onStateChange({
                 ...appState,
@@ -178,7 +178,7 @@ const PhotoRestoration: React.FC<PhotoRestorationProps> = (props) => {
             logGeneration('photo-restoration', preGenState, urlWithMetadata, {
                 credits_used: creditCostPerImage,
                 generation_count: 1,
-                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
             });
             onStateChange({
                 ...appState,

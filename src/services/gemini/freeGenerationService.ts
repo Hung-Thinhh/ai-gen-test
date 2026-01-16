@@ -4,11 +4,11 @@
 */
 import { Modality } from "@google/genai";
 import ai from './client'; // Import the shared client instance
-import { 
-    processApiError, 
-    parseDataUrl, 
-    callGeminiWithRetry, 
-    processGeminiResponse 
+import {
+    processApiError,
+    parseDataUrl,
+    callGeminiWithRetry,
+    processGeminiResponse
 } from './baseService';
 
 export async function generateFreeImage(
@@ -19,14 +19,16 @@ export async function generateFreeImage(
     imageDataUrl2?: string,
     imageDataUrl3?: string,
     imageDataUrl4?: string,
-    removeWatermark?: boolean
+    removeWatermark?: boolean,
+    toolKey?: string
 ): Promise<string[]> {
     try {
         const allImageUrls = [imageDataUrl1, imageDataUrl2, imageDataUrl3, imageDataUrl4].filter(Boolean) as string[];
-        
-        const results: string[] = [];
 
-        for (let i = 0; i < numberOfImages; i++) {
+
+
+        // Generate requests in parallel
+        const promises = Array.from({ length: numberOfImages }).map(async (_, i) => {
             const parts: object[] = [];
 
             if (allImageUrls.length > 0) {
@@ -45,22 +47,29 @@ export async function generateFreeImage(
             }
             const fullPrompt = promptParts.join('\n');
             parts.push({ text: fullPrompt });
-            
+
             const validRatios: string[] = ['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9'];
             const config: any = {};
-            
+
             let finalAspectRatio = aspectRatio;
             if (aspectRatio === 'Giữ nguyên' && allImageUrls.length === 0) {
                 finalAspectRatio = '1:1'; // Default for text-to-image
             }
-            
+
             if (finalAspectRatio !== 'Giữ nguyên' && validRatios.includes(finalAspectRatio)) {
                 config.imageConfig = { aspectRatio: finalAspectRatio };
             }
 
+            // Extract tool_key from URL (e.g., /tool/free-generation -> free-generation)
+            // Use provided toolKey if available, otherwise fallback to URL or 'unknown'
+            const finalToolKey = toolKey || (typeof window !== 'undefined' ? window.location.pathname.split('/').pop() : 'unknown');
+            config.tool_key = finalToolKey;
+
             const response = await callGeminiWithRetry(parts, config);
-            results.push(processGeminiResponse(response));
-        }
+            return processGeminiResponse(response);
+        });
+
+        const results = await Promise.all(promises);
 
         return results;
 

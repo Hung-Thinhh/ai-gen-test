@@ -5,12 +5,28 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 
 export async function POST(req: NextRequest) {
+    const perfStart = Date.now();
+    const perfLog = (step: string) => {
+        const elapsed = Date.now() - perfStart;
+        console.log(`[PERF] ${step}: ${elapsed}ms`);
+    };
+
     try {
         const apiKey = process.env.GEMINI_API_KEY;
+        const vertexProjectId = process.env.VERTEX_PROJECT_ID;
+        const vertexLocation = process.env.VERTEX_LOCATION || 'us-central1';
 
-        if (!apiKey) {
+        // Helper to ensure Google Auth finds the file (if using local file)
+        if (process.env.GOOGLE_APPLICATION_CREDENTIALS && !process.env.GOOGLE_APPLICATION_CREDENTIALS.startsWith('/')) {
+            const path = await import('path');
+            if (!path.isAbsolute(process.env.GOOGLE_APPLICATION_CREDENTIALS)) {
+                process.env.GOOGLE_APPLICATION_CREDENTIALS = path.resolve(process.cwd(), process.env.GOOGLE_APPLICATION_CREDENTIALS);
+            }
+        }
+
+        if (!apiKey && !vertexProjectId) {
             return NextResponse.json(
-                { error: 'Server API Key not configured' },
+                { error: 'Server API Key or Vertex Project ID not configured' },
                 { status: 500 }
             );
         }
@@ -63,6 +79,8 @@ export async function POST(req: NextRequest) {
 
         console.log('[API DEBUG] Credit cost from header:', creditCost);
         console.log('[API DEBUG] Model:', model);
+        console.log('[API DEBUG] Received parts:', JSON.stringify(parts, null, 2));
+        console.log('[API DEBUG] Received config:', JSON.stringify(config, null, 2));
 
         // 3. Check if user has enough credits (don't deduct yet)
         console.log('[API DEBUG] Checking credits...', { isGuest, userId, guestId, creditCost });
@@ -123,53 +141,152 @@ export async function POST(req: NextRequest) {
             }, { status: 402 });
         }
 
+        perfLog('Credit check completed');
+
         // 4. Generate Image (credits NOT deducted yet)
         console.log('[API DEBUG] Credits sufficient, proceeding with generation...');
-        const ai = new GoogleGenAI({ apiKey });
-        const response = await ai.models.generateContent({
-            model: model || 'gemini-2.5-flash-image',
-            contents: { parts },
-            config: config
-        });
 
-        // 5. Upload to Cloudinary (Server-side)
-        console.log('[API DEBUG] Uploading to Cloudinary...');
-
-        const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dmxmzannb';
-        const UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'AI-image';
-
-        // Helper to upload
-        const uploadToCloudinaryServer = async (base64Image: string) => {
-            const formData = new FormData();
-            formData.append('file', base64Image);
-            formData.append('upload_preset', UPLOAD_PRESET);
-
-            const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
-                method: 'POST',
-                body: formData
+        let ai;
+        if (vertexProjectId) {
+            console.log('[API DEBUG] Using Vertex AI Provider', { project: vertexProjectId, location: vertexLocation });
+            // [FIX] Correct configuration for @google/genai:
+            // The build fails with 'vertexAI' because strict types require 'vertexai'.
+            // Even if it 'seemed' to work before, the build error confirms this is the only valid way.
+            ai = new GoogleGenAI({
+                vertexai: true,
+                project: vertexProjectId,
+                location: vertexLocation
             });
-
-            if (!uploadRes.ok) {
-                const errData = await uploadRes.json();
-                console.error('Cloudinary Upload Error:', errData);
-                throw new Error('Failed to upload image to storage');
-            }
-
-            const data = await uploadRes.json();
-            // Optimize URL (f_auto, q_auto)
-            return data.secure_url.replace('/upload/', '/upload/f_auto,q_auto/');
-        };
-
-        // We only upload the first image for now (gemini usually returns 1 in this setup)
-        const firstCandidate = response.candidates?.[0]?.content?.parts?.[0];
-        let imageUrl = '';
-
-        if (firstCandidate && firstCandidate.inlineData) {
-            const base64Image = `data:${firstCandidate.inlineData.mimeType};base64,${firstCandidate.inlineData.data}`;
-            imageUrl = await uploadToCloudinaryServer(base64Image);
-            console.log('[API DEBUG] Image uploaded:', imageUrl);
         } else {
-            console.warn('[API DEBUG] No inlineData found in candidate, skipping upload');
+            console.log('[API DEBUG] Using Gemini API Key Provider');
+            ai = new GoogleGenAI({ apiKey });
+        }
+
+        let imageUrl = '';
+        let finishReason = '';
+        let lastEnhancedPrompt = ''; // Store the last enhanced prompt for history logging
+
+        // Import R2 upload function once
+        const { uploadToR2 } = await import('@/lib/r2/upload');
+
+        // Retry loop: Try up to 3 times (to handle occasional API timeouts)
+        // But log each attempt to understand why retry is needed
+        const maxAttempts = 3;
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                if (attempt > 1) {
+                    console.log(`[API DEBUG] ⚠️ Retry attempt ${attempt}/${maxAttempts}...`);
+                }
+
+                // FIX: For image generation with reference images, we need to:
+                // 1. Include the image data for reference (face swap, style transfer, etc.)
+                // 2. Add explicit "GENERATE A NEW IMAGE:" directive to EVERY prompt
+                // 3. This tells the model to CREATE a new image, not just analyze
+
+                const hasImageData = parts.some((p: any) => p.inlineData);
+
+                // Extract text and ALWAYS add explicit generation directive
+                const textParts = parts.filter((p: any) => p.text);
+                const originalText = textParts.map((p: any) => p.text).join('\n');
+
+                // ALWAYS prepend generation directive - this is critical!
+                // Even if prompt contains "Tạo/Generate", being explicit helps the model understand
+                const enhancedPrompt = `GENERATE A NEW IMAGE:\n\n${originalText}`;
+                lastEnhancedPrompt = enhancedPrompt; // Store for history logging
+
+                if (attempt === 1) {
+                    console.log(`[API DEBUG] Attempt 1 - Starting generation with ${hasImageData ? 'reference image' : 'text only'}...`);
+                    console.log(`[API DEBUG] Prompt: ${enhancedPrompt.substring(0, 150)}...`);
+                }
+
+                console.log(`[API DEBUG] Attempt ${attempt} - Has image data: ${hasImageData}`);
+                console.log(`[API DEBUG] Attempt ${attempt} - Enhanced prompt:\n${enhancedPrompt.substring(0, 300)}...`);
+
+                // Build parts array: preserve image data if present, use enhanced prompt text
+                const requestParts: any[] = [];
+
+                // Add image data first (if present)
+                const imageParts = parts.filter((p: any) => p.inlineData);
+                requestParts.push(...imageParts);
+
+                // Add the enhanced text prompt
+                requestParts.push({ text: enhancedPrompt });
+
+                console.log(`[API DEBUG] Attempt ${attempt} - Request parts: ${imageParts.length} images + 1 text`);
+
+                // Filter out properties that are not valid for image generation
+                const filteredConfig = Object.keys(config).reduce((acc: any, key: string) => {
+                    // Exclude text-generation specific properties
+                    if (!['responseMimeType', 'responseSchema', 'responseModalities'].includes(key)) {
+                        acc[key] = config[key];
+                    }
+                    return acc;
+                }, {});
+
+                console.log(`[API DEBUG] Attempt ${attempt} - Filtered config:`, JSON.stringify(filteredConfig, null, 2));
+
+                const response = await ai.models.generateContent({
+                    model: model || 'gemini-2.5-flash-image',
+                    contents: [{
+                        role: 'user',
+                        parts: requestParts  // Image data (if any) + enhanced text prompt
+                    }],
+                    config: filteredConfig  // Use only filtered config
+                });
+
+                perfLog(`AI generation completed (Attempt ${attempt})`);
+
+                const firstCandidate = response.candidates?.[0];
+                const firstPart = firstCandidate?.content?.parts?.[0];
+                finishReason = firstCandidate?.finishReason || 'UNKNOWN';
+
+                if (firstPart && firstPart.inlineData) {
+                    console.log(`[API DEBUG] ✅ Attempt ${attempt} successful! Image generated.`);
+                    const base64Image = `data:${firstPart.inlineData.mimeType};base64,${firstPart.inlineData.data}`;
+                    imageUrl = await uploadToR2(base64Image);
+                    perfLog('R2 upload completed');
+                    console.log('[API DEBUG] Image uploaded to R2:', imageUrl);
+                    break; // Success!
+                } else {
+                    // Attempt failed - log why
+                    console.warn(`[API DEBUG] ❌ Attempt ${attempt} failed: No inlineData (finish reason: ${finishReason})`);
+                    if (firstPart?.text) {
+                        const responseText = firstPart.text.substring(0, 200);
+                        console.warn(`[API DEBUG] Model returned TEXT instead of IMAGE: "${responseText}..."`);
+                    }
+                    if (firstCandidate?.safetyRatings && Array.isArray(firstCandidate.safetyRatings) && firstCandidate.safetyRatings.length > 0) {
+                        console.warn('[API DEBUG] Safety ratings:', firstCandidate.safetyRatings);
+                    }
+
+                    // If this was last attempt, throw error
+                    if (attempt === maxAttempts) {
+                        throw new Error(`Failed to generate image after ${maxAttempts} attempts. Last reason: ${finishReason}`);
+                    }
+                    // Otherwise, continue to next retry
+                    console.log(`[API DEBUG] Waiting before retry attempt ${attempt + 1}...`);
+                }
+
+            } catch (err) {
+                console.error(`[API DEBUG] ❌ Attempt ${attempt} error:`, err instanceof Error ? err.message : err);
+
+                // If this was last attempt, rethrow
+                if (attempt === maxAttempts) {
+                    throw err;
+                }
+                // Otherwise, continue to next retry
+                console.log(`[API DEBUG] Will retry after error...`);
+            }
+        }
+
+        perfLog('AI generation process completed');
+
+        // Stop here if no image generated (prevent empty history/credit deduction)
+        if (!imageUrl) {
+            console.warn('[API] No image URL generated after retries, skipping DB update and history log.');
+            return NextResponse.json({
+                error: 'hiện AI quá tải kh thể tạo ảnh vui lòng truy cập lại sau',
+                details: finishReason
+            }, { status: 503 }); // 503 Service Unavailable
         }
 
 
@@ -225,19 +342,11 @@ export async function POST(req: NextRequest) {
                     RETURNING gallery;
                 `;
 
-                const oke1 = await sql`
-                    SELECT gallery->>-1 AS last_added_url 
-FROM profiles 
-WHERE id = ${userId};
-                `;
-
-                console.log('cccccccccccccccccccccccccccccccccc', oke1);
-
                 if (creditResult.length > 0) {
                     newCredits = creditResult[0].current_credits;
                     // Get last added URL from the returned gallery array
                     const galleryArr = galleryResult[0]?.gallery;
-                    const lastUrl = Array.isArray(galleryArr) ? galleryArr[galleryArr.length - 1] : 'unknown';
+                    const lastUrl = Array.isArray(galleryArr) ? galleryArr[galleryArr.length - 1] : imageUrl;
 
                     console.log(`[API] User updated. New balance: ${newCredits}, Image saved to profiles. Last URL: ${lastUrl}`);
                 } else {
@@ -257,13 +366,66 @@ WHERE id = ${userId};
             // Actually if DB fails, user gets image but no history. acceptable trade-off vs erroring out.
         }
 
+        perfLog('DB update completed');
+
+        // AUTO-LOG TO HISTORY (Server-side)
+        try {
+            console.log('[API] Auto-logging to generation_history...');
+
+            // Get tool info
+            const toolKey = body.tool_key || null;
+            let toolId = body.tool_id ? parseInt(body.tool_id) : -1;
+
+            // If tool_key is provided but tool_id is missing/invalid, look it up
+            if (toolKey && (toolId === -1 || !toolId)) {
+                try {
+                    const toolResult = await sql`SELECT tool_id FROM tools WHERE key = ${toolKey} LIMIT 1`;
+                    if (toolResult && toolResult.length > 0) {
+                        toolId = toolResult[0].tool_id;
+                        console.log(`[API] Resolved tool_key '${toolKey}' to tool_id: ${toolId}`);
+                    } else {
+                        console.warn(`[API] Could not resolve tool_key '${toolKey}' to an ID`);
+                        toolId = -1; // Default to -1 if not found
+                    }
+                } catch (lookupErr: any) {
+                    console.warn('[API] ⚠️ Tool lookup failed (non-blocking), proceeding with tool_id=-1:', lookupErr.message);
+                    toolId = -1; // Default to -1 on error
+                }
+            }
+
+            await sql`
+                INSERT INTO generation_history 
+                (user_id, guest_id, tool_id, output_images, generation_count, credits_used, api_model_used, generation_time_ms, error_message, created_at, tool_key, input_prompt)
+                VALUES (
+                    ${userId || null},
+                    ${guestId || null},
+                    ${toolId},
+                    ${JSON.stringify([imageUrl])}::jsonb,
+                    1,
+                    ${creditCost},
+                    ${model || 'unknown'},
+                    ${Date.now() - perfStart},
+                    NULL,
+                    NOW(),
+                    ${toolKey},
+                    ${lastEnhancedPrompt}
+                )
+            `;
+
+            console.log('[API] ✅ History logged successfully with input_prompt');
+        } catch (histErr: any) {
+            console.error('[API] ⚠️ History logging failed (non-critical):', histErr.message);
+        }
+
+        perfLog('🏁 TOTAL TIME');
         console.log('[API DEBUG] Process complete');
 
         // Return response
+        // OPTIMIZATION: If we have an R2 URL, do NOT send back the heavy Base64 candidates.
         return NextResponse.json({
-            candidates: response.candidates,
+            candidates: [], // Strip Base64 if R2 URL exists
             newCredits,
-            imageUrl // Return the persistent URL too
+            imageUrl // Return the persistent URL
         });
 
     } catch (error: any) {

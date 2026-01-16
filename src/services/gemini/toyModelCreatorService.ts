@@ -2,11 +2,11 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
-import { 
-    processApiError, 
-    parseDataUrl, 
-    callGeminiWithRetry, 
-    processGeminiResponse 
+import {
+    processApiError,
+    parseDataUrl,
+    callGeminiWithRetry,
+    processGeminiResponse
 } from './baseService';
 
 export interface ToyModelOptions {
@@ -57,7 +57,7 @@ const buildDesktopModelPrompt = (options: ToyModelOptions): string[] => {
     }
 
     promptParts.push('\nBức ảnh phải mô tả cảnh sau đây với chi tiết cực kỳ cao:');
-    
+
     const sceneDetails = [
         '1. **Chủ thể chính:** Một mô hình đồ chơi (action figure) chất lượng cao, chi tiết của nhân vật/vật thể chính từ hình ảnh được tải lên. Mô hình đồ chơi này phải là tâm điểm chính.',
         '2. **Bối cảnh:** Mô hình đồ chơi đang đứng trên một mặt bàn làm việc.'
@@ -70,21 +70,21 @@ const buildDesktopModelPrompt = (options: ToyModelOptions): string[] => {
     }
 
     if (options.softwareType && options.softwareType !== 'Tự động') {
-         sceneDetails.push(`Màn hình của máy tính PHẢI hiển thị một ${options.softwareType} của chính mô hình đồ chơi đó.`);
+        sceneDetails.push(`Màn hình của máy tính PHẢI hiển thị một ${options.softwareType} của chính mô hình đồ chơi đó.`);
     } else {
-         sceneDetails.push('Màn hình của máy tính PHẢI hiển thị một mô hình 3D wireframe hoặc render đất sét xám của chính mô hình đồ chơi đó, như thể nó đang được thiết kế trong phần mềm 3D.');
+        sceneDetails.push('Màn hình của máy tính PHẢI hiển thị một mô hình 3D wireframe hoặc render đất sét xám của chính mô hình đồ chơi đó, như thể nó đang được thiết kế trong phần mềm 3D.');
     }
-    
+
     if (options.boxType && options.boxType !== 'Tự động') {
         sceneDetails.push(`4. **Bao bì:** Về một phía của mô hình đồ chơi, có một ${options.boxType} được thiết kế chuyên nghiệp cho món đồ chơi. Hộp phải có hình ảnh của món đồ chơi và nhãn hiệu phù hợp liên quan đến chủ thể.`);
     } else {
         sceneDetails.push('4. **Bao bì:** Về một phía của mô hình đồ chơi, có một hộp đựng bán lẻ được thiết kế chuyên nghiệp cho món đồ chơi. Hộp phải có hình ảnh của món đồ chơi và nhãn hiệu phù hợp liên quan đến chủ thể.');
     }
-    
+
     if (options.background && options.background !== 'Tự động') {
         sceneDetails.push(`5. **Phông nền:** Phía sau bàn làm việc và máy tính, phông nền phải là một ${options.background}, được làm mờ để tạo chiều sâu.`);
     } else {
-         sceneDetails.push('5. **Phông nền:** Phía sau bàn làm việc và máy tính, phông nền phải là một cảnh mờ, có không khí của môi trường từ hình ảnh gốc được tải lên (ví dụ: nếu ảnh gốc là một cầu thủ bóng đá, phông nền là một sân vận động mờ).');
+        sceneDetails.push('5. **Phông nền:** Phía sau bàn làm việc và máy tính, phông nền phải là một cảnh mờ, có không khí của môi trường từ hình ảnh gốc được tải lên (ví dụ: nếu ảnh gốc là một cầu thủ bóng đá, phông nền là một sân vận động mờ).');
     }
 
     return [...promptParts, ...sceneDetails];
@@ -161,7 +161,7 @@ const buildCraftingModelPrompt = (options: ToyModelOptions): string[] => {
     }
 
     promptParts.push('\n**CHI TIẾT BỐ CỤC CẢNH:**');
-    
+
     const sceneDetails = [];
 
     if (options.characterMood && options.characterMood !== 'Tự động') {
@@ -181,7 +181,7 @@ const buildCraftingModelPrompt = (options: ToyModelOptions): string[] => {
     } else {
         sceneDetails.push('- **Bản vẽ thiết kế:** Ở phía sau, có một bản vẽ kỹ thuật hoặc mô hình 3D trên màn hình máy tính của mô hình đang được chế tạo.');
     }
-    
+
     if (options.background && options.background !== 'Tự động') {
         sceneDetails.push(`- **Bối cảnh/Phông nền:** Toàn bộ cảnh diễn ra trong một ${options.background}.`);
     } else {
@@ -202,13 +202,13 @@ const buildPokemonModelPrompt = (options: ToyModelOptions): string[] => {
     promptParts.push('\n**BỐ CỤC CẢNH - HOÀNH TRÁNG:**');
 
     const sceneDetails = [];
-    
+
     const pokeballType = options.pokeballType && options.pokeballType !== 'Tự động' ? options.pokeballType : 'Poké Ball (thường)';
 
     sceneDetails.push(`1. **Phông nền (Background):** Ở **phía sau** tất cả các mô hình, đặt một quả **${pokeballType} KHỔNG LỒ**, được đặt **nghiêng chéo ở một bên** của khung hình. Quả Poké Ball này đóng vai trò như một phông nền hoành tráng và phải được **làm mờ (out of focus / bokeh)** để tạo chiều sâu.`);
 
     sceneDetails.push('2. **Mô hình chính (Tâm điểm):** Ở **tiền cảnh**, sắc nét và nổi bật, là mô hình đồ chơi của Pokémon chính (dựa trên ảnh gốc). Toàn bộ sự chú ý phải tập trung vào các mô hình ở tiền cảnh.');
-    
+
     const evolutionMap: { [key: string]: string } = {
         'Một dạng tiến hoá': 'Bên cạnh Pokémon chính, đặt một mô hình đồ chơi của một dạng tiến hoá (hoặc tiền tiến hoá) hợp lý.',
         'Toàn bộ chuỗi tiến hoá': 'Bên cạnh Pokémon chính, đặt các mô hình đồ chơi của TOÀN BỘ chuỗi tiến hoá (ví dụ: một dạng tiền tiến hoá và một dạng tiến hoá cao hơn).',
@@ -229,24 +229,25 @@ const buildPokemonModelPrompt = (options: ToyModelOptions): string[] => {
     }
 
     sceneDetails.push('5. **Bối cảnh/Nền phụ:** Ngoài Poké Ball khổng lồ, môi trường xung quanh phải được **suy ra từ các đặc điểm hình ảnh của sinh vật gốc** (ví dụ: sinh vật có màu sắc rực lửa thì có thêm các yếu tố núi lửa; sinh vật trông giống nước thì có thêm hiệu ứng nước bắn tóe). Yếu tố này nên tinh tế và không lấn át các mô hình.');
-    
+
     promptParts.push(...sceneDetails);
-    
+
     promptParts.push(
         '\n**YÊU CẦU CHẤT LƯỢNG:**',
         '- Phải có sự tương phản rõ rệt giữa các mô hình sắc nét ở tiền cảnh và Poké Ball khổng lồ mờ ảo ở hậu cảnh.',
         '- Ánh sáng phải kịch tính, chiếu sáng các mô hình từ phía trước và hai bên để làm nổi bật chúng khỏi nền.',
         '- Kết cấu của các mô hình và vật phẩm phải chân thực (nhựa, kim loại, v.v.).'
     );
-    
+
     return promptParts;
 };
 
 
 export async function generateToyModelImage(
-    imageDataUrl: string, 
-    concept: string, 
-    options: ToyModelOptions
+    imageDataUrl: string,
+    concept: string,
+    options: ToyModelOptions,
+    toolKey?: string
 ): Promise<string> {
     const { mimeType, data: base64Data } = parseDataUrl(imageDataUrl);
     const imagePart = { inlineData: { mimeType, data: base64Data } };
@@ -285,7 +286,7 @@ export async function generateToyModelImage(
     if (options.removeWatermark) {
         promptParts.push('**Yêu cầu đặc biệt:** Không được có bất kỳ watermark, logo, hay chữ ký nào trên ảnh kết quả.');
     }
-    
+
     promptParts.push(
         '\nHình ảnh cuối cùng phải là một bức ảnh duy nhất, gắn kết, chất lượng cao. Không bao gồm bất kỳ văn bản giải thích nào. Chỉ trả về hình ảnh cuối cùng.'
     );
@@ -294,6 +295,9 @@ export async function generateToyModelImage(
     const textPart = { text: prompt };
 
     const config: any = {};
+    if (toolKey) {
+        config.tool_key = toolKey;
+    }
     const validRatios = ['1:1', '3:4', '4:3', '9:16', '16:9', '2:3', '4:5', '3:2', '5:4', '21:9'];
     if (options.aspectRatio && options.aspectRatio !== 'Giữ nguyên' && validRatios.includes(options.aspectRatio)) {
         config.imageConfig = { aspectRatio: options.aspectRatio };

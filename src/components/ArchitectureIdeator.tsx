@@ -41,6 +41,7 @@ interface ArchitectureIdeatorProps {
         api_model_used?: string;
         credits_used?: number;
         generation_count?: number;
+        input_prompt?: string;
     }) => void;
 }
 
@@ -115,7 +116,13 @@ const ArchitectureIdeator: React.FC<ArchitectureIdeatorProps> = (props) => {
         onStateChange({ ...appState, stage: 'generating', error: null });
 
         try {
-            const resultUrl = await generateArchitecturalImage(appState.uploadedImage, appState.options, appState.styleReferenceImage);
+            // No need to transform options, the service handles 'Tự động' correctly
+            const resultUrl = await generateArchitecturalImage(
+                appState.uploadedImage,
+                appState.options,
+                appState.styleReferenceImage,
+                'architecture-ideator'
+            );
             const settingsToEmbed = {
                 viewId: 'architecture-ideator',
                 state: { ...appState, stage: 'configuring', generatedImage: null, historicalImages: [], error: null },
@@ -124,7 +131,8 @@ const ArchitectureIdeator: React.FC<ArchitectureIdeatorProps> = (props) => {
             logGeneration('architecture-ideator', preGenState, urlWithMetadata, {
                 credits_used: creditCostPerImage,
                 generation_count: 1,
-                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
+                input_prompt: appState.options.notes
             });
             onStateChange({
                 ...appState,
@@ -162,7 +170,8 @@ const ArchitectureIdeator: React.FC<ArchitectureIdeatorProps> = (props) => {
             logGeneration('architecture-ideator', preGenState, urlWithMetadata, {
                 credits_used: creditCostPerImage,
                 generation_count: 1,
-                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
+                input_prompt: prompt
             });
             onStateChange({
                 ...appState,

@@ -16,7 +16,7 @@ import { parseDataUrl, processGeminiResponse, callGeminiWithRetry, processApiErr
  * @param objectDescription - Text description of the object to remove
  * @returns The edited image with the object removed (as data URL)
  */
-export async function removeObjectFromImage(imageDataUrl: string, objectDescription: string): Promise<string> {
+export async function removeObjectFromImage(imageDataUrl: string, objectDescription: string, toolKey?: string): Promise<string> {
     const prompt = `You are an expert AI photo editor specializing in object removal and inpainting.
 
 YOUR TASK: Remove the object described as "${objectDescription}" from this image.
@@ -47,7 +47,7 @@ Return ONLY the final edited image with the object removed and the area filled n
             { text: prompt }
         ];
 
-        const response = await callGeminiWithRetry(parts);
+        const response = await callGeminiWithRetry(parts, toolKey ? { tool_key: toolKey } : {});
         return processGeminiResponse(response);
     } catch (error) {
         console.error('Error in removeObjectFromImage:', error);
@@ -63,7 +63,8 @@ Return ONLY the final edited image with the object removed and the area filled n
 export async function swapFaces(
     sourceImageDataUrl: string,
     targetFaceDataUrl: string,
-    additionalInstructions?: string
+    additionalInstructions?: string,
+    toolKey?: string
 ): Promise<string> {
     const prompt = `**PROFESSIONAL FACE SWAP - READ CAREFULLY**
 
@@ -144,7 +145,7 @@ ${additionalInstructions ? `**User's Additional Instructions:** ${additionalInst
         { text: prompt }
     ];
 
-    const response = await callGeminiWithRetry(parts);
+    const response = await callGeminiWithRetry(parts, toolKey ? { tool_key: toolKey } : {});
     return processGeminiResponse(response);
 }
 
@@ -154,7 +155,8 @@ ${additionalInstructions ? `**User's Additional Instructions:** ${additionalInst
 export async function inpaintImage(
     prompt: string,
     maskedImageDataUrl: string,
-    additionalInstructions?: string
+    additionalInstructions?: string,
+    toolKey?: string
 ): Promise<string> {
     const fullPrompt = `Your task is to perform inpainting.The user has provided an image with a transparent area(the mask).You must fill in this transparent area based on the following instruction: "${prompt}".
 
@@ -171,7 +173,7 @@ export async function inpaintImage(
         { text: fullPrompt }
     ];
 
-    const response = await callGeminiWithRetry(parts);
+    const response = await callGeminiWithRetry(parts, toolKey ? { tool_key: toolKey } : {});
     return processGeminiResponse(response);
 }
 
@@ -180,7 +182,8 @@ export async function inpaintImage(
  */
 export async function generatePhotoBooth(
     imageDataUrl: string,
-    count: number
+    count: number,
+    toolKey?: string
 ): Promise<string> {
     const prompt = `**PHOTOBOOTH TASK - CRITICAL: PRESERVE EXACT IDENTITY**
 
@@ -222,7 +225,7 @@ The person in the output MUST be immediately recognizable as the person in the i
         { text: prompt }
     ];
 
-    const response = await callGeminiWithRetry(parts);
+    const response = await callGeminiWithRetry(parts, toolKey ? { tool_key: toolKey } : {});
     return processGeminiResponse(response);
 }
 
@@ -231,7 +234,8 @@ The person in the output MUST be immediately recognizable as the person in the i
  */
 export async function generateCloneEffect(
     imageDataUrl: string,
-    instructions?: string
+    instructions?: string,
+    toolKey?: string
 ): Promise<string> {
     const prompt = `Your task is to create a "clone" effect photo.Take the single person from the provided image and create a new image where there are three versions of that same person in different poses, interacting within the same scene.
 
@@ -251,7 +255,7 @@ export async function generateCloneEffect(
         { text: prompt }
     ];
 
-    const response = await callGeminiWithRetry(parts);
+    const response = await callGeminiWithRetry(parts, toolKey ? { tool_key: toolKey } : {});
     return processGeminiResponse(response);
 }
 
@@ -261,7 +265,8 @@ export async function generateCloneEffect(
 export async function swapColorPalette(
     originalImageDataUrl: string,
     paletteImageDataUrl: string,
-    dimensions?: { width: number; height: number }
+    dimensions?: { width: number; height: number },
+    toolKey?: string
 ): Promise<string> {
     const dimensionsText = dimensions
         ? `The final output image MUST be exactly ${dimensions.width} pixels wide by ${dimensions.height} pixels tall.`
@@ -288,7 +293,7 @@ The result should be a new version of the first image, but as if it were created
         { text: prompt }
     ];
 
-    const response = await callGeminiWithRetry(parts);
+    const response = await callGeminiWithRetry(parts, toolKey ? { tool_key: toolKey } : {});
     return processGeminiResponse(response);
 }
 
@@ -297,7 +302,8 @@ The result should be a new version of the first image, but as if it were created
  */
 export async function extractOutfit(
     imageDataUrl: string,
-    instructions?: string
+    instructions?: string,
+    toolKey?: string
 ): Promise<string> {
     const prompt = `Your task is to isolate and extract only the complete outfit(clothing, shoes, accessories) worn by the person in the provided image.
 
@@ -315,7 +321,7 @@ export async function extractOutfit(
         { text: prompt }
     ];
 
-    const response = await callGeminiWithRetry(parts);
+    const response = await callGeminiWithRetry(parts, toolKey ? { tool_key: toolKey } : {});
     return processGeminiResponse(response);
 }
 
@@ -324,7 +330,8 @@ export async function extractOutfit(
  */
 export async function generateProductMockup(
     logoDataUrl: string,
-    productDataUrl: string
+    productDataUrl: string,
+    toolKey?: string
 ): Promise<string> {
     const prompt = `Your task is to create a product mockup.
 - The ** first image ** is a logo with a transparent background.
@@ -345,7 +352,7 @@ export async function generateProductMockup(
         { text: prompt }
     ];
 
-    const response = await callGeminiWithRetry(parts);
+    const response = await callGeminiWithRetry(parts, toolKey ? { tool_key: toolKey } : {});
     return processGeminiResponse(response);
 }
 
@@ -354,11 +361,11 @@ export async function generateProductMockup(
 /**
  * Generates typographic illustration from text phrase
  */
-export async function generateTypographicIllustration(phrase: string): Promise<string> {
+export async function generateTypographicIllustration(phrase: string, toolKey?: string): Promise<string> {
     const prompt = `Using only the letters from the phrase["${phrase}"], create a minimalist black and white typographic illustration depicting the scene described by the phrase.Each letter should be creatively shaped and arranged to form a sense of motion and represent the elements in the scene.The design must be clean and minimal, comprising the entire manipulated alphabet of["${phrase}"] without any additional shapes or lines.The letters should bend or curve to mimic the natural forms of the scene while remaining legible.The final image should be on a clean, solid, light grey background.`;
 
     const parts = [{ text: prompt }];
-    const response = await callGeminiWithRetry(parts);
+    const response = await callGeminiWithRetry(parts, toolKey ? { tool_key: toolKey } : {});
     return processGeminiResponse(response);
 }
 
@@ -369,7 +376,8 @@ export async function generateStyledImage(
     prompt: string,
     imageUrls: string[],
     additionalInstructions?: string,
-    aspectRatio?: string
+    aspectRatio?: string,
+    toolKey?: string
 ): Promise<string> {
     const fullPrompt = additionalInstructions ? `${prompt} \n\nAdditional Instructions: ${additionalInstructions} ` : prompt;
 
@@ -379,7 +387,10 @@ export async function generateStyledImage(
     });
 
     const parts = [...imageParts, { text: fullPrompt }];
-    const config = aspectRatio ? { aspectRatio } : {};
+    const config = {
+        ...(aspectRatio ? { aspectRatio } : {}),
+        ...(toolKey ? { tool_key: toolKey } : {})
+    };
     console.log('gọi apiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii');
 
     const response = await callGeminiWithRetry(parts, config);
@@ -389,7 +400,7 @@ export async function generateStyledImage(
 /**
  * Generates background from concept image
  */
-export async function generateBackgroundFromConcept(imageDataUrl: string): Promise<string> {
+export async function generateBackgroundFromConcept(imageDataUrl: string, toolKey?: string): Promise<string> {
     const prompt = `Analyze the provided concept / mood board image.Your task is to generate a clean, empty, photorealistic background scene inspired by the overall theme, color palette, and style of the image.
 
 ** CRITICAL INSTRUCTIONS:**
@@ -403,7 +414,7 @@ export async function generateBackgroundFromConcept(imageDataUrl: string): Promi
         { text: prompt }
     ];
 
-    const response = await callGeminiWithRetry(parts);
+    const response = await callGeminiWithRetry(parts, toolKey ? { tool_key: toolKey } : {});
     return processGeminiResponse(response);
 }
 

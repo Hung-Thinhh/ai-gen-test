@@ -20,7 +20,11 @@ interface PhotoRestorationOptions {
     colorizeRgb?: boolean;
 }
 
-export async function restoreOldPhoto(imageDataUrl: string, options: PhotoRestorationOptions): Promise<string> {
+export async function restoreOldPhoto(
+    imageDataUrl: string,
+    options: PhotoRestorationOptions,
+    toolKey?: string
+): Promise<string> {
     const { mimeType, data: base64Data } = parseDataUrl(imageDataUrl);
     const imagePart = { inlineData: { mimeType, data: base64Data } };
 
@@ -85,9 +89,14 @@ export async function restoreOldPhoto(imageDataUrl: string, options: PhotoRestor
     const prompt = promptParts.join('\n');
     const textPart = { text: prompt };
 
+    const config: any = {};
+    if (toolKey) {
+        config.tool_key = toolKey;
+    }
+
     try {
         console.log("Attempting to restore old photo with new stronger prompt...");
-        const response = await callGeminiWithRetry([imagePart, textPart]);
+        const response = await callGeminiWithRetry([imagePart, textPart], config);
         return processGeminiResponse(response);
     } catch (error) {
         const processedError = processApiError(error);

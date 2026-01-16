@@ -76,13 +76,13 @@ const PhotoBooth: React.FC<PhotoBoothProps> = (props) => {
         onStateChange({ ...appState, stage: 'generating', error: null });
 
         try {
-            const result = await generatePhotoBooth(appState.uploadedImage, appState.options.photoCount);
+            const result = await generatePhotoBooth(appState.uploadedImage, appState.options.photoCount, 'photo-booth');
             onStateChange({ ...appState, stage: 'results', resultImage: result });
             addImagesToGallery([result]);
             logGeneration('photo-booth', preGenState, result, {
                 credits_used: creditCostPerImage,
                 generation_count: appState.options.photoCount,
-                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
             });
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "Đã xảy ra lỗi.";

@@ -1,0 +1,47 @@
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { r2Client, R2_BUCKET_NAME, R2_PUBLIC_URL } from "./client";
+
+/**
+ * Upload base64 image to Cloudflare R2
+ * @param base64Image - Base64 encoded image
+ * @returns Public URL of the uploaded image
+ */
+export async function uploadToR2(base64Image: string): Promise<string> {
+    try {
+        // Extract base64 data (remove data:image/png;base64, prefix)
+        const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, "");
+        const buffer = Buffer.from(base64Data, "base64");
+
+        // Generate unique filename
+        const timestamp = Date.now();
+        const randomString = Math.random().toString(36).substring(7);
+        const filename = `${timestamp}-${randomString}.png`;
+
+        console.log('[R2] Uploading image:', filename, 'Size:', (buffer.length / 1024 / 1024).toFixed(2), 'MB');
+
+        const uploadStart = Date.now();
+
+        // Upload to R2
+        await r2Client.send(
+            new PutObjectCommand({
+                Bucket: R2_BUCKET_NAME,
+                Key: filename,
+                Body: buffer,
+                ContentType: "image/png",
+                CacheControl: "public, max-age=31536000", // 1 year
+            })
+        );
+
+        const uploadDuration = Date.now() - uploadStart;
+        console.log('[R2] Upload completed in', uploadDuration, 'ms');
+
+        // Return public URL
+        const publicUrl = `${R2_PUBLIC_URL}/${filename}`;
+        console.log('[R2] Public URL:', publicUrl);
+
+        return publicUrl;
+    } catch (error) {
+        console.error('[R2] Upload error:', error);
+        throw new Error(`Failed to upload to R2: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}

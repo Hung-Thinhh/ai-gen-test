@@ -40,16 +40,45 @@ export async function GET(req: NextRequest) {
 
         if (!userId) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-        const profiles = await sql`
-            SELECT gallery FROM profiles WHERE id = ${userId}
+        // Get gallery images from generation_history with prompts
+        const data = await sql`
+            SELECT 
+                history_id,
+                output_images,
+                input_prompt,
+                created_at,
+                tool_key
+            FROM generation_history 
+            WHERE user_id = ${userId}
+            ORDER BY created_at DESC
+            LIMIT 500
         `;
 
-        let gallery: string[] = [];
-        if (profiles.length > 0 && profiles[0].gallery && Array.isArray(profiles[0].gallery)) {
-            gallery = profiles[0].gallery.reverse();
-        }
+        // Filter output_images: only keep R2 URLs (remove base64)
+        const filteredData = data
+            .map((record: any) => {
+                if (!record.output_images || !Array.isArray(record.output_images)) {
+                    return record;
+                }
 
-        return NextResponse.json({ gallery }, {
+                // Filter output_images array
+                const filteredImages = record.output_images.filter((img: string) => {
+                    if (!img || typeof img !== 'string') return false;
+                    if (img.startsWith('data:')) return false;  // Skip base64
+                    if (!img.startsWith('https://')) return false;  // Only HTTPS
+                    return true;
+                });
+
+                return {
+                    ...record,
+                    output_images: filteredImages
+                };
+            })
+            .filter((record: any) => record.output_images && record.output_images.length > 0);  // Only keep records with valid images
+
+        console.log(`[Gallery GET] Found ${filteredData.length} records with valid URLs`);
+
+        return NextResponse.json(filteredData, {
             headers: {
                 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
                 'Pragma': 'no-cache'
@@ -69,21 +98,39 @@ export async function POST(req: NextRequest) {
         const userId = await getUUIDFromSession(session);
         if (!userId) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-        const { urls } = await req.json();
+        const body = await req.json();
+        const { urls, images, prompt, tool_key } = body;
 
-        if (!urls || !Array.isArray(urls)) return NextResponse.json({ error: 'Invalid URLs' }, { status: 400 });
+        // Support both old format (urls) and new format (images + prompt)
+        const imagesToSave = images || urls || [];
 
-        // Atomic Upsert: Append to JSONB array
-        await sql`
-            INSERT INTO profiles (id, gallery, last_updated)
-            VALUES (${userId}, ${JSON.stringify(urls)}::jsonb, NOW())
-            ON CONFLICT (id) 
-            DO UPDATE SET 
-                gallery = COALESCE(profiles.gallery, '[]'::jsonb) || ${JSON.stringify(urls)}::jsonb,
-                last_updated = NOW()
+        if (!imagesToSave || !Array.isArray(imagesToSave) || imagesToSave.length === 0) {
+            return NextResponse.json({ error: 'Invalid images/urls' }, { status: 400 });
+        }
+
+        // Insert into generation_history
+        const result = await sql`
+            INSERT INTO generation_history (
+                user_id, output_images, input_prompt, tool_key, created_at
+            ) VALUES (
+                ${userId},
+                ${JSON.stringify(imagesToSave)}::jsonb,
+                ${prompt || null},
+                ${tool_key || null},
+                NOW()
+            )
+            RETURNING history_id, output_images, input_prompt, created_at, tool_key
         `;
 
-        return NextResponse.json({ success: true });
+        if (result.length > 0) {
+            return NextResponse.json({
+                success: true,
+                history: result[0],
+                count: imagesToSave.length
+            }, { status: 201 });
+        }
+
+        return NextResponse.json({ error: 'Failed to insert history' }, { status: 500 });
     } catch (e: any) {
         console.error('[API] POST /api/user/gallery error:', e);
         return NextResponse.json({ error: e.message }, { status: 500 });
@@ -98,24 +145,26 @@ export async function DELETE(req: NextRequest) {
         const userId = await getUUIDFromSession(session);
         if (!userId) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-        const url_to_remove = req.nextUrl.searchParams.get('url');
+        // Support both query param and body formats
+        let historyId = req.nextUrl.searchParams.get('history_id') || req.nextUrl.searchParams.get('url');
 
-        if (!url_to_remove) return NextResponse.json({ error: 'Missing url' }, { status: 400 });
+        if (!historyId) {
+            const body = await req.json();
+            historyId = body.history_id || body.url;
+        }
 
-        // Remove item from JSONB array using jsonb_path_query_array
-        // Filter out the matching URL
-        await sql`
-            UPDATE profiles 
-            SET gallery = (
-                SELECT jsonb_agg(elem)
-                FROM jsonb_array_elements(COALESCE(gallery, '[]'::jsonb)) AS elem
-                WHERE elem::text != ${JSON.stringify(url_to_remove)}
-            ),
-            last_updated = NOW()
-            WHERE id = ${userId}
+        if (!historyId) return NextResponse.json({ error: 'Missing history_id or url' }, { status: 400 });
+
+        // Delete from generation_history
+        const result = await sql`
+            DELETE FROM generation_history 
+            WHERE user_id = ${userId} AND history_id = ${historyId}::uuid
         `;
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({
+            success: true,
+            deleted: result.length || 0
+        });
     } catch (e: any) {
         console.error('[API] DELETE /api/user/gallery error:', e);
         return NextResponse.json({ error: e.message }, { status: 500 });

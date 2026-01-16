@@ -16,7 +16,7 @@ interface GalleryModalProps {
     images: string[];
 }
 
-const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, images }) => {
+const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, images: initialImages }) => {
     const {
         lightboxIndex: selectedImageIndex,
         openLightbox,
@@ -30,6 +30,8 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, images }) 
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
     const [isCombining, setIsCombining] = useState(false);
+    const [galleryImages, setGalleryImages] = useState<string[]>([]);  // Load from API
+    const [prompts, setPrompts] = useState<(string | null)[]>([]);  // Store prompts from API
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -38,13 +40,31 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, images }) 
             setIsSelectionMode(false);
             setSelectedIndices([]);
         } else {
-            // Also refresh when modal opens
-            refreshGallery();
+            // Fetch images and prompts from gallery API
+            fetchGalleryWithPrompts();
         }
-    }, [isOpen, closeLightbox, refreshGallery]);
+    }, [isOpen, closeLightbox]);
+
+    // Fetch images and prompts from gallery API
+    const fetchGalleryWithPrompts = async () => {
+        try {
+            const response = await fetch('/api/gallery');
+            if (response.ok) {
+                const data = await response.json();
+                const fetchedImages = (data.images || []).map((img: any) => img.url);
+                setGalleryImages(fetchedImages);
+                setPrompts(data.prompts || []);
+                console.log(`[Gallery] Loaded ${fetchedImages.length} images and ${data.prompts.filter((p: any) => p).length} prompts`);
+            }
+        } catch (error) {
+            console.warn('Failed to fetch gallery with prompts:', error);
+            // Fallback to initial images if API fails
+            setGalleryImages(initialImages);
+        }
+    };
 
     const handleDownloadAll = () => {
-        const imagesToZip: ImageForZip[] = images.map((url, index) => ({
+        const imagesToZip: ImageForZip[] = galleryImages.map((url, index) => ({
             url,
             filename: `Duky-gallery-image-${index + 1}`,
             folder: 'gallery',
@@ -55,7 +75,7 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, images }) 
 
     const handleEditImage = (indexToEdit: number, e: React.MouseEvent) => {
         e.stopPropagation();
-        const urlToEdit = images[indexToEdit];
+        const urlToEdit = galleryImages[indexToEdit];
         if (!urlToEdit || urlToEdit.startsWith('blob:')) {
             alert(t('galleryModal_cannotEditVideo'));
             return;
@@ -109,7 +129,7 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, images }) 
         setIsCombining(true);
         try {
             const itemsToCombine = selectedIndices.map(index => ({
-                url: images[index],
+                url: galleryImages[index],
                 label: '' // No labels are used when combining from the main gallery.
             }));
             const resultUrl = await combineImages(itemsToCombine, {
@@ -188,7 +208,7 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, images }) 
                             <GalleryToolbar
                                 isSelectionMode={isSelectionMode}
                                 selectedCount={selectedIndices.length}
-                                imageCount={images.length}
+                                imageCount={galleryImages.length}
                                 title={t('galleryModal_title')}
                                 isCombining={isCombining}
                                 onToggleSelectionMode={handleToggleSelectionMode}
@@ -199,10 +219,10 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, images }) 
                                 onCombineHorizontal={() => handleCombine('horizontal')}
                                 onCombineVertical={() => handleCombine('vertical')}
                             />
-                            {images.length > 0 ? (
+                            {galleryImages.length > 0 ? (
                                 <div className="gallery-grid">
                                     <AnimatePresence>
-                                        {images.map((img, index) => (
+                                        {galleryImages.map((img, index) => (
                                             <ImageThumbnail
                                                 key={`${img.slice(-20)}-${index}`}
                                                 index={index}
@@ -234,7 +254,13 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, images }) 
                     </motion.div>
                 )}
             </AnimatePresence>
-            <Lightbox images={images} selectedIndex={selectedImageIndex} onClose={closeLightbox} onNavigate={navigateLightbox} />
+            <Lightbox
+                images={galleryImages}
+                selectedIndex={selectedImageIndex}
+                onClose={closeLightbox}
+                onNavigate={navigateLightbox}
+                prompts={prompts}  // Pass prompts from gallery API
+            />
         </>
     );
 };

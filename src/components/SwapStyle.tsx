@@ -127,12 +127,12 @@ const SwapStyle: React.FC<SwapStyleProps> = (props) => {
             let resultUrl: string;
 
             if (appState.options.convertToReal) {
-                resultUrl = await swapImageStyle(appState.contentImage, appState.options);
+                resultUrl = await swapImageStyle(appState.contentImage, appState.options, 'image-to-real');
             } else if (appState.styleImage) {
-                const { resultUrl: mixedUrl } = await mixImageStyle(appState.contentImage, appState.styleImage, appState.options);
+                const { resultUrl: mixedUrl } = await mixImageStyle(appState.contentImage, appState.styleImage, appState.options, 'swap-style');
                 resultUrl = mixedUrl;
             } else {
-                resultUrl = await swapImageStyle(appState.contentImage, appState.options);
+                resultUrl = await swapImageStyle(appState.contentImage, appState.options, 'swap-style');
             }
 
             const settingsToEmbed = {
@@ -143,7 +143,7 @@ const SwapStyle: React.FC<SwapStyleProps> = (props) => {
             logGeneration('swap-style', preGenState, urlWithMetadata, {
                 credits_used: creditCostPerImage,
                 generation_count: 1,
-                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
             });
             onStateChange({
                 ...appState,
@@ -181,7 +181,7 @@ const SwapStyle: React.FC<SwapStyleProps> = (props) => {
             logGeneration('swap-style', preGenState, urlWithMetadata, {
                 credits_used: creditCostPerImage,
                 generation_count: 1,
-                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
             });
             onStateChange({
                 ...appState,

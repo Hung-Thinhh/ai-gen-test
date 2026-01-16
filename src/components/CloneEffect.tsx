@@ -83,14 +83,15 @@ const CloneEffect: React.FC<CloneEffectProps> = (props) => {
         try {
             const result = await generateCloneEffect(
                 appState.uploadedImage,
-                appState.options.instructions || undefined
+                appState.options.instructions || undefined,
+                'clone-effect'
             );
             onStateChange({ ...appState, stage: 'results', resultImage: result });
             addImagesToGallery([result]);
             logGeneration('clone-effect', preGenState, result, {
                 credits_used: creditCostPerImage,
                 generation_count: 1,
-                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
             });
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "Đã xảy ra lỗi.";

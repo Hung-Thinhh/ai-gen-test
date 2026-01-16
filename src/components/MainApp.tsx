@@ -80,6 +80,7 @@ const StudioPhotoshoot = lazy(() => import('./StudioPhotoshoot'));
 const ProductSceneGenerator = lazy(() => import('./ProductSceneGenerator'));
 const PoseAnimator = lazy(() => import('./PoseAnimator'));
 const PosterCreator = lazy(() => import('./PosterCreator'));
+const MilkTeaPosterWrapper = lazy(() => import('./MilkTeaPosterWrapper'));
 const UserProfile = lazy(() => import('./UserProfile'));
 const Settings = lazy(() => import('./Settings'));
 const Pricing = lazy(() => import('./Pricing'));
@@ -124,6 +125,7 @@ const AppComponents: Record<string, any> = {
     'product-scene': { Component: ProductSceneGenerator, settingsKey: 'productScene', props: (s: any, t: any) => ({ mainTitle: t(s.mainTitleKey), subtitle: t(s.subtitleKey), useSmartTitleWrapping: s.useSmartTitleWrapping, smartTitleWrapWords: s.smartTitleWrapWords, uploaderCaption: t(s.uploaderCaptionKey), uploaderDescription: t(s.uploaderDescriptionKey) }) },
     'pose-animator': { Component: PoseAnimator, settingsKey: 'poseAnimator', props: (s: any, t: any) => ({ mainTitle: t(s.mainTitleKey), subtitle: t(s.subtitleKey), useSmartTitleWrapping: s.useSmartTitleWrapping, smartTitleWrapWords: s.smartTitleWrapWords, uploaderCaptionPose: t(s.uploaderCaptionPoseKey), uploaderDescriptionPose: t(s.uploaderDescriptionPoseKey), uploaderCaptionTarget: t(s.uploaderCaptionTargetKey), uploaderDescriptionTarget: t(s.uploaderDescriptionTargetKey) }) },
     'poster-creator': { Component: PosterCreator, settingsKey: 'posterCreator', props: (s: any, t: any) => ({ mainTitle: t(s.mainTitleKey), subtitle: t(s.subtitleKey), useSmartTitleWrapping: s.useSmartTitleWrapping, smartTitleWrapWords: s.smartTitleWrapWords, uploaderCaption: t(s.uploaderCaptionKey), uploaderDescription: t(s.uploaderDescriptionKey) }) },
+    'milk-tea-poster': { Component: MilkTeaPosterWrapper, settingsKey: 'milkTeaPoster', props: (s: any, t: any) => ({}) },
     'khmer-photo-merge': { Component: KhmerPhotoMerge, settingsKey: 'khmerPhotoMerge', props: (s: any, t: any) => ({ mainTitle: t(s.mainTitleKey), subtitle: t(s.subtitleKey), uploaderCaption: t(s.uploaderCaptionKey), uploaderDescription: t(s.uploaderDescriptionKey), useSmartTitleWrapping: s.useSmartTitleWrapping, smartTitleWrapWords: s.smartTitleWrapWords }) },
 };
 
@@ -338,7 +340,7 @@ function MainApp() {
         }
 
         const { Component, settingsKey, props } = appInfo;
-        const appSettings = settings[settingsKey];
+        const appSettings = settings[settingsKey] || {}; // Fallback to empty object if settings missing
         const translatedProps = props(appSettings, t);
 
         return (

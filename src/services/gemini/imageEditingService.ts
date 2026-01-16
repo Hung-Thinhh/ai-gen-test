@@ -24,7 +24,8 @@ export async function editImageWithPrompt(
     imageDataUrl: string,
     prompt: string,
     aspectRatio?: string,
-    removeWatermark?: boolean
+    removeWatermark?: boolean,
+    toolKey?: string
 ): Promise<string> {
     try {
         const { mimeType, data: base64Data } = parseDataUrl(imageDataUrl);
@@ -71,6 +72,10 @@ export async function editImageWithPrompt(
             config.imageConfig = { aspectRatio };
         }
 
+        if (toolKey) {
+            config.tool_key = toolKey;
+        }
+
         const response = await callGeminiWithRetry([imagePart, textPart], config);
         return processGeminiResponse(response);
     } catch (error) {
@@ -85,7 +90,7 @@ export async function editImageWithPrompt(
  * @param imageDataUrl A data URL string of the source image.
  * @returns A promise resolving to a data URL of the image with a transparent background.
  */
-export async function removeImageBackground(imageDataUrl: string): Promise<string> {
+export async function removeImageBackground(imageDataUrl: string, toolKey?: string): Promise<string> {
     try {
         const { mimeType, data: base64Data } = parseDataUrl(imageDataUrl);
         const imagePart = {
@@ -103,7 +108,7 @@ export async function removeImageBackground(imageDataUrl: string): Promise<strin
         const textPart = { text: prompt };
 
         console.log("Attempting to remove image background...");
-        const response = await callGeminiWithRetry([imagePart, textPart]);
+        const response = await callGeminiWithRetry([imagePart, textPart], toolKey ? { tool_key: toolKey } : {});
         return processGeminiResponse(response);
     } catch (error) {
         const processedError = processApiError(error);
@@ -116,7 +121,8 @@ export async function generateFromMultipleImages(
     imageDataUrls: string[],
     prompt: string,
     aspectRatio?: string,
-    removeWatermark?: boolean
+    removeWatermark?: boolean,
+    toolKey?: string
 ): Promise<string> {
     try {
         const imageParts = await Promise.all(
@@ -152,6 +158,10 @@ export async function generateFromMultipleImages(
         const validRatios = ['1:1', '3:4', '4:3', '9:16', '16:9', '2:3', '4:5', '3:2', '5:4', '21:9'];
         if (aspectRatio && aspectRatio !== 'Giữ nguyên' && validRatios.includes(aspectRatio)) {
             config.imageConfig = { aspectRatio: aspectRatio };
+        }
+
+        if (toolKey) {
+            config.tool_key = toolKey;
         }
 
         console.log("Attempting to generate image from multiple sources with config:", config);

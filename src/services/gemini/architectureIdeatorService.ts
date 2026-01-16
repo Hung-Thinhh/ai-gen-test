@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import ai from './client';
-import { 
+import {
     processApiError,
-    parseDataUrl, 
-    callGeminiWithRetry, 
+    parseDataUrl,
+    callGeminiWithRetry,
     processGeminiResponse,
     getTextModel
 } from './baseService';
@@ -31,16 +31,16 @@ async function analyzeArchitecturalStyle(styleImageDataUrl: string): Promise<str
 4.  **Ánh sáng:** Thời gian trong ngày và chất lượng ánh sáng (ví dụ: "ánh sáng hoàng hôn kịch tính," "ánh sáng ban ngày dịu, u ám").
 
 Không mô tả hình dạng của tòa nhà, chỉ mô tả phong cách và bối cảnh của nó.`;
-    
+
     try {
         const response = await ai.models.generateContent({
             model: getTextModel(),
-            contents: { parts: [imagePart, {text: prompt}] },
+            contents: { parts: [imagePart, { text: prompt }] },
         });
 
         const text = response.text;
         if (!text) {
-             throw new Error("AI không thể phân tích được phong cách của ảnh.");
+            throw new Error("AI không thể phân tích được phong cách của ảnh.");
         }
         return text.trim();
     } catch (error) {
@@ -57,16 +57,17 @@ Không mô tả hình dạng của tòa nhà, chỉ mô tả phong cách và b�
  * @returns A promise that resolves to a base64-encoded image data URL of the generated image.
  */
 export async function generateArchitecturalImage(
-    imageDataUrl: string, 
+    imageDataUrl: string,
     options: ArchitectureOptions,
-    styleReferenceImageDataUrl?: string | null
+    styleReferenceImageDataUrl?: string | null,
+    toolKey?: string
 ): Promise<string> {
     const { mimeType, data: base64Data } = parseDataUrl(imageDataUrl);
 
     const sketchImagePart = {
         inlineData: { mimeType, data: base64Data },
     };
-    
+
     const requestParts: object[] = [sketchImagePart];
     const promptParts: string[] = [];
 
@@ -131,9 +132,14 @@ export async function generateArchitecturalImage(
     const textPart = { text: prompt };
     requestParts.push(textPart);
 
+    const config: any = {};
+    if (toolKey) {
+        config.tool_key = toolKey;
+    }
+
     try {
         console.log("Attempting to generate architectural image with dynamic prompt...");
-        const response = await callGeminiWithRetry(requestParts);
+        const response = await callGeminiWithRetry(requestParts, config);
         return processGeminiResponse(response);
     } catch (error) {
         const processedError = processApiError(error);
@@ -170,7 +176,7 @@ export async function refineArchitecturePrompt(basePrompt: string, userPrompt: s
 
         **Đầu ra:** Chỉ xuất ra câu lệnh cuối cùng, không có lời dẫn.
     `;
-    
+
     const parts: any[] = [...imageParts, { text: metaPrompt }];
     const fallbackPrompt = `${basePrompt}. ${userPrompt}`.trim();
 

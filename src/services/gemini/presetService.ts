@@ -107,7 +107,7 @@ const presetConfig: Record<string, PresetConfig> = {
         generator: (images: (string | undefined)[], preset: PresetData) => {
             const sketchImage = images[0]!;
             const styleRefImage = images[1] || preset.state.styleReferenceImage;
-            return generateArchitecturalImage(sketchImage, preset.state.options, styleRefImage);
+            return generateArchitecturalImage(sketchImage, preset.state.options, styleRefImage, 'architecture-ideator');
         },
     },
     'avatar-creator': {
@@ -121,7 +121,7 @@ const presetConfig: Record<string, PresetConfig> = {
             if (styleRefUrl) {
                 console.log("Preset is using a style reference image for Avatar Creator.");
                 const result = await generatePatrioticImage(
-                    imageUrl, '', options.additionalPrompt, options.removeWatermark, options.aspectRatio, styleRefUrl
+                    imageUrl, '', options.additionalPrompt, options.removeWatermark, options.aspectRatio, styleRefUrl, 'avatar-creator'
                 );
                 return [result];
             }
@@ -165,7 +165,7 @@ const presetConfig: Record<string, PresetConfig> = {
             }
 
             const promises = finalIdeas.map((idea: string) =>
-                generatePatrioticImage(imageUrl, idea, options.additionalPrompt, options.removeWatermark, options.aspectRatio)
+                generatePatrioticImage(imageUrl, idea, options.additionalPrompt, options.removeWatermark, options.aspectRatio, undefined, 'avatar-creator')
             );
             return Promise.all(promises);
         },
@@ -181,7 +181,7 @@ const presetConfig: Record<string, PresetConfig> = {
             if (styleRefUrl) {
                 console.log("Preset is using a style reference image for Baby Photo Creator.");
                 const result = await generateBabyPhoto(
-                    imageUrl, '', options.additionalPrompt, options.removeWatermark, options.aspectRatio, styleRefUrl
+                    imageUrl, '', options.additionalPrompt, options.removeWatermark, options.aspectRatio, styleRefUrl, 'baby-photo-creator'
                 );
                 return [result];
             }
@@ -217,7 +217,7 @@ const presetConfig: Record<string, PresetConfig> = {
             }
 
             const promises = finalIdeas.map((idea: string) =>
-                generateBabyPhoto(imageUrl, idea, options.additionalPrompt, options.removeWatermark, options.aspectRatio)
+                generateBabyPhoto(imageUrl, idea, options.additionalPrompt, options.removeWatermark, options.aspectRatio, undefined, 'baby-photo-creator')
             );
             return Promise.all(promises);
         },
@@ -236,7 +236,8 @@ const presetConfig: Record<string, PresetConfig> = {
                     portraitUrl,
                     '', // idea is empty when using style ref
                     options,
-                    styleRefUrl
+                    styleRefUrl,
+                    'beauty-creator'
                 );
                 return [result];
             }
@@ -280,7 +281,7 @@ const presetConfig: Record<string, PresetConfig> = {
             }
 
             const promises = finalIdeas.map((idea: string) =>
-                generateBeautyImage(portraitUrl, idea, options)
+                generateBeautyImage(portraitUrl, idea, options, undefined, 'beauty-creator')
             );
             return Promise.all(promises);
         },
@@ -296,7 +297,7 @@ const presetConfig: Record<string, PresetConfig> = {
             if (styleRefUrl) {
                 console.log("Preset is using a style reference image for Mid-Autumn Creator.");
                 const result = await generateMidAutumnImage(
-                    imageUrl, '', options.additionalPrompt, options.removeWatermark, options.aspectRatio, styleRefUrl
+                    imageUrl, '', options.additionalPrompt, options.removeWatermark, options.aspectRatio, styleRefUrl, 'mid-autumn-creator'
                 );
                 return [result];
             }
@@ -340,7 +341,7 @@ const presetConfig: Record<string, PresetConfig> = {
             }
 
             const promises = finalIdeas.map((idea: string) =>
-                generateMidAutumnImage(imageUrl, idea, options.additionalPrompt, options.removeWatermark, options.aspectRatio)
+                generateMidAutumnImage(imageUrl, idea, options.additionalPrompt, options.removeWatermark, options.aspectRatio, undefined, 'mid-autumn-creator')
             );
             return Promise.all(promises);
         },
@@ -356,7 +357,7 @@ const presetConfig: Record<string, PresetConfig> = {
             if (styleRefUrl) {
                 console.log("Preset is using a style reference image for Entrepreneur Creator.");
                 const result = await generateEntrepreneurImage(
-                    imageUrl, '', options.additionalPrompt, options.removeWatermark, options.aspectRatio, styleRefUrl
+                    imageUrl, '', options.additionalPrompt, options.removeWatermark, options.aspectRatio, styleRefUrl, 'entrepreneur-creator'
                 );
                 return [result];
             }
@@ -400,7 +401,7 @@ const presetConfig: Record<string, PresetConfig> = {
             }
 
             const promises = finalIdeas.map((idea: string) =>
-                generateEntrepreneurImage(imageUrl, idea, options.additionalPrompt, options.removeWatermark, options.aspectRatio)
+                generateEntrepreneurImage(imageUrl, idea, options.additionalPrompt, options.removeWatermark, options.aspectRatio, undefined, 'entrepreneur-creator')
             );
             return Promise.all(promises);
         },
@@ -408,12 +409,12 @@ const presetConfig: Record<string, PresetConfig> = {
     'dress-the-model': {
         imageKeys: ['modelImage', 'clothingImage'],
         requiredImageCount: 2,
-        generator: (images: (string | undefined)[], preset: PresetData) => generateDressedModelImage(images[0]!, images[1]!, preset.state.options),
+        generator: (images: (string | undefined)[], preset: PresetData) => generateDressedModelImage(images[0]!, images[1]!, preset.state.options, 'dress-the-model'),
     },
     'photo-restoration': {
         imageKeys: ['uploadedImage'],
         requiredImageCount: 1,
-        generator: (images: (string | undefined)[], preset: PresetData) => restoreOldPhoto(images[0]!, preset.state.options),
+        generator: (images: (string | undefined)[], preset: PresetData) => restoreOldPhoto(images[0]!, preset.state.options, 'photo-restoration'),
     },
     'swap-style': {
         imageKeys: ['contentImage', 'styleImage'],
@@ -429,18 +430,18 @@ const presetConfig: Record<string, PresetConfig> = {
 
             // `swapImageStyle` handles the `convertToReal` case internally.
             if (options.convertToReal) {
-                const result = await swapImageStyle(contentImage, options);
+                const result = await swapImageStyle(contentImage, options, 'image-to-real'); // Use image-to-real for explicit conversion
                 return [result];
             }
 
             // If a style image is present (either from canvas or preset), use `mixImageStyle`.
             if (styleImage) {
-                const { resultUrl } = await mixImageStyle(contentImage, styleImage, options);
+                const { resultUrl } = await mixImageStyle(contentImage, styleImage, options, 'swap-style');
                 return [resultUrl];
             }
 
             // Otherwise, it's a text-based style swap.
-            const result = await swapImageStyle(contentImage, options);
+            const result = await swapImageStyle(contentImage, options, 'swap-style');
             return [result];
         },
     },
@@ -450,13 +451,13 @@ const presetConfig: Record<string, PresetConfig> = {
         generator: (images: (string | undefined)[], preset: PresetData) => {
             const concept = preset.state.concept;
             if (!concept) throw new Error("Toy Model Creator preset is missing a 'concept'.");
-            return generateToyModelImage(images[0]!, concept, preset.state.options);
+            return generateToyModelImage(images[0]!, concept, preset.state.options, 'toy-model-creator');
         },
     },
     'free-generation': {
         imageKeys: ['image1', 'image2', 'image3', 'image4'],
         requiredImageCount: 0,
-        generator: (images: (string | undefined)[], preset: PresetData) => generateFreeImage(preset.state.options.prompt, preset.state.options.numberOfImages, preset.state.options.aspectRatio, images[0], images[1], images[2], images[3], preset.state.options.removeWatermark),
+        generator: (images: (string | undefined)[], preset: PresetData) => generateFreeImage(preset.state.options.prompt, preset.state.options.numberOfImages, preset.state.options.aspectRatio, images[0], images[1], images[2], images[3], preset.state.options.removeWatermark, 'free-generation'),
     },
     'image-interpolation': {
         imageKeys: ['referenceImage'],
@@ -468,7 +469,7 @@ const presetConfig: Record<string, PresetConfig> = {
             let iPrompt = generatedPrompt;
             if (additionalNotes) { iPrompt = await interpolatePrompts(iPrompt, additionalNotes); }
             const fPrompt = await adaptPromptToContext(referenceUrl, iPrompt);
-            const result = await editImageWithPrompt(referenceUrl, fPrompt, preset.state.options.aspectRatio, preset.state.options.removeWatermark);
+            const result = await editImageWithPrompt(referenceUrl, fPrompt, preset.state.options.aspectRatio, preset.state.options.removeWatermark, 'image-interpolation');
             return [result];
         }
     }

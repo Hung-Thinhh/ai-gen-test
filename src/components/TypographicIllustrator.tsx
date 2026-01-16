@@ -29,13 +29,13 @@ const TypographicIllustrator: React.FC<TypographicIllustratorProps> = (props) =>
         // Set generating stage AFTER credits confirmed
         onStateChange({ ...appState, stage: 'generating', error: null });
         try {
-            const result = await generateTypographicIllustration(appState.phrase);
+            const result = await generateTypographicIllustration(appState.phrase, 'typographic-illustrator');
             onStateChange({ ...appState, stage: 'results', resultImage: result });
             addImagesToGallery([result]);
             logGeneration('typographic-illustrator', preGenState, result, {
                 credits_used: creditCostPerImage,
                 generation_count: 1,
-                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
             });
         } catch (err) {
             onStateChange({ ...appState, stage: 'results', error: err instanceof Error ? err.message : "Lỗi." });

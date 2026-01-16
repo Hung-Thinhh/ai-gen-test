@@ -8,6 +8,15 @@ export async function POST(req: NextRequest) {
     try {
         const data = await req.json();
 
+        // DEBUG: Log incoming data
+        console.log('[History API] Received data:', JSON.stringify({
+            tool_id: data.tool_id,
+            output_images: data.output_images?.length ? `Array(${data.output_images.length})` : data.output_images,
+            generation_count: data.generation_count,
+            credits_used: data.credits_used,
+            input_prompt: data.input_prompt // Log prompt
+        }));
+
         // 1. Check strict authentication (User Session OR Guest ID)
         const session = await getServerSession(authOptions);
         const hasUser = session && session.user;
@@ -69,19 +78,25 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        // Ensure tool_id is never null (database constraint)
+        // Use -1 as default for unknown/studio tools
+        const finalToolId = toolId || -1;
+
         await sql`
             INSERT INTO generation_history 
-            (user_id, guest_id, tool_id, output_images, generation_count, credits_used, api_model_used, generation_time_ms, error_message)
+            (user_id, guest_id, tool_id, output_images, generation_count, credits_used, api_model_used, generation_time_ms, error_message, input_prompt, created_at)
             VALUES (
                 ${userId || null},
                 ${data.guest_id || null},
-                ${toolId || null},
+                ${finalToolId},
                 ${outputImagesJson}::jsonb,
                 ${generationCount},
                 ${creditsUsed},
                 ${data.api_model_used || 'unknown'},
                 ${data.generation_time_ms || 0},
-                ${data.error_message || null}
+                ${data.error_message || null},
+                ${data.input_prompt || null},
+                NOW()
             )
         `;
 

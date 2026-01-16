@@ -85,7 +85,8 @@ export async function generatePatrioticImage(
     customPrompt?: string,
     removeWatermark?: boolean,
     aspectRatio?: string,
-    styleReferenceImageDataUrl?: string | null
+    styleReferenceImageDataUrl?: string | null,
+    toolKey?: string
 ): Promise<string> {
     const { mimeType, data: base64Data } = parseDataUrl(imageDataUrl);
 
@@ -99,6 +100,9 @@ export async function generatePatrioticImage(
     }
 
     const config: any = {};
+    if (toolKey) {
+        config.tool_key = toolKey;
+    }
     const validRatios = ['1:1', '3:4', '4:3', '9:16', '16:9', '2:3', '4:5', '3:2', '5:4', '21:9'];
     if (aspectRatio && aspectRatio !== 'Giữ nguyên' && validRatios.includes(aspectRatio)) {
         config.imageConfig = { aspectRatio };

@@ -8,19 +8,32 @@ import { downloadImage } from './uiUtils';
 import { DownloadIcon } from './icons';
 
 interface LightboxProps {
-    images: string[];
+    images: (string | { src: string; type: 'video' | 'image' })[];
     selectedIndex: number | null;
     onClose: () => void;
     onNavigate: (newIndex: number) => void;
+    prompts?: (string | null)[];  // Optional prompts array to display below image
 }
 
-const Lightbox: React.FC<LightboxProps> = ({ images, selectedIndex, onClose, onNavigate }) => {
+const Lightbox: React.FC<LightboxProps> = ({ images, selectedIndex, onClose, onNavigate, prompts }) => {
     const [scale, setScale] = React.useState(1);
+    const [copied, setCopied] = React.useState(false);
 
     // Reset zoom when image changes
     useEffect(() => {
+
         setScale(1);
     }, [selectedIndex]);
+
+    const handleCopyPrompt = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (selectedIndex !== null && prompts && prompts[selectedIndex]) {
+            navigator.clipboard.writeText(prompts[selectedIndex]!).then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+            });
+        }
+    };
 
     const handleKeyDown = useCallback((e: KeyboardEvent) => {
         if (selectedIndex === null) return;
@@ -44,13 +57,16 @@ const Lightbox: React.FC<LightboxProps> = ({ images, selectedIndex, onClose, onN
         };
     }, [selectedIndex, handleKeyDown]);
 
+    const currentItem = selectedIndex !== null ? images[selectedIndex] : null;
+
     const handleDownloadCurrent = () => {
-        if (selectedIndex !== null && images[selectedIndex]) {
-            const url = images[selectedIndex];
-            // Generate random ID: timestamp + random number
-            const randomId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-            downloadImage(url, `Duky-AI-${randomId}`);
-        }
+        if (!currentItem) return;
+        const url = typeof currentItem === 'string' ? currentItem : currentItem.src;
+        // Generate random ID: timestamp + random number
+        const randomId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        // If it's a video, we might want a different filename extension, but downloadImage handles it?
+        // Let's assume downloadImage handles it or browser detects mime.
+        downloadImage(url, `Duky-AI-${randomId}`);
     };
 
     const handleZoomIn = (e: React.MouseEvent) => {
@@ -61,6 +77,36 @@ const Lightbox: React.FC<LightboxProps> = ({ images, selectedIndex, onClose, onN
     const handleZoomOut = (e: React.MouseEvent) => {
         e.stopPropagation();
         setScale(prev => Math.max(prev - 0.5, 0.5));
+    };
+
+    const renderContent = () => {
+        if (!currentItem) return null;
+
+        const src = typeof currentItem === 'string' ? currentItem : currentItem.src;
+        const isVideo = typeof currentItem === 'object'
+            ? currentItem.type === 'video'
+            : (src.endsWith('.mp4') || src.endsWith('.webm'));
+
+        if (isVideo) {
+            return (
+                <video
+                    src={src}
+                    controls
+                    autoPlay
+                    className="gallery-lightbox-img"
+                    style={{ transform: `scale(${scale})`, transition: 'transform 0.2s ease-out' }}
+                />
+            );
+        }
+
+        return (
+            <img
+                src={src}
+                alt={`Generated content ${selectedIndex !== null ? selectedIndex + 1 : ''}`}
+                className="gallery-lightbox-img"
+                style={{ transform: `scale(${scale})`, transition: 'transform 0.2s ease-out' }}
+            />
+        );
     };
 
     return (
@@ -88,24 +134,34 @@ const Lightbox: React.FC<LightboxProps> = ({ images, selectedIndex, onClose, onN
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ duration: 0.2, ease: "easeInOut" }}
                             >
-                                {images[selectedIndex] && (images[selectedIndex].endsWith('.mp4') || images[selectedIndex].endsWith('.webm')) ? (
-                                    <video
-                                        src={images[selectedIndex]}
-                                        controls
-                                        autoPlay
-                                        className="gallery-lightbox-img"
-                                        style={{ transform: `scale(${scale})`, transition: 'transform 0.2s ease-out' }}
-                                    />
-                                ) : (
-                                    <img
-                                        src={images[selectedIndex]}
-                                        alt={`Generated image ${selectedIndex + 1}`}
-                                        className="gallery-lightbox-img"
-                                        style={{ transform: `scale(${scale})`, transition: 'transform 0.2s ease-out' }}
-                                    />
+                                {renderContent()}
+
+                                {/* Prompt Display Section */}
+                                {selectedIndex !== null && prompts && prompts[selectedIndex] && (
+                                    <motion.div
+                                        className="absolute md:bottom-4 bottom-[-20%] left-4 right-4 bg-black/80 backdrop-blur-sm rounded-lg p-4 text-white max-h-32 overflow-y-auto z-50"
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: 10 }}
+                                    >
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="flex-1 text-sm">
+                                                <p className="font-semibold mb-2 text-orange-400">Prompt:</p>
+                                                <p className="!text-xs text-gray-300 line-clamp-3">{prompts[selectedIndex]}</p>
+                                            </div>
+                                            <button
+                                                className="lightbox-action-btn bg-orange-500 hover:bg-orange-600 px-3 py-1 rounded text-white !text-xs font-semibold whitespace-nowrap transition-all"
+                                                onClick={handleCopyPrompt}
+                                                title={copied ? "Đã copy!" : "Copy prompt"}
+                                            >
+                                                {copied ? '✓ Copied' : 'Copy'}
+                                            </button>
+                                        </div>
+                                    </motion.div>
                                 )}
 
-                                <div className="absolute md:top-4 top-[-30%] right-2 flex gap-4 z-50">
+                                {/* Image Actions */}
+                                <div className="absolute md:top-4 md:top-[5%] top-[-15%] right-2 flex gap-4 z-50">
                                     <button
                                         className="lightbox-action-btn bg-black/50 hover:bg-black/70 p-2 rounded-full text-white backdrop-blur-sm transition-all"
                                         onClick={handleZoomOut}

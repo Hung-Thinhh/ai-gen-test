@@ -2,11 +2,11 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
-import { 
-    processApiError, 
-    parseDataUrl, 
-    callGeminiWithRetry, 
-    processGeminiResponse 
+import {
+    processApiError,
+    parseDataUrl,
+    callGeminiWithRetry,
+    processGeminiResponse
 } from './baseService';
 
 interface DressModelOptions {
@@ -26,9 +26,10 @@ interface DressModelOptions {
  * @returns A promise that resolves to the generated image's data URL.
  */
 export async function generateDressedModelImage(
-    modelImageDataUrl: string, 
-    clothingImageDataUrl: string, 
-    options: DressModelOptions
+    modelImageDataUrl: string,
+    clothingImageDataUrl: string,
+    options: DressModelOptions,
+    toolKey?: string
 ): Promise<string> {
     const { mimeType: modelMime, data: modelData } = parseDataUrl(modelImageDataUrl);
     const { mimeType: clothingMime, data: clothingData } = parseDataUrl(clothingImageDataUrl);
@@ -56,7 +57,7 @@ export async function generateDressedModelImage(
         '2.  **CHUYỂN ĐỔI TRANG PHỤC:** Lấy trang phục từ Ảnh 1 và mặc nó lên người mẫu một cách tự nhiên và chân thực, phù hợp với tư thế của họ. Giữ nguyên màu sắc, họa tiết và kiểu dáng của trang phục.',
         '3.  **TÙY CHỈNH KẾT QUẢ:** Dựa vào các yêu cầu sau để tạo ra bức ảnh cuối cùng:'
     );
-    
+
     let optionsSelected = false;
     if (options.background && options.background !== 'Tự động') {
         promptParts.push(`    *   **Bối cảnh (Background):** ${options.background}.`);
@@ -74,11 +75,11 @@ export async function generateDressedModelImage(
         promptParts.push(`    *   **Ghi chú:** ${options.notes}`);
         optionsSelected = true; // Notes count as a selection
     }
-    
+
     if (!optionsSelected) {
         promptParts.push('    *   **Toàn quyền sáng tạo:** Hãy tự động chọn bối cảnh, tư thế và phong cách ảnh phù hợp nhất với trang phục và người mẫu để tạo ra một bức ảnh thời trang ấn tượng.');
     }
-    
+
     promptParts.push(
         '',
         'Kết quả cuối cùng phải là một bức ảnh duy nhất, chất lượng cao, trông giống như ảnh chụp thời trang chuyên nghiệp. Chỉ trả về ảnh kết quả, không trả về ảnh gốc hay văn bản giải thích.'
@@ -92,6 +93,9 @@ export async function generateDressedModelImage(
     const textPart = { text: prompt };
 
     const config: any = {};
+    if (toolKey) {
+        config.tool_key = toolKey;
+    }
     const validRatios = ['1:1', '3:4', '4:3', '9:16', '16:9', '2:3', '4:5', '3:2', '5:4', '21:9'];
     if (options.aspectRatio && options.aspectRatio !== 'Giữ nguyên' && validRatios.includes(options.aspectRatio)) {
         config.imageConfig = { aspectRatio: options.aspectRatio };

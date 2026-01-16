@@ -96,9 +96,9 @@ export const useVideoGeneration = () => {
                 console.log('[generateVideo] Processing data URL');
                 image = parseDataUrl(sourceUrl);
             } else if (sourceUrl.startsWith('http://') || sourceUrl.startsWith('https://')) {
-                console.log('[generateVideo] Processing HTTP URL - fetching image');
-                // Fetch the image and convert to base64
-                const response = await fetch(sourceUrl);
+                console.log('[generateVideo] Processing HTTP URL - fetching image via Proxy');
+                // Fetch the image via proxy to avoid CORS
+                const response = await fetch(`/api/proxy-image?url=${encodeURIComponent(sourceUrl)}`);
                 if (!response.ok) {
                     throw new Error(`Failed to fetch image: ${response.statusText}`);
                 }

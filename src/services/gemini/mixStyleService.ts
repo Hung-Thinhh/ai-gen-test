@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import ai from './client'; // Import the shared client instance
-import { 
+import {
     processApiError,
-    parseDataUrl, 
-    callGeminiWithRetry, 
-    processGeminiResponse 
+    parseDataUrl,
+    callGeminiWithRetry,
+    processGeminiResponse
 } from './baseService';
 
 interface MixStyleOptions {
@@ -26,16 +26,16 @@ async function analyzeStyle(styleImageDataUrl: string): Promise<string> {
     const imagePart = { inlineData: { mimeType, data } };
 
     const prompt = `Phân tích hình ảnh này và mô tả phong cách nghệ thuật, bảng màu, kết cấu, chất liệu, và không khí chung của nó một cách tổng quát, chính xác và súc tích. Chỉ tập trung vào các đặc điểm phong cách có thể áp dụng lại, không mô tả nội dung cụ thể (con người, đồ vật). Ví dụ: "Phong cách tranh sơn dầu với nét cọ dày, bảng màu ấm áp với tông vàng và cam, ánh sáng dịu nhẹ, không khí hoài cổ."`;
-    
+
     try {
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
-            contents: { parts: [imagePart, {text: prompt}] },
+            contents: { parts: [imagePart, { text: prompt }] },
         });
 
         const text = response.text;
         if (!text) {
-             throw new Error("AI không thể phân tích được phong cách của ảnh.");
+            throw new Error("AI không thể phân tích được phong cách của ảnh.");
         }
         return text.trim();
     } catch (error) {
@@ -44,7 +44,12 @@ async function analyzeStyle(styleImageDataUrl: string): Promise<string> {
     }
 }
 
-export async function mixImageStyle(contentImageDataUrl: string, styleImageDataUrl: string, options: MixStyleOptions): Promise<{ resultUrl: string; finalPrompt: string; }> {
+export async function mixImageStyle(
+    contentImageDataUrl: string,
+    styleImageDataUrl: string,
+    options: MixStyleOptions,
+    toolKey?: string
+): Promise<{ resultUrl: string; finalPrompt: string; }> {
     try {
         console.log("Step 1: Analyzing style image...");
         const styleDescription = await analyzeStyle(styleImageDataUrl);
@@ -59,7 +64,7 @@ export async function mixImageStyle(contentImageDataUrl: string, styleImageDataU
             '1. **Bảo toàn Nội dung:** Phải giữ lại TOÀN BỘ bố cục, chủ thể, và các đối tượng chính từ ảnh gốc. Không được thêm, bớt, hay thay đổi các yếu tố cốt lõi này.',
             `2. **Áp dụng Phong cách:** Biến đổi hình ảnh gốc để nó mang phong cách được mô tả chi tiết sau đây: "${styleDescription}"`
         ];
-        
+
         const strengthMapping: { [key: string]: string } = {
             'Rất yếu': 'Mức độ ảnh hưởng phong cách (Rất Yếu): Chỉ áp dụng nhẹ nhàng màu sắc và không khí chung, giữ lại gần như toàn bộ chi tiết gốc.',
             'Yếu': 'Mức độ ảnh hưởng phong cách (Yếu): Áp dụng màu sắc và kết cấu cơ bản, giữ lại các chi tiết chính.',
@@ -72,19 +77,24 @@ export async function mixImageStyle(contentImageDataUrl: string, styleImageDataU
         if (options.notes) {
             promptParts.push(`4. **Ghi chú bổ sung từ người dùng (Ưu tiên cao):** "${options.notes}". Phải tích hợp yêu cầu này một cách hợp lý vào phong cách đã mô tả.`);
         }
-        
+
         if (options.removeWatermark) {
             promptParts.push('- **Yêu cầu đặc biệt:** Không được có bất kỳ watermark, logo, hay chữ ký nào trên ảnh kết quả.');
         }
-        
+
         promptParts.push('Chỉ trả về hình ảnh kết quả cuối cùng, không kèm theo văn bản giải thích.');
 
         const finalPrompt = promptParts.join('\n');
         const textPart = { text: finalPrompt };
         console.log("Step 2: Constructed final prompt for image generation:", finalPrompt);
 
+        const config: any = {};
+        if (toolKey) {
+            config.tool_key = toolKey;
+        }
+
         // This call uses the vision model `gemini-2.5-flash-image-preview`
-        const response = await callGeminiWithRetry([contentImagePart, textPart]);
+        const response = await callGeminiWithRetry([contentImagePart, textPart], config);
         const resultUrl = processGeminiResponse(response);
         return { resultUrl, finalPrompt };
 

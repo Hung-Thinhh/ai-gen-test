@@ -1,5 +1,4 @@
-import { log } from 'console';
-import { uploadToCloudinary } from './cloudinaryService';
+
 import { cacheService, CACHE_KEYS, CACHE_TTL } from './cacheService';
 import { getSession } from "next-auth/react";
 // Helper to get user role
@@ -129,19 +128,30 @@ const executeWithRetry = async <T>(
 */
 
 /**
- * Uploads a Base64 image to Cloudinary (Replaces Firebase Storage) and returns the download URL.
- * @param userId The ID of the user.
+ * Uploads a Base64 image to R2 (via Server API) and returns the public URL.
+ * @param userId The ID of the user. (Unused for R2 file path currently as R2 handles unique naming, but kept for signature compatibility)
  * @param base64Data The Base64 string of the image.
- * @param folder The folder path.
+ * @param folder The folder path (Optional/Unused in simple R2 implementation).
  */
 export const uploadImageToCloud = async (userId: string, base64Data: string, folder: string = "gallery", skipOptimization: boolean = false): Promise<string> => {
     try {
-        // Use Cloudinary Service
-        const storagePath = `users/${userId}/${folder}`;
-        const downloadUrl = await uploadToCloudinary(base64Data, storagePath, { skipOptimization });
-        return downloadUrl;
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ image: base64Data, folder }),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Upload failed');
+        }
+
+        const data = await response.json();
+        return data.url;
     } catch (error) {
-        console.error("Error uploading image to cloud (Cloudinary):", error);
+        console.error("Error uploading image to cloud (R2):", error);
         throw error;
     }
 };
@@ -154,11 +164,19 @@ export const addImageToCloudGallery = async (userId: string, imageUrl: string) =
 };
 
 /**
- * Uploads a generic asset (File) to Cloudinary and returns URL.
+ * Uploads a generic asset (File) to R2 and returns URL.
  */
 export const uploadAsset = async (file: File): Promise<string> => {
     try {
-        return await uploadToCloudinary(file, 'studio-assets');
+        // Convert File to Base64
+        const base64Data = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = error => reject(error);
+        });
+
+        return await uploadImageToCloud('assets', base64Data, 'studio-assets');
     } catch (error) {
         console.error("Error uploading asset:", error);
         throw error;
@@ -194,7 +212,25 @@ export const getUserCloudGallery = async (userId: string, useFreshClient: boolea
         });
         if (!res.ok) return [];
         const data = await res.json();
-        return data.gallery || [];
+
+        // New format: Array of records with output_images (already filtered)
+        if (Array.isArray(data) && data.length > 0) {
+
+            return data;
+        }
+
+        // Legacy format support
+        if (data.images && Array.isArray(data.images)) {
+            console.log(`[storageService] getUserCloudGallery: Loaded ${data.images.length} images (legacy format)`);
+            return data.images.map((img: any) => img.url || img);
+        }
+
+        if (data.gallery && Array.isArray(data.gallery)) {
+            console.log(`[storageService] getUserCloudGallery: Loaded ${data.gallery.length} URLs (legacy gallery format)`);
+            return data.gallery;
+        }
+
+        return [];
     } catch (error) {
         console.error("Error fetching cloud gallery:", error);
         return [];
@@ -222,12 +258,23 @@ export const removeImageFromCloudGallery = async (userId: string, imageUrl: stri
  */
 export const uploadGuestImage = async (guestId: string, base64Data: string, skipOptimization: boolean = false): Promise<string> => {
     try {
-        // Use Cloudinary Service
-        const storagePath = `guests/${guestId}`;
-        const downloadUrl = await uploadToCloudinary(base64Data, storagePath, { skipOptimization });
-        return downloadUrl;
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ image: base64Data, folder: `guests/${guestId}` }),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Upload failed');
+        }
+
+        const data = await response.json();
+        return data.url;
     } catch (error) {
-        console.error("Error uploading guest image (Cloudinary):", error);
+        console.error("Error uploading guest image (R2):", error);
         throw error;
     }
 };
@@ -433,7 +480,16 @@ export const getGuestCloudGallery = async (guestId: string, useFreshClient: bool
         if (!response.ok) return [];
 
         const data = await response.json();
-        return data.gallery || [];
+
+        // New format: Array of records with output_images (already filtered)
+        if (Array.isArray(data) && data.length > 0) {
+            console.log(`[storageService] getGuestCloudGallery: Loaded ${data.length} records from API`);
+            console.log('dataaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', data);
+
+            return data;
+        }
+
+        return [];
     } catch (error) {
         console.error("Error fetching guest gallery:", error);
         return [];
@@ -632,6 +688,8 @@ export const updateTool = async (toolId: string | number, updates: any, token?: 
  * Logs a generation event to the 'generation_history' table.
  */
 export const logGenerationHistory = async (userId: string | null, entry: any, token?: string, guestId?: string) => {
+    console.log('[storageService] logGenerationHistory ENTRY:', entry);
+    console.log('[storageService] input_prompt:', entry.input_prompt);
     try {
         if (!userId) {
             console.log("[Storage] Guest history logging disabled.");
@@ -648,12 +706,10 @@ export const logGenerationHistory = async (userId: string | null, entry: any, to
 
         // If tool_id is missing or 0, try to resolve from appId provided in entry (if any)
         // entry usually comes from MainApp.tsx logGeneration which has appId
-        /*
         if (!resolvedToolId && entry.appId) {
             const foundId = await getToolId(entry.appId);
             if (foundId) resolvedToolId = foundId;
         }
-        */
 
         // Calculate credits_used = base_credit_cost * generation_count
         // [MOVED TO SERVER API]
@@ -670,18 +726,18 @@ export const logGenerationHistory = async (userId: string | null, entry: any, to
             api_model_used: entry.api_model_used || 'unknown',
             generation_time_ms: entry.generation_time_ms || 0,
             error_message: entry.error_message || null,
+            input_prompt: entry.input_prompt || null,
         };
 
+        // DEBUG: Log output_images
+        console.log('[Storage] output_images:', entry.output_images, 'Length:', entry.output_images?.length);
+
         // Only include tool_id if it's valid (non-zero/null). 
-        // If FK is not nullable, this insert might still fail if we omit it.
-        // But usually nullable FKs are fine. If it's NOT nullable, we are in trouble if we can't find it.
-        // Assuming we default to null if not found, and hope column is nullable.
-        // If not nullable, we might default to 1? But explicit 0 failed.
+        // If still not resolved, use -1 as fallback (unknown tool)
         if (resolvedToolId) {
             dbEntry.tool_id = resolvedToolId;
         } else {
-            // Try explicit NULL instead of 0
-            dbEntry.tool_id = null;
+            dbEntry.tool_id = -1; // Fallback for unknown tools
         }
 
         // Use API to log history

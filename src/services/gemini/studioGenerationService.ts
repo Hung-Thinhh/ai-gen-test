@@ -12,60 +12,25 @@ import {
 } from './baseService';
 
 function getPrimaryPrompt(templatePrompt: string, customPrompt: string, styleContext: string, removeWatermark?: boolean, aspectRatio?: string, hasSecondImage = false): string {
-    const modificationText = customPrompt ? ` Chi tiết bổ sung: "${customPrompt}".` : '';
-    const watermarkText = removeWatermark ? ' Yêu cầu quan trọng: Kết quả cuối cùng không được chứa bất kỳ watermark, logo, hay chữ ký nào.' : '';
-    const aspectRatioText = (aspectRatio && aspectRatio !== 'Giữ nguyên') ? `Bức ảnh kết quả BẮT BUỘC phải có tỷ lệ khung hình chính xác là ${aspectRatio}.` : '';
+    const modificationText = customPrompt ? ` ${customPrompt}.` : '';
+    const watermarkText = removeWatermark ? ' No watermark or logo.' : '';
+    const aspectRatioText = (aspectRatio && aspectRatio !== 'Giữ nguyên') ? `Aspect ratio: ${aspectRatio}. ` : '';
 
-    // GENERIC: Stronger instruction to follow the template prompt exactly.
-    // MODIFICATION: Moved Face Instructions to the TOP to ensure they are processed first.
-
-    let faceInstructions = `**NHIỆM VỤ ƯU TIÊN HÀNG ĐẦU (TOP PRIORITY): BẢO TOÀN KHUÔN MẶT**
-Đây là tác vụ GHÉP MẶT (FACE SWAP) chất lượng cao.
-1. Mục tiêu duy nhất: Đưa khuôn mặt từ ảnh gốc vào bối cảnh mới.
-2. YÊU CẦU: Giữ nguyên 100% các đặc điểm nhận dạng: mắt, mũi, miệng, cằm, má, cấu trúc xương mặt, biểu cảm.
-3. CẤM: Không được tạo ra khuôn mặt mới, không được lai tạo khuôn mặt.
-4. Ảnh đầu ra phải trông giống hệt người trong ảnh đầu vào, chỉ khác trang phục và tóc.`;
-
-    let taskDescription = `**MÔ TẢ BỐI CẢNH & TRANG PHỤC (STYLE):**
-Hãy đặt nhân vật vào bối cảnh và trang phục sau đây theo phong cách "${styleContext}":
-"${templatePrompt}"
-
-**CHỈ DẪN THỰC HIỆN:**
-- Bước 1: Lấy khuôn mặt từ ảnh đầu vào.
-- Bước 2: Tái tạo (Render) lại phần cơ thể, trang phục, tóc và bối cảnh dựa trên mô tả ở trên.
-- Bước 3: Hòa trộn ánh sáng sao cho khuôn mặt gốc khớp tự nhiên với bối cảnh mới.`;
-
+    // OPTIMIZED: Concise but effective face swap instructions
     if (hasSecondImage) {
-        faceInstructions = `**NHIỆM VỤ ƯU TIÊN HÀNG ĐẦU: FACE SWAP CẶP ĐÔI (DUAL FACE SWAP)**
-Bạn được cung cấp 2 ảnh chân dung. Nhiệm vụ là ghép mặt của họ vào một bức ảnh cặp đôi mới.
-1. ẢNH 1 (NỮ): Lấy khuôn mặt này ghép vào nhân vật Nữ trong ảnh kết quả.
-2. ẢNH 2 (NAM): Lấy khuôn mặt này ghép vào nhân vật Nam trong ảnh kết quả.
-3. YÊU CẦU TUYỆT ĐỐI: 
-   - Khuôn mặt Nữ phải giống 100% người trong Ảnh 1.
-   - Khuôn mặt Nam phải giống 100% người trong Ảnh 2.
-   - KHÔNG ĐƯỢC HOÁN ĐỔI GIỚI TÍNH hay khuôn mặt.`;
-
-        taskDescription = `**MÔ TẢ BỐI CẢNH & TRANG PHỤC CẶP ĐÔI:**
-Phong cách chủ đạo: "${styleContext}"
-"${templatePrompt}"
-
-HÃY ĐẢM BẢO:
-- Nhân vật Nữ mặc trang phục Nữ như mô tả.
-- Nhân vật Nam mặc trang phục Nam như mô tả.
-- Bối cảnh chính xác như mô tả.`;
+        return `${aspectRatioText}DUAL FACE SWAP:
+Photo 1 (Female): Use this face for female character.
+Photo 2 (Male): Use this face for male character.
+Style: "${styleContext}"
+Scene: "${templatePrompt}"
+CRITICAL: Preserve 100% facial identity from input photos. Only change clothing, hair, and background.${modificationText}${watermarkText}`;
     }
 
-    return `${aspectRatioText}
-${faceInstructions}
-
-${taskDescription}
-
-**YÊU CẦU KỸ THUẬT:**
-- Độ phân giải siêu cao (8K), chi tiết sắc nét.
-- Giữ nguyên màu da (Skin tone) của người trong ảnh gốc.
-- Ánh sáng tự nhiên (Photorealistic lighting).${modificationText}${watermarkText}
-
-**LỜI NHẮC CUỐI CÙNG:** Nếu khuôn mặt không giống ảnh gốc, tác vụ coi như THẤT BẠI.`;
+    return `${aspectRatioText}FACE SWAP:
+Keep exact face from input photo (eyes, nose, mouth, skin tone).
+Style: "${styleContext}"
+Scene: "${templatePrompt}"
+Requirements: Photorealdistic, natural lighting, high detail.${modificationText}${watermarkText}`;
 }
 
 function getFallbackPrompt(templatePrompt: string, customPrompt: string, styleContext: string, removeWatermark?: boolean, aspectRatio?: string, hasSecondImage = false): string {
@@ -94,7 +59,8 @@ export async function generateStudioImage(
     customPrompt: string,
     removeWatermark?: boolean,
     aspectRatio?: string,
-    secondImageDataUrl?: string | null
+    secondImageDataUrl?: string | null,
+    toolKey?: string
 ): Promise<string> {
     const { mimeType: userMime, data: userData } = await import('./baseService').then(m => m.normalizeImageInput(userImageDataUrl));
     const userImagePart = { inlineData: { mimeType: userMime, data: userData } };
@@ -111,6 +77,10 @@ export async function generateStudioImage(
     const validRatios = ['1:1', '3:4', '4:3', '9:16', '16:9', '2:3', '4:5', '3:2', '5:4', '21:9'];
     if (aspectRatio && aspectRatio !== 'Giữ nguyên' && validRatios.includes(aspectRatio)) {
         config.imageConfig = { aspectRatio };
+    }
+
+    if (toolKey) {
+        config.tool_key = toolKey;
     }
 
     const hasSecondImage = !!secondImageDataUrl;

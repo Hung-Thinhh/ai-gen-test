@@ -319,7 +319,7 @@ const PortraitGenerator: React.FC<PortraitGeneratorProps> = (props) => {
                 const variedPrompt = index === 0
                     ? promptParts
                     : `${promptParts}. Variation ${index + 1}: Create a unique but equally stunning version.`;
-                return await generateStyledImage(variedPrompt, images, undefined, opts.aspectRatio || undefined);
+                return await generateStyledImage(variedPrompt, images, undefined, opts.aspectRatio || undefined, 'portrait-generator');
             } catch (err) {
                 console.error(`Failed to generate image ${index + 1}:`, err);
                 return null;
@@ -343,7 +343,7 @@ const PortraitGenerator: React.FC<PortraitGeneratorProps> = (props) => {
             logGeneration('portrait-generator', preGenState, successfulImages[0], {
                 credits_used: creditCostPerImage * successfulImages.length,
                 generation_count: successfulImages.length,
-                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
             });
         } else {
             onStateChange({

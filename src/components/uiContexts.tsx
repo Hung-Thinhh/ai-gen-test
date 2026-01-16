@@ -418,22 +418,27 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }, [translations]);
 
     const checkCredits = useCallback(async (amount: number = 1) => {
-        // ✅ SERVER-SIDE VALIDATION ONLY
-        // Credit checking is now handled by /api/gemini/generate-image
-        // Server will return 402 INSUFFICIENT_CREDITS if user doesn't have enough
-        // This function now just returns true to allow the request to proceed
+        const currentCredits = isLoggedIn && user ? userCredits : guestCredits;
 
-        console.log(`[Credit Check] Skipping client-side check. Server will validate.`);
+        console.log(`[Credit Check] Required: ${amount}, Available: ${currentCredits}`);
 
-        // Still check if user is authenticated or has guest ID
+        if (currentCredits < amount) {
+            console.warn(`[Credit Check] Insufficient credits. Need ${amount}, have ${currentCredits}`);
+            toast.error('Số lượng credit không đủ để tạo thêm ảnh, hãy giảm số lượng ảnh hoặc mua thêm gói.');
+            // Trigger "Out of Credits" modal if available
+            setIsOutOfCreditsModalOpen(true);
+            return false;
+        }
+
+        // Still check if user is authenticated or has guest ID (sanity check)
         if (!isLoggedIn && !guestId) {
             console.warn("No user or guest ID - cannot proceed");
             toast.error("Vui lòng tải lại trang để khởi tạo phiên.");
             return false;
         }
 
-        return true; // Let server handle the actual credit validation
-    }, [isLoggedIn, guestId]);
+        return true;
+    }, [isLoggedIn, guestId, user, userCredits, guestCredits]);
 
 
 
@@ -517,6 +522,7 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         error_message?: string;
         output_images?: any;
         generation_count?: number;
+        input_prompt?: string;
     }) => {
         if (!settings) return;
 
@@ -569,7 +575,7 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         });
     }, []);
 
-    const addImagesToGallery = useCallback(async (newImages: string[]) => {
+    const addImagesToGallery = useCallback(async (newImages: string[], persist: boolean = true) => {
         const uniqueNewImages = newImages.filter(img => img && !imageGallery.includes(img));
 
         if (uniqueNewImages.length === 0) {
@@ -577,37 +583,45 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         }
 
         if (isLoggedIn && user) {
-            // 1. Upload all new images to Cloudinary (Parallel)
-            const uploadPromises = uniqueNewImages.map(async (img) => {
-                if (img.startsWith('data:image')) {
-                    // Check if optimization should be skipped (e.g., for PNGs with metadata)
-                    const skipOptimization = img.startsWith('data:image/png');
-                    return await storageService.uploadImageToCloud(user.id, img, 'gallery', skipOptimization);
-                } else {
-                    return img; // Already a URL
-                }
-            });
+            let uploadedUrls: string[] = [];
 
-            try {
-                const uploadedUrls = await Promise.all(uploadPromises);
-
-                // 2. Save all URLs to Supabase DB (Batch)
-                await storageService.addMultipleImagesToCloudGallery(user.id, uploadedUrls, token || undefined);
-
-                // toast.success('Đã lưu ảnh vào Cloud!');
-                setImageGallery(prev => {
-                    const newUnique = uploadedUrls.filter(u => !prev.includes(u));
-                    return [...newUnique, ...prev];
+            if (persist) {
+                // 1. Upload all new images to Cloudinary (Parallel)
+                const uploadPromises = uniqueNewImages.map(async (img) => {
+                    if (img.startsWith('data:image')) {
+                        // Check if optimization should be skipped (e.g., for PNGs with metadata)
+                        const skipOptimization = img.startsWith('data:image/png');
+                        return await storageService.uploadImageToCloud(user.id, img, 'gallery', skipOptimization);
+                    } else {
+                        return img; // Already a URL
+                    }
                 });
-                return uploadedUrls;
-            } catch (err) {
-                toast.error('Lỗi khi lưu ảnh vào Cloud.');
-                console.error(err);
-                // Fallback to local
-                await db.addMultipleGalleryImages(uniqueNewImages);
-                setImageGallery(prev => [...uniqueNewImages, ...prev]);
-                return uniqueNewImages;
+
+                try {
+                    uploadedUrls = await Promise.all(uploadPromises);
+
+                    // 2. Save all URLs to Supabase DB (Batch)
+                    await storageService.addMultipleImagesToCloudGallery(user.id, uploadedUrls, token || undefined);
+                } catch (err) {
+                    toast.error('Lỗi khi lưu ảnh vào Cloud.');
+                    console.error(err);
+                    // Fallback to local
+                    await db.addMultipleGalleryImages(uniqueNewImages);
+                    setImageGallery(prev => [...uniqueNewImages, ...prev]);
+                    return uniqueNewImages;
+                }
+            } else {
+                // If not persisting, assume images are already URLs or valid
+                uploadedUrls = uniqueNewImages;
             }
+
+            // Update UI State
+            setImageGallery(prev => {
+                const newUnique = uploadedUrls.filter(u => !prev.includes(u));
+                return [...newUnique, ...prev];
+            });
+            return uploadedUrls;
+
         } else {
             // Guest Flow: Upload to Cloudinary then save URL to IndexedDB
             const activeGuestId = guestId || `guest_${Date.now()}`; // Fallback if context not ready
@@ -681,14 +695,13 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 // User: Fetch directly from Supabase profiles bucket/table
                 // Use fresh client = true to bypass cache
                 fetchedImages = await storageService.getUserCloudGallery(user.id, true, token || undefined);
+                
             } else if (guestId) {
                 // Guest: Fetch directly from guest_sessions
                 // Use fresh client = true to bypass cache
                 fetchedImages = await storageService.getGuestCloudGallery(guestId, true);
             }
 
-            console.log("Gallery refreshed, count:", fetchedImages.length);
-            console.log("Gallery Data:", fetchedImages); // Debug Log
             // Replace local state purely with DB data
             setImageGallery(fetchedImages);
         } catch (error) {

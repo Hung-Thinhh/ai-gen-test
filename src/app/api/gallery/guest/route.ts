@@ -15,11 +15,11 @@ export async function GET(req: NextRequest) {
 
         // Get guest gallery
         const data = await sql`
-            SELECT * FROM guest_gallery 
-            WHERE guest_id = ${guestId} 
+            SELECT * FROM geeration_history 
+            WHERE user_id = ${guestId} 
             ORDER BY created_at DESC
         `;
-
+            console.log('[API] Fetched guest gallery data:', data);
         return NextResponse.json({ images: data || [] });
 
     } catch (error: any) {

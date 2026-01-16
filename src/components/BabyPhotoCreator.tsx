@@ -47,6 +47,7 @@ interface BabyPhotoCreatorProps {
         api_model_used?: string;
         credits_used?: number;
         generation_count?: number;
+        input_prompt?: string;
     }) => void;
 }
 
@@ -166,7 +167,8 @@ const BabyPhotoCreator: React.FC<BabyPhotoCreatorProps> = (props) => {
                     appState.options.additionalPrompt,
                     appState.options.removeWatermark,
                     appState.options.aspectRatio,
-                    appState.styleReferenceImage
+                    appState.styleReferenceImage,
+                    'baby-photo-creator'
                 );
                 const settingsToEmbed = {
                     viewId: 'baby-photo-creator',
@@ -176,7 +178,8 @@ const BabyPhotoCreator: React.FC<BabyPhotoCreatorProps> = (props) => {
                 logGeneration('baby-photo-creator', preGenState, urlWithMetadata, {
                     credits_used: creditCostPerImage,
                     generation_count: 1,
-                    api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                    api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
+                    input_prompt: appState.options.additionalPrompt || "Style Reference"
                 });
                 // FIX: Pass a state object instead of a function to `onStateChange`.
                 onStateChange({
@@ -273,14 +276,27 @@ const BabyPhotoCreator: React.FC<BabyPhotoCreatorProps> = (props) => {
 
         const processIdea = async (idea: string) => {
             try {
-                const resultUrl = await generateBabyPhoto(appState.uploadedImage!, idea, appState.options.additionalPrompt, appState.options.removeWatermark, appState.options.aspectRatio);
+                const resultUrl = await generateBabyPhoto(
+                    appState.uploadedImage!,
+                    idea,
+                    appState.options.additionalPrompt,
+                    appState.options.removeWatermark,
+                    appState.options.aspectRatio,
+                    null,
+                    'baby-photo-creator'
+                );
+                const settingsToEmbed = {
+                    viewId: 'baby-photo-creator',
+                    state: { ...preGenState, stage: 'configuring', generatedImages: {}, historicalImages: [], error: null },
+                };
                 const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
 
                 if (!hasLoggedGeneration.current) {
                     logGeneration('baby-photo-creator', preGenState, urlWithMetadata, {
                         generation_count: 1,
                         credits_used: creditCostPerImage,
-                        api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                        api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
+                        input_prompt: idea
                     });
                     hasLoggedGeneration.current = true;
                 }
@@ -368,7 +384,8 @@ const BabyPhotoCreator: React.FC<BabyPhotoCreatorProps> = (props) => {
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
             logGeneration('baby-photo-creator', preGenState, urlWithMetadata, {
-                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
+                input_prompt: customPrompt
             });
             onStateChange({
                 ...appState,

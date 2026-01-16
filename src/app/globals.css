@@ -4309,3 +4309,18 @@ input:checked+.switch-slider:before {
     width: 24px !important;
     border-radius: 9999px !important;
 }
+
+/* Shimmer Animation for Skeleton Loading */
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.animate-shimmer {
+    animation: shimmer 2s ease-in-out infinite;
+}

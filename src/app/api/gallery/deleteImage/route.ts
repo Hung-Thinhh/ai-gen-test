@@ -1,16 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route';
-import { v2 as cloudinary } from 'cloudinary';
-import { extractPublicIdFromUrl, isCloudinaryUrl } from '@/utils/cloudinaryUtils';
-
-// Configure Cloudinary
-cloudinary.config({
-    cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
 export async function POST(request: NextRequest) {
     try {
         // 1. Authenticate user using NextAuth
@@ -47,26 +37,9 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // 4. Delete from Cloudinary (if it's a Cloudinary URL)
-        if (isCloudinaryUrl(imageUrl)) {
-            const publicId = extractPublicIdFromUrl(imageUrl);
-
-            if (publicId) {
-                try {
-                    const result = await cloudinary.uploader.destroy(publicId);
-                    console.log('[deleteImage] Cloudinary delete result:', result);
-
-                    if (result.result !== 'ok' && result.result !== 'not found') {
-                        console.warn('[deleteImage] Cloudinary delete failed:', result);
-                    }
-                } catch (cloudinaryError) {
-                    console.error('[deleteImage] Cloudinary delete error:', cloudinaryError);
-                    // Continue with DB deletion even if Cloudinary fails
-                }
-            }
-        }
-
-        // 5. Delete from Neon database
+        // 4. Delete from Cloudinary (REMOVED - Migrated to R2)
+        // If we needed to delete from R2, we would do it here using S3/R2 client
+        // For now, we just remove the reference from the database// 5. Delete from Neon database
         const { sql } = await import('@/lib/postgres/client');
 
         // Find and update generation_history records containing this image

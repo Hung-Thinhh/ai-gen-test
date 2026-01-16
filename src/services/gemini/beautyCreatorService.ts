@@ -111,7 +111,8 @@ export async function generateBeautyImage(
     imageDataUrl: string,
     idea: string,
     options: BeautyOptions,
-    styleReferenceImageDataUrl?: string | null
+    styleReferenceImageDataUrl?: string | null,
+    toolKey?: string
 ): Promise<string> {
     const { mimeType, data: base64Data } = parseDataUrl(imageDataUrl);
     const portraitImagePart = { inlineData: { mimeType, data: base64Data } };
@@ -161,6 +162,9 @@ export async function generateBeautyImage(
     requestParts.push(textPart);
 
     const config: any = {};
+    if (toolKey) {
+        config.tool_key = toolKey;
+    }
     const validRatios = ['1:1', '3:4', '4:3', '9:16', '16:9', '2:3', '4:5', '3:2', '5:4', '21:9'];
     if (options.aspectRatio && options.aspectRatio !== 'Giữ nguyên' && validRatios.includes(options.aspectRatio)) {
         config.imageConfig = { aspectRatio: options.aspectRatio };

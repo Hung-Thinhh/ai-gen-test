@@ -2,11 +2,11 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
-import { 
+import {
     processApiError,
-    parseDataUrl, 
-    callGeminiWithRetry, 
-    processGeminiResponse 
+    parseDataUrl,
+    callGeminiWithRetry,
+    processGeminiResponse
 } from './baseService';
 
 interface SwapStyleOptions {
@@ -17,7 +17,7 @@ interface SwapStyleOptions {
     convertToReal?: boolean;
 }
 
-async function convertImageToRealistic(imageDataUrl: string, options: SwapStyleOptions): Promise<string> {
+async function convertImageToRealistic(imageDataUrl: string, options: SwapStyleOptions, toolKey?: string): Promise<string> {
     const { mimeType, data: base64Data } = parseDataUrl(imageDataUrl);
     const imagePart = { inlineData: { mimeType, data: base64Data } };
 
@@ -25,7 +25,7 @@ async function convertImageToRealistic(imageDataUrl: string, options: SwapStyleO
         'Nhiệm vụ của bạn là chuyển đổi hình ảnh được cung cấp thành một bức ảnh SIÊU THỰC (hyper-realistic), chi tiết và sống động như thật. Kết quả cuối cùng phải không thể phân biệt được với một bức ảnh được chụp bằng máy ảnh DSLR cao cấp.',
         '**YÊU CẦU BẮT BUỘC:**'
     ];
-    
+
     // NOTE: styleStrength is used as faithfulness here
     const faithfulnessMapping: { [key: string]: string } = {
         'Rất yếu': '1. **Mức độ giữ nét (Rất Yếu):** Bạn có quyền tự do sáng tạo cao nhất. Chỉ cần giữ lại chủ đề chính, bạn có thể thay đổi đáng kể bố cục, góc nhìn và các chi tiết.',
@@ -45,22 +45,27 @@ async function convertImageToRealistic(imageDataUrl: string, options: SwapStyleO
         '2. **Thay đổi phong cách:** Biến đổi hoàn toàn phong cách nghệ thuật (ví dụ: vẽ tay, hoạt hình, 3D) thành một bức ảnh trông như được chụp bằng máy ảnh kỹ thuật số hiện đại.',
         '3. **Chân thực đến kinh ngạc:** Hãy đặc biệt chú ý đến ánh sáng tự nhiên, bóng đổ phức tạp, kết cấu vật liệu chi tiết (da, vải, kim loại, gỗ), và các chi tiết nhỏ nhất để tạo ra một kết quả chân thực.'
     );
-    
+
     if (options.notes) {
         promptParts.push(`- **Ghi chú từ người dùng:** "${options.notes}".`);
     }
-    
+
     if (options.removeWatermark) {
         promptParts.push('- **Yêu cầu đặc biệt:** Không được có bất kỳ watermark, logo, hay chữ ký nào trên ảnh kết quả.');
     }
-    
+
     promptParts.push('Chỉ trả về hình ảnh đã được chuyển đổi, không kèm theo văn bản giải thích.');
 
     const prompt = promptParts.join('\n');
     const textPart = { text: prompt };
 
+    const config: any = {};
+    if (toolKey) {
+        config.tool_key = toolKey;
+    }
+
     try {
-        const response = await callGeminiWithRetry([imagePart, textPart]);
+        const response = await callGeminiWithRetry([imagePart, textPart], config);
         return processGeminiResponse(response);
     } catch (error) {
         const processedError = processApiError(error);
@@ -69,10 +74,10 @@ async function convertImageToRealistic(imageDataUrl: string, options: SwapStyleO
     }
 }
 
-export async function swapImageStyle(imageDataUrl: string, options: SwapStyleOptions): Promise<string> {
-    
+export async function swapImageStyle(imageDataUrl: string, options: SwapStyleOptions, toolKey?: string): Promise<string> {
+
     if (options.convertToReal) {
-        return convertImageToRealistic(imageDataUrl, options);
+        return convertImageToRealistic(imageDataUrl, options, toolKey);
     }
 
     const { mimeType, data: base64Data } = parseDataUrl(imageDataUrl);
@@ -82,7 +87,7 @@ export async function swapImageStyle(imageDataUrl: string, options: SwapStyleOpt
         'Nhiệm vụ của bạn là một nghệ sĩ bậc thầy, biến đổi hình ảnh được cung cấp theo một phong cách nghệ thuật cụ thể.',
         '**YÊU CẦU BẮT BUỘC:**'
     ];
-    
+
     if (options.style && options.style.trim() !== '' && options.style.trim().toLowerCase() !== 'tự động') {
         promptParts.push(`1. **Áp dụng phong cách:** Chuyển đổi hoàn toàn hình ảnh gốc sang phong cách nghệ thuật **"${options.style}"**.`);
     } else {
@@ -96,29 +101,34 @@ export async function swapImageStyle(imageDataUrl: string, options: SwapStyleOpt
         'Mạnh': '2. **Mức độ ảnh hưởng Style (Mạnh):** Có thể thay đổi một vài chi tiết phụ và kết cấu, nhưng phải giữ lại chủ thể và bố cục chính của ảnh gốc để phù hợp hơn với style mới.',
         'Rất mạnh': '2. **Mức độ ảnh hưởng Style (Rất Mạnh):** Tự do sáng tạo cao nhất. Chỉ cần giữ lại chủ đề chính, bạn có thể thay đổi đáng kể bố cục, góc nhìn và các chi tiết để phù hợp nhất với phong cách đã chọn.',
     };
-    
+
     promptParts.push(strengthMapping[options.styleStrength]);
 
     promptParts.push(
         '3. **Kết quả chất lượng cao:** Bức ảnh cuối cùng phải là một tác phẩm nghệ thuật hoàn chỉnh, chất lượng cao, thể hiện rõ nét đặc trưng của phong cách đã chọn.'
     );
-    
+
     if (options.notes) {
         promptParts.push(`- **Ghi chú từ người dùng:** "${options.notes}".`);
     }
-    
+
     if (options.removeWatermark) {
         promptParts.push('- **Yêu cầu đặc biệt:** Không được có bất kỳ watermark, logo, hay chữ ký nào trên ảnh kết quả.');
     }
-    
+
     promptParts.push('Chỉ trả về hình ảnh đã được chuyển đổi, không kèm theo văn bản giải thích.');
 
     const prompt = promptParts.join('\n');
     const textPart = { text: prompt };
 
+    const config: any = {};
+    if (toolKey) {
+        config.tool_key = toolKey;
+    }
+
     try {
         console.log("Attempting to swap image style...");
-        const response = await callGeminiWithRetry([imagePart, textPart]);
+        const response = await callGeminiWithRetry([imagePart, textPart], config);
         return processGeminiResponse(response);
     } catch (error) {
         const processedError = processApiError(error);

@@ -342,7 +342,8 @@ const KhmerPhotoMerge: React.FC<KhmerPhotoMergeProps> = (props) => {
                 appState.options.customPrompt,
                 appState.options.removeWatermark,
                 appState.options.aspectRatio,
-                secondImage
+                secondImage,
+                'khmer-photo-merge'
             );
             console.log("Generation successful, resultUrl length:", resultUrl?.length);
 
@@ -356,7 +357,7 @@ const KhmerPhotoMerge: React.FC<KhmerPhotoMergeProps> = (props) => {
             logGeneration('khmer-photo-merge', preGenState, urlWithMetadata, {
                 generation_count: 1,
                 credits_used: creditCost,
-                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
             });
 
 

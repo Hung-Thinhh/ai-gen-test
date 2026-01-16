@@ -27,12 +27,12 @@ export const OutOfCreditsModal: React.FC = () => {
                         </svg>
                     </div>
                     <h2 className="text-xl md:text-2xl font-bold text-white mb-2">
-                        {language === 'vi' ? 'Hết lượt tạo ảnh' : 'Out of Credits'}
+                        {language === 'vi' ? 'Không đủ Credit' : 'Insufficient Credits'}
                     </h2>
                     <p className="text-neutral-400 text-sm md:text-base leading-relaxed">
                         {language === 'vi'
-                            ? 'Bạn đã sử dụng hết số credit miễn phí. Nâng cấp tài khoản ngay để thoả sức sáng tạo không giới hạn!'
-                            : 'You have used all your free credits. Upgrade now to unlock unlimited creativity!'}
+                            ? 'Số lượng credit không đủ để tạo thêm ảnh, hãy giảm số lượng ảnh hoặc mua thêm gói.'
+                            : 'Not enough credits to generate more images. Please reduce the number of images or purchase more credits.'}
                     </p>
                 </div>
 

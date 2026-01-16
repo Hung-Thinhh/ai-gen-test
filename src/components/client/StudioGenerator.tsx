@@ -216,10 +216,14 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
         let errorCount = 0;
 
         // Generate images in parallel
-        const generateSingle = async (styleUrl: string): Promise<string | null> => {
+        const generateSingle = async (styleUrl: string): Promise<{ url: string; prompt: string } | null> => {
             try {
                 const selectedTemplate = TEMPLATES.find((t: any) => t.image_url === styleUrl || t.url === styleUrl);
                 const templatePrompt = selectedTemplate ? (selectedTemplate.prompt || selectedTemplate.content) : "Portrait style";
+
+                // Reconstruct the full prompt just for logging purposes (approximation of service logic)
+                // This ensures the user sees what was actually sent (Scene + Style + Custom)
+                const fullPrompt = `Style: "${studio.name}"\nScene: "${templatePrompt}"\nRequirements: Photorealistic.${appState.options.customPrompt ? ' ' + appState.options.customPrompt : ''}`;
 
                 const resultUrl = await generateStudioImage(
                     appState.uploadedImage!,
@@ -228,14 +232,16 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                     appState.options.customPrompt,
                     appState.options.removeWatermark,
                     appState.options.aspectRatio,
-                    undefined
+                    undefined,
+                    'studio-generator'
                 );
 
                 const settingsToEmbed = {
                     viewId: 'studio-generator',
                     state: { ...preGenState, stage: 'configuring', generatedImage: null, error: null },
                 };
-                return await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
+                const finalUrl = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
+                return { url: finalUrl, prompt: fullPrompt };
             } catch (err) {
                 console.error("Generation failed for style:", styleUrl, err);
                 errorCount++;
@@ -245,14 +251,20 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
 
         const promises = selectedStyleImages.map(styleUrl => generateSingle(styleUrl));
         const allResults = await Promise.all(promises);
-        const successfulImages = allResults.filter((r): r is string => r !== null);
+        const successfulResults = allResults.filter((r): r is { url: string; prompt: string } => r !== null);
+        const successfulImages = successfulResults.map(r => r.url); // Extract URLs for display
 
-        if (successfulImages.length > 0) {
+        if (successfulResults.length > 0) {
             setGeneratedImages(successfulImages);
+            // Use the prompt from the first successful generation
+            const loggedPrompt = successfulResults[0].prompt;
+
+            console.log('[StudioGenerator] Logging generation with prompt:', loggedPrompt);
             logGeneration(studio.id, preGenState, successfulImages[0], {
                 generation_count: successfulImages.length,
                 credits_used: creditCostPerImage * successfulImages.length,
-                api_model_used: modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image'
+                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
+                input_prompt: loggedPrompt
             });
         }
 
