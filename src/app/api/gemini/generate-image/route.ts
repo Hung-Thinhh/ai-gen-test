@@ -171,7 +171,9 @@ export async function POST(req: NextRequest) {
 
         // Retry loop: Try up to 3 times (to handle occasional API timeouts)
         // But log each attempt to understand why retry is needed
-        const maxAttempts = 3;
+        // Retry loop: Try up to 2 times as requested
+        // But log each attempt to understand why retry is needed
+        const maxAttempts = 2;
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
                 if (attempt > 1) {
@@ -236,26 +238,31 @@ export async function POST(req: NextRequest) {
 
                 perfLog(`AI generation completed (Attempt ${attempt})`);
 
-                const firstCandidate = response.candidates?.[0];
-                const firstPart = firstCandidate?.content?.parts?.[0];
-                finishReason = firstCandidate?.finishReason || 'UNKNOWN';
+                // Find ANY valid candidate with image data
+                // If asking for 2 images and 1 fails but 1 succeeds, we should take the successful one.
+                const validCandidate = response.candidates?.find((c: any) => c.content?.parts?.[0]?.inlineData);
+                const validPart = validCandidate?.content?.parts?.[0];
 
-                if (firstPart && firstPart.inlineData) {
+                finishReason = response.candidates?.[0]?.finishReason || 'UNKNOWN';
+
+                if (validPart && validPart.inlineData) {
                     console.log(`[API DEBUG] ✅ Attempt ${attempt} successful! Image generated.`);
-                    const base64Image = `data:${firstPart.inlineData.mimeType};base64,${firstPart.inlineData.data}`;
+                    const base64Image = `data:${validPart.inlineData.mimeType};base64,${validPart.inlineData.data}`;
                     imageUrl = await uploadToR2(base64Image);
                     perfLog('R2 upload completed');
                     console.log('[API DEBUG] Image uploaded to R2:', imageUrl);
                     break; // Success!
                 } else {
                     // Attempt failed - log why
-                    console.warn(`[API DEBUG] ❌ Attempt ${attempt} failed: No inlineData (finish reason: ${finishReason})`);
+                    console.warn(`[API DEBUG] ❌ Attempt ${attempt} failed: No valid image data found in candidates. Finish reason: ${finishReason}`);
+
+                    const firstPart = response.candidates?.[0]?.content?.parts?.[0];
                     if (firstPart?.text) {
                         const responseText = firstPart.text.substring(0, 200);
                         console.warn(`[API DEBUG] Model returned TEXT instead of IMAGE: "${responseText}..."`);
                     }
-                    if (firstCandidate?.safetyRatings && Array.isArray(firstCandidate.safetyRatings) && firstCandidate.safetyRatings.length > 0) {
-                        console.warn('[API DEBUG] Safety ratings:', firstCandidate.safetyRatings);
+                    if (response.candidates?.[0]?.safetyRatings && Array.isArray(response.candidates[0].safetyRatings) && response.candidates[0].safetyRatings.length > 0) {
+                        console.warn('[API DEBUG] Safety ratings:', response.candidates[0].safetyRatings);
                     }
 
                     // If this was last attempt, throw error
@@ -284,9 +291,9 @@ export async function POST(req: NextRequest) {
         if (!imageUrl) {
             console.warn('[API] No image URL generated after retries, skipping DB update and history log.');
             return NextResponse.json({
-                error: 'hiện AI quá tải kh thể tạo ảnh vui lòng truy cập lại sau',
+                error: 'Không thể tạo ảnh với nội dung này. Có thể do mô tả vi phạm chính sách hoặc quá phức tạp.',
                 details: finishReason
-            }, { status: 503 }); // 503 Service Unavailable
+            }, { status: 400 }); // Return 400 Bad Request instead of 503 for content issues
         }
 
 

@@ -207,7 +207,7 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
     devLog('[BASESERVICE] Parts count:', parts.length);
     devLog('[BASESERVICE] Config:', config);
 
-    const maxRetries = 3;
+    const maxRetries = 1; // Server already retries internally, so client attempts should be 1 to avoid multiplication
     const initialDelay = 1000;
     let lastError: Error | null = null;
     const currentVersion = globalConfig.modelVersion;

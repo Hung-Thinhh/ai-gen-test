@@ -2,6 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
+import { toast } from 'react-hot-toast';
 import React, { ChangeEvent, useCallback, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { generateStudioImage } from '../../services/geminiService';
@@ -216,7 +217,7 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
         let errorCount = 0;
 
         // Generate images in parallel
-        const generateSingle = async (styleUrl: string): Promise<{ url: string; prompt: string } | null> => {
+        const generateSingle = async (styleUrl: string): Promise<{ url: string; prompt: string; error?: string } | null> => {
             try {
                 const selectedTemplate = TEMPLATES.find((t: any) => t.image_url === styleUrl || t.url === styleUrl);
                 const templatePrompt = selectedTemplate ? (selectedTemplate.prompt || selectedTemplate.content) : "Portrait style";
@@ -244,14 +245,23 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                 return { url: finalUrl, prompt: fullPrompt };
             } catch (err) {
                 console.error("Generation failed for style:", styleUrl, err);
+                const errorMessage = err instanceof Error ? err.message : String(err);
+
+                // Show toast for immediate feedback
+                toast.error(`Lỗi: ${errorMessage}`, {
+                    duration: 5000
+                });
+
                 errorCount++;
-                return null;
+                return { url: '', prompt: '', error: errorMessage };
             }
         };
 
         const promises = selectedStyleImages.map(styleUrl => generateSingle(styleUrl));
         const allResults = await Promise.all(promises);
-        const successfulResults = allResults.filter((r): r is { url: string; prompt: string } => r !== null);
+
+        // Filter successes (check for url presence and no error)
+        const successfulResults = allResults.filter((r): r is { url: string; prompt: string; error?: string } => r !== null && !!r.url && !r.error);
         const successfulImages = successfulResults.map(r => r.url); // Extract URLs for display
 
         if (successfulResults.length > 0) {
@@ -269,10 +279,29 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
         }
 
         setPendingCount(0);
+
+        // Determine final error state
+        let finalError = null;
+        if (successfulImages.length === 0 && imageCount > 0) {
+            // All failed
+            const firstErrorResult = allResults.find(r => r && r.error);
+            const firstError = firstErrorResult?.error || "Lỗi không xác định";
+
+            let userFriendlyError = firstError;
+            if (firstError.includes('hết Credit') || firstError.includes('Insufficient credits')) userFriendlyError = "Bạn đã hết Credit. Vui lòng nạp thêm.";
+            else if (firstError.includes('safety') || firstError.includes('block')) userFriendlyError = "Nội dung bị chặn bảo mật (NSFW/Safety). Thử ảnh khác.";
+            else if (firstError.includes('400')) userFriendlyError = "Không thể tạo ảnh với yêu cầu này (Lỗi 400).";
+
+            finalError = `Tất cả ảnh thất bại: ${userFriendlyError}`;
+        } else if (errorCount > 0) {
+            // Partial failure
+            finalError = `Đã tạo ${successfulImages.length}/${imageCount} ảnh. ${errorCount} ảnh thất bại.`;
+        }
+
         setAppState(prev => ({
             ...prev,
             stage: 'results',
-            error: errorCount > 0 ? `Đã tạo ${successfulImages.length}/${imageCount} ảnh` : null
+            error: finalError
         }));
     };
 

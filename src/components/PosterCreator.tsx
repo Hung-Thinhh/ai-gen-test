@@ -1018,7 +1018,6 @@ ${aspectRatioPrompt}
                     let imageUrlForDisplay = '';
 
                     // Upload / Process Result
-                    // Upload / Process Result
                     try {
                         // Use context method to ensure sync with Global Gallery State + DB + Cloudinary
                         // This handles both User and Guest flows internally
@@ -1053,11 +1052,13 @@ ${aspectRatioPrompt}
 
                     // UPDATE STATE IMMEDIATELY upon completion of THIS image
                     setDisplayImages(prev => [...prev, imageUrlForDisplay]);
+                    return { success: true };
 
                 } catch (err) {
                     console.error(`❌ [PosterCreator] Error generating image ${index + 1}:`, err);
+                    const errorMessage = err instanceof Error ? err.message : String(err);
                     console.error('[PosterCreator] Error details:', {
-                        message: err instanceof Error ? err.message : String(err),
+                        message: errorMessage,
                         stack: err instanceof Error ? err.stack : undefined,
                         imageCount: imagesToUse.length,
                         promptLength: prompt.length,
@@ -1065,9 +1066,11 @@ ${aspectRatioPrompt}
                     });
 
                     // Show error to user
-                    toast.error(`Lỗi khi tạo ảnh ${index + 1}: ${err instanceof Error ? err.message : 'Unknown error'}`, {
+                    toast.error(`Lỗi khi tạo ảnh ${index + 1}: ${errorMessage}`, {
                         duration: 5000
                     });
+
+                    return { success: false, error: errorMessage };
                 } finally {
                     // Decrement pending count regardless of success/failure
                     setPendingImageSlots(prev => Math.max(0, prev - 1));
@@ -1075,8 +1078,28 @@ ${aspectRatioPrompt}
             });
 
             // Await all to ensure function doesn't exit early (though state updates happen generally)
-            await Promise.all(generationPromises);
+            const results = await Promise.all(generationPromises);
             console.log("All parallel generations completed.");
+
+            // Check if all failed
+            const allFailed = results.every(r => !r.success);
+            if (allFailed && imageCount > 0) {
+                const firstError = results.find(r => !r.success)?.error || "Unknown error";
+                let userFriendlyError = firstError;
+
+                // Map common errors to friendly messages
+                if (firstError.includes('hết Credit')) userFriendlyError = "Bạn đã hết Credit. Vui lòng nạp thêm.";
+                if (firstError.includes('safety') || firstError.includes('block')) userFriendlyError = "Nội dung bị hệ thống chặn vì an toàn. Vui lòng thử mô tả khác.";
+                if (firstError.includes('400')) userFriendlyError = "Không thể tạo ảnh với yêu cầu này. Vui lòng thử lại.";
+
+                onStateChange({
+                    ...appState,
+                    stage: 'configuring', // Go back to configuring so user can change settings
+                    error: `Tạo ảnh thất bại: ${userFriendlyError}`
+                });
+                // Force show options so user can edit
+                setShowOptions(true);
+            }
 
             // Reset generating flag
             setIsGenerating(false);
