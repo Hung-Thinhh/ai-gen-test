@@ -295,11 +295,10 @@ export interface ToyModelCreatorState {
 }
 
 export interface ImageInterpolationState {
-    stage: 'idle' | 'prompting' | 'configuring' | 'generating' | 'results';
-    analysisMode: 'general' | 'deep' | 'expert';
-    inputImage: string | null;
-    outputImage: string | null;
-    referenceImage: string | null;
+    stage: 'idle' | 'analyzing' | 'prompt-ready' | 'configuring' | 'generating' | 'results';
+    analysisMode: 'quick' | 'expert' | null;
+    sourceImage: string | null;  // Ảnh để phân tích
+    referenceImage: string | null;  // Ảnh để generate (hiện sau khi có prompt)
     generatedPrompt: string;
     promptSuggestions: string;
     additionalNotes: string;
@@ -726,7 +725,20 @@ export const getInitialStateForApp = (viewId: string): AnyAppState => {
                 error: null
             };
         case 'image-interpolation':
-            return { stage: 'idle', analysisMode: 'general', inputImage: null, outputImage: null, referenceImage: null, generatedPrompt: '', promptSuggestions: '', additionalNotes: '', finalPrompt: null, generatedImage: null, historicalImages: [], options: { removeWatermark: false, aspectRatio: 'Giữ nguyên' }, error: null };
+            return {
+                stage: 'idle',
+                analysisMode: null,
+                sourceImage: null,
+                referenceImage: null,
+                generatedPrompt: '',
+                promptSuggestions: '',
+                additionalNotes: '',
+                finalPrompt: null,
+                generatedImage: null,
+                historicalImages: [],
+                options: { removeWatermark: false, aspectRatio: 'Giữ nguyên' },
+                error: null
+            };
         case 'face-swap':
             return { stage: 'configuring', sourceImage: null, targetFaceImage: null, resultImage: null, options: { additionalInstructions: '' }, error: null };
         case 'inpainter':

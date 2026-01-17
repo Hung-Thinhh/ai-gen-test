@@ -4,7 +4,7 @@
 */
 import React, { useEffect, ChangeEvent, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { analyzeImagePairForPrompt, analyzeImagePairForPromptDeep, analyzeImagePairForPromptExpert, editImageWithPrompt, interpolatePrompts, adaptPromptToContext } from '../services/geminiService';
+import { analyzeImagePairForPrompt, analyzeImagePairForPromptExpert, editImageWithPrompt, interpolatePrompts, adaptPromptToContext } from '../services/geminiService';
 import ActionablePolaroidCard from './ActionablePolaroidCard';
 import Lightbox from './Lightbox';
 import {
@@ -62,7 +62,7 @@ const ImageInterpolation: React.FC<ImageInterpolationProps> = (props) => {
     const { videoTasks, generateVideo } = useVideoGeneration();
     const [localGeneratedPrompt, setLocalGeneratedPrompt] = useState(appState.generatedPrompt);
     const [localAdditionalNotes, setLocalAdditionalNotes] = useState(appState.additionalNotes);
-    const lightboxImages = [appState.inputImage, appState.outputImage, appState.referenceImage, ...appState.historicalImages.map(h => h.url)].filter((img): img is string => !!img);
+    const lightboxImages = [appState.sourceImage, appState.referenceImage, ...appState.historicalImages.map(h => h.url)].filter((img): img is string => !!img);
 
     const appStateRef = useRef(appState);
     useEffect(() => {
@@ -77,41 +77,26 @@ const ImageInterpolation: React.FC<ImageInterpolationProps> = (props) => {
         setLocalAdditionalNotes(appState.additionalNotes);
     }, [appState.additionalNotes]);
 
-    const handleInputImageChange = (url: string | null) => {
+    const handleSourceImageChange = (url: string | null) => {
         if (!url) return;
         const currentAppState = appStateRef.current;
-        const wasConfiguring = currentAppState.stage === 'configuring' || currentAppState.stage === 'prompting';
         onStateChange({
             ...currentAppState,
-            inputImage: url,
+            sourceImage: url,
             generatedPrompt: '',
             promptSuggestions: '',
+            analysisMode: null,
             finalPrompt: null,
             generatedImage: null,
+            referenceImage: null,
             historicalImages: [],
-            error: wasConfiguring ? t('imageInterpolation_inputChangedError') : null,
-            stage: wasConfiguring ? 'configuring' : 'idle',
+            error: null,
+            stage: 'idle',
         });
         addImagesToGallery([url]);
     };
 
-    const handleOutputImageChange = (url: string | null) => {
-        if (!url) return;
-        const currentAppState = appStateRef.current;
-        const wasConfiguring = currentAppState.stage === 'configuring' || currentAppState.stage === 'prompting';
-        onStateChange({
-            ...currentAppState,
-            outputImage: url,
-            generatedPrompt: '',
-            promptSuggestions: '',
-            finalPrompt: null,
-            generatedImage: null,
-            historicalImages: [],
-            error: wasConfiguring ? t('imageInterpolation_outputChangedError') : null,
-            stage: wasConfiguring ? 'configuring' : 'idle',
-        });
-        addImagesToGallery([url]);
-    };
+    // Removed handleOutputImageChange - no longer needed
 
     const handleReferenceImageChange = (url: string | null) => {
         if (!url) return;
@@ -133,32 +118,30 @@ const ImageInterpolation: React.FC<ImageInterpolationProps> = (props) => {
         });
     };
 
-    const handleAnalyzeClick = async (mode: 'general' | 'deep' | 'expert') => {
-        if (!appState.inputImage || !appState.outputImage) return;
+    const handleAnalyzeClick = async (mode: 'quick' | 'expert') => {
+        if (!appState.sourceImage) return;
 
-        onStateChange({ ...appStateRef.current, stage: 'prompting', error: null, analysisMode: mode });
+        onStateChange({ ...appStateRef.current, stage: 'analyzing', error: null, analysisMode: mode });
         try {
             let result;
-            switch (mode) {
-                case 'expert':
-                    result = await analyzeImagePairForPromptExpert(appState.inputImage, appState.outputImage);
-                    break;
-                case 'deep':
-                    result = await analyzeImagePairForPromptDeep(appState.inputImage, appState.outputImage);
-                    break;
-                default:
-                    result = await analyzeImagePairForPrompt(appState.inputImage, appState.outputImage);
-                    break;
+            if (mode === 'expert') {
+                result = await analyzeImagePairForPromptExpert(appState.sourceImage);
+            } else {
+                result = await analyzeImagePairForPrompt(appState.sourceImage);
             }
-            onStateChange({ ...appStateRef.current, stage: 'configuring', generatedPrompt: result.mainPrompt, promptSuggestions: result.suggestions || '' });
+            onStateChange({ ...appStateRef.current, stage: 'prompt-ready', generatedPrompt: result.mainPrompt, promptSuggestions: result.suggestions || '' });
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
             onStateChange({ ...appStateRef.current, stage: 'idle', generatedPrompt: '', promptSuggestions: '', error: t('imageInterpolation_analysisError', errorMessage) });
         }
     };
 
+    const handleProceedToGeneration = () => {
+        onStateChange({ ...appStateRef.current, stage: 'configuring' });
+    };
+
     const handleGenerate = async () => {
-        const referenceImageToUse = appState.referenceImage || appState.inputImage;
+        const referenceImageToUse = appState.referenceImage || appState.sourceImage;
         if (!referenceImageToUse || !appState.generatedPrompt) return;
 
         // Check credits FIRST
@@ -283,30 +266,35 @@ const ImageInterpolation: React.FC<ImageInterpolationProps> = (props) => {
 
     const handleDownloadAll = () => {
         const inputImages: ImageForZip[] = [];
-        if (appState.inputImage) inputImages.push({ url: appState.inputImage, filename: 'anh-truoc', folder: 'input' });
-        if (appState.outputImage) inputImages.push({ url: appState.outputImage, filename: 'anh-sau', folder: 'input' });
+        if (appState.sourceImage) inputImages.push({ url: appState.sourceImage, filename: 'anh-goc', folder: 'input' });
         if (appState.referenceImage) inputImages.push({ url: appState.referenceImage, filename: 'anh-tham-chieu', folder: 'input' });
 
         processAndDownloadAll({
             inputImages,
             historicalImages: appState.historicalImages,
             videoTasks,
-            zipFilename: 'ket-qua-noi-suy-anh.zip',
-            baseOutputFilename: 'ket-qua-noi-suy',
+            zipFilename: 'ket-qua-trich-xuat-prompt.zip',
+            baseOutputFilename: 'ket-qua',
         });
     };
 
-    const isLoading = appState.stage === 'prompting' || appState.stage === 'generating';
+    const isLoading = appState.stage === 'analyzing' || appState.stage === 'generating';
     const getAnalyzingText = () => {
-        if (appState.stage !== 'prompting') return '';
-        switch (appState.analysisMode) {
-            case 'expert': return t('imageInterpolation_analyzingExpert');
-            case 'deep': return t('imageInterpolation_analyzingDeep');
-            default: return t('imageInterpolation_analyzingGeneral');
-        }
+        if (appState.stage !== 'analyzing') return '';
+        return appState.analysisMode === 'expert'
+            ? t('imageInterpolation_analyzingExpert')
+            : t('imageInterpolation_analyzingGeneral');
     };
 
-    const referenceImageToShow = appState.referenceImage || appState.inputImage;
+    const referenceImageToShow = appState.referenceImage || appState.sourceImage;
+
+    const isAnalyzing = appState.stage === 'analyzing';
+    const isConfiguringOrGenerating = appState.stage === 'configuring' || appState.stage === 'generating' || appState.stage === 'results';
+    const showPromptDisplay = appState.stage === 'analyzing' || appState.stage === 'prompt-ready' || isConfiguringOrGenerating;
+    const showGenerator = isConfiguringOrGenerating;
+
+    // Explicitly cast stage for TS checks in render to avoid overlap errors
+    const currentStage = appState.stage as string;
 
     return (
         <div className="flex flex-col items-center justify-center w-full h-full flex-1 min-h-screen">
@@ -316,38 +304,28 @@ const ImageInterpolation: React.FC<ImageInterpolationProps> = (props) => {
                 )}
             </AnimatePresence>
 
-            {(appState.stage === 'idle' || appState.stage === 'configuring' || appState.stage === 'prompting') && (
+            {(appState.stage === 'idle' || showPromptDisplay) && (
                 <motion.div className="flex flex-col items-center gap-6 w-full max-w-screen-2xl py-6 overflow-y-auto" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
                     <div className="w-full pb-4 max-w-4xl">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 w-full max-w-7xl mx-auto px-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-7xl mx-auto px-4">
+                            {/* Source Image Upload */}
                             <div className="flex flex-col items-center gap-2">
                                 <ActionablePolaroidCard
-                                    type={appState.inputImage ? 'content-input' : 'uploader'}
+                                    type={appState.sourceImage ? 'content-input' : 'uploader'}
                                     caption={uploaderCaptionInput}
                                     status="done"
-                                    mediaUrl={appState.inputImage || undefined}
+                                    mediaUrl={appState.sourceImage || undefined}
                                     placeholderType="magic"
-                                    onImageChange={handleInputImageChange}
+                                    onImageChange={handleSourceImageChange}
                                 />
                                 <p className="base-font font-bold text-neutral-300 text-center max-w-xs text-xs sm:text-sm">
                                     {uploaderDescriptionInput}
                                 </p>
                             </div>
-                            <div className="flex flex-col items-center gap-2">
-                                <ActionablePolaroidCard
-                                    type={appState.outputImage ? 'content-input' : 'uploader'}
-                                    caption={uploaderCaptionOutput}
-                                    status="done"
-                                    mediaUrl={appState.outputImage || undefined}
-                                    placeholderType="magic"
-                                    onImageChange={handleOutputImageChange}
-                                />
-                                <p className="base-font font-bold text-neutral-300 text-center max-w-xs text-xs sm:text-sm">
-                                    {uploaderDescriptionOutput}
-                                </p>
-                            </div>
+
+                            {/* Reference Image Upload - Show after prompt ready */}
                             <AnimatePresence>
-                                {(appState.stage === 'configuring' || appState.stage === 'prompting') && (
+                                {appState.stage === 'configuring' && (
                                     <motion.div
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
@@ -371,23 +349,35 @@ const ImageInterpolation: React.FC<ImageInterpolationProps> = (props) => {
                         </div>
                     </div>
 
-                    <div className="flex flex-col items-center mt-4 mx-4">
-                        <div className="flex items-center gap-4">
-                            <button onClick={() => handleAnalyzeClick('general')} className="btn btn-secondary" disabled={!appState.inputImage || !appState.outputImage || appState.stage === 'prompting'}>
-                                {appState.stage === 'prompting' && appState.analysisMode === 'general' ? getAnalyzingText() : t('imageInterpolation_analyzeGeneral')}
-                            </button>
-                            <button onClick={() => handleAnalyzeClick('deep')} className="btn btn-secondary" disabled={!appState.inputImage || !appState.outputImage || appState.stage === 'prompting'}>
-                                {appState.stage === 'prompting' && appState.analysisMode === 'deep' ? getAnalyzingText() : t('imageInterpolation_analyzeDeep')}
-                            </button>
-                            <button onClick={() => handleAnalyzeClick('expert')} className="btn btn-secondary" disabled={!appState.inputImage || !appState.outputImage || appState.stage === 'prompting'}>
-                                {appState.stage === 'prompting' && appState.analysisMode === 'expert' ? getAnalyzingText() : t('imageInterpolation_analyzeExpert')}
-                            </button>
+                    {/* Analysis Buttons - Only show when image uploaded and not analyzing */}
+                    {appState.sourceImage && (appState.stage === 'idle' || appState.stage === 'analyzing') && (
+                        <div className="flex flex-col items-center mt-4 mx-4">
+                            <div className="flex items-center gap-4">
+                                <button
+                                    onClick={() => handleAnalyzeClick('quick')}
+                                    className="btn btn-secondary"
+                                    disabled={appState.stage === 'analyzing'}
+                                >
+                                    {appState.stage === 'analyzing' && appState.analysisMode === 'quick'
+                                        ? getAnalyzingText()
+                                        : '⚡ Phân tích nhanh'}
+                                </button>
+                                <button
+                                    onClick={() => handleAnalyzeClick('expert')}
+                                    className="btn btn-secondary"
+                                    disabled={appState.stage === 'analyzing'}
+                                >
+                                    {appState.stage === 'analyzing' && appState.analysisMode === 'expert'
+                                        ? getAnalyzingText()
+                                        : '🎯 Phân tích chuyên sâu'}
+                                </button>
+                            </div>
+                            {appState.error && <p className="text-yellow-300 text-sm mt-2 max-w-md text-center">{appState.error}</p>}
                         </div>
-                        {appState.error && <p className="text-yellow-300 text-sm mt-2 max-w-md text-center">{appState.error}</p>}
-                    </div>
+                    )}
 
                     <AnimatePresence>
-                        {(appState.stage === 'configuring' || appState.stage === 'prompting') && (
+                        {showPromptDisplay && (
                             <motion.div
                                 className="w-full flex justify-center mt-4"
                                 initial={{ opacity: 0, y: 20 }}
@@ -397,7 +387,7 @@ const ImageInterpolation: React.FC<ImageInterpolationProps> = (props) => {
                                 <OptionsPanel className="max-w-4xl flex flex-col gap-8">
                                     <div className="space-y-4">
                                         <h2 className="base-font font-bold text-2xl text-yellow-400 border-b border-yellow-400/20 pb-2">{t('imageInterpolation_generatedPromptTitle')}</h2>
-                                        {appState.stage === 'prompting' ? (
+                                        {appState.stage === 'analyzing' ? (
                                             <div className="flex items-center justify-center h-48"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400"></div></div>
                                         ) : (
                                             <>
@@ -416,6 +406,19 @@ const ImageInterpolation: React.FC<ImageInterpolationProps> = (props) => {
                                                         rows={4}
                                                     />
                                                 </div>
+
+                                                {/* Button to proceed to generation */}
+                                                {appState.stage === 'prompt-ready' && (
+                                                    <div className="flex justify-center mt-4">
+                                                        <button
+                                                            onClick={handleProceedToGeneration}
+                                                            className="btn btn-primary"
+                                                        >
+                                                            ✨ Tạo ảnh từ prompt này
+                                                        </button>
+                                                    </div>
+                                                )}
+
                                                 {appState.promptSuggestions && (
                                                     <div>
                                                         <h4 className="base-font font-bold text-lg text-neutral-200 mb-2">{t('imageInterpolation_suggestionsTitle')}</h4>
@@ -440,41 +443,45 @@ const ImageInterpolation: React.FC<ImageInterpolationProps> = (props) => {
                                             </>
                                         )}
                                     </div>
-                                    <div className="space-y-4">
-                                        <h2 className="base-font font-bold text-2xl text-yellow-400 border-b border-yellow-400/20 pb-2">{t('imageInterpolation_customizeTitle')}</h2>
-                                        <div>
-                                            <label htmlFor="additional-notes" className="block text-left base-font font-bold text-lg text-neutral-200 mb-2">{t('imageInterpolation_notesLabel')}</label>
-                                            <textarea
-                                                id="additional-notes"
-                                                value={localAdditionalNotes}
-                                                onChange={(e) => setLocalAdditionalNotes(e.target.value)}
-                                                onBlur={() => {
-                                                    if (localAdditionalNotes !== appState.additionalNotes) {
-                                                        onStateChange({ ...appState, additionalNotes: localAdditionalNotes });
-                                                    }
-                                                }}
-                                                placeholder={t('imageInterpolation_notesPlaceholder')}
-                                                className="form-input h-20"
-                                                rows={2}
-                                            />
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+
+                                    {/* Generator Section - Only show when configuring or generating/results */}
+                                    {showGenerator && (
+                                        <div className="space-y-4 border-t border-neutral-700/50 pt-8">
+                                            <h2 className="base-font font-bold text-2xl text-yellow-400 border-b border-yellow-400/20 pb-2">{t('imageInterpolation_customizeTitle')}</h2>
                                             <div>
-                                                <label htmlFor="aspect-ratio-interp" className="block text-left base-font font-bold text-lg text-neutral-200 mb-2">{t('common_aspectRatio')}</label>
-                                                <select id="aspect-ratio-interp" value={appState.options.aspectRatio} onChange={(e) => handleOptionChange('aspectRatio', e.target.value)} className="form-input">
-                                                    {ASPECT_RATIO_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                                </select>
+                                                <label htmlFor="additional-notes" className="block text-left base-font font-bold text-lg text-neutral-200 mb-2">{t('imageInterpolation_notesLabel')}</label>
+                                                <textarea
+                                                    id="additional-notes"
+                                                    value={localAdditionalNotes}
+                                                    onChange={(e) => setLocalAdditionalNotes(e.target.value)}
+                                                    onBlur={() => {
+                                                        if (localAdditionalNotes !== appState.additionalNotes) {
+                                                            onStateChange({ ...appState, additionalNotes: localAdditionalNotes });
+                                                        }
+                                                    }}
+                                                    placeholder={t('imageInterpolation_notesPlaceholder')}
+                                                    className="form-input h-20"
+                                                    rows={2}
+                                                />
                                             </div>
-                                            <div className="flex items-center pb-3">
-                                                <input type="checkbox" id="remove-watermark-interp" checked={appState.options.removeWatermark} onChange={(e) => handleOptionChange('removeWatermark', e.target.checked)} className="h-4 w-4 rounded border-neutral-500 bg-neutral-700 text-yellow-400 focus:ring-yellow-400 focus:ring-offset-neutral-800" />
-                                                <label htmlFor="remove-watermark-interp" className="ml-3 block text-sm font-medium text-neutral-300">{t('common_removeWatermark')}</label>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                                                <div>
+                                                    <label htmlFor="aspect-ratio-interp" className="block text-left base-font font-bold text-lg text-neutral-200 mb-2">{t('common_aspectRatio')}</label>
+                                                    <select id="aspect-ratio-interp" value={appState.options.aspectRatio} onChange={(e) => handleOptionChange('aspectRatio', e.target.value)} className="form-input">
+                                                        {ASPECT_RATIO_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div className="flex items-center pb-3">
+                                                    <input type="checkbox" id="remove-watermark-interp" checked={appState.options.removeWatermark} onChange={(e) => handleOptionChange('removeWatermark', e.target.checked)} className="h-4 w-4 rounded border-neutral-500 bg-neutral-700 text-yellow-400 focus:ring-yellow-400 focus:ring-offset-neutral-800" />
+                                                    <label htmlFor="remove-watermark-interp" className="ml-3 block text-sm font-medium text-neutral-300">{t('common_removeWatermark')}</label>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center justify-end gap-4 pt-4">
+                                                <button onClick={onReset} className="btn btn-secondary">{t('common_startOver')}</button>
+                                                <button onClick={handleGenerate} className="btn btn-primary" disabled={!appState.generatedPrompt || isLoading}>{isLoading ? t('common_creating') : t('imageInterpolation_createButton')}</button>
                                             </div>
                                         </div>
-                                        <div className="flex items-center justify-end gap-4 pt-4">
-                                            <button onClick={onReset} className="btn btn-secondary">{t('common_startOver')}</button>
-                                            <button onClick={handleGenerate} className="btn btn-primary" disabled={!appState.generatedPrompt || isLoading}>{isLoading ? t('common_creating') : t('imageInterpolation_createButton')}</button>
-                                        </div>
-                                    </div>
+                                    )}
                                 </OptionsPanel>
                             </motion.div>
                         )}

@@ -41,10 +41,21 @@ export async function GET(req: NextRequest) {
                 return NextResponse.json({ error: 'Forbidden - Admin only' }, { status: 403 });
             }
 
-            // Get all users for admin
+            // Get all users with their purchased package info
             const allUsers = await sql`
-                SELECT * FROM users 
-                ORDER BY created_at DESC
+                SELECT 
+                    u.*,
+                    pt.package_id as purchased_package_id
+                FROM users u
+                LEFT JOIN LATERAL (
+                    SELECT package_id 
+                    FROM payment_transactions 
+                    WHERE user_id::text = u.user_id::text
+                    AND status = 'completed'
+                    ORDER BY completed_at DESC 
+                    LIMIT 1
+                ) pt ON true
+                ORDER BY u.created_at DESC
             `;
 
             return NextResponse.json({ users: allUsers });
@@ -161,9 +172,24 @@ export async function PATCH(req: NextRequest) {
         const body = await req.json();
         const { user_id, role, current_credits, plan } = body;
 
+        console.log('[API] PATCH /api/users - Received body:', body);
+        console.log('[API] Parsed values:', { user_id, role, current_credits, plan });
+        console.log('[API] current_credits type:', typeof current_credits);
+        console.log(`
+                UPDATE users
+                SET 
+                    current_credits = COALESCE(${current_credits !== undefined ? current_credits : null}, current_credits),
+                    updated_at = NOW()
+                WHERE user_id = '${user_id}'
+                RETURNING *
+            `);
+
         // If updating another user, check admin permission
         if (user_id && user_id !== currentUser.user_id) {
+            console.log('[API] Admin updating user:', { user_id, role, current_credits });
+
             if (currentUser.role !== 'admin') {
+                console.log('[API] Permission denied - user is not admin');
                 return NextResponse.json({ error: 'Forbidden - Admin only' }, { status: 403 });
             }
 
@@ -178,10 +204,14 @@ export async function PATCH(req: NextRequest) {
                 RETURNING *
             `;
 
+            console.log('[API] Update result:', updateData);
+
             if (!updateData || updateData.length === 0) {
+                console.log('[API] User not found after update');
                 return NextResponse.json({ error: 'User not found' }, { status: 404 });
             }
 
+            console.log('[API] Returning updated user:', updateData[0]);
             return NextResponse.json({ user: updateData[0] });
         }
 

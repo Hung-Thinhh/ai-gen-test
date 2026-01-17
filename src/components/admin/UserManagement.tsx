@@ -82,25 +82,27 @@ const RoleBadge = ({ role }: { role: string }) => {
 const PlanBadge = ({ plan }: { plan: string }) => {
     let color = '#6B7280';
     let bg = '#F3F4F6';
+    let borderColor = '#E5E7EB';
 
-    if (plan === 'Pro') {
-        color = '#FF6600';
+    // If plan is a number (package_id), show in orange
+    if (plan && plan !== 'Free') {
+        color = '#EA580C'; // Orange
         bg = '#FFEDD5';
-    } else if (plan === 'Enterprise') {
-        color = '#0F6CBD';
-        bg = '#E0F2FE';
+        borderColor = '#F97316';
     }
 
     return (
         <Chip
-            label={plan || 'Free'} // Default to Free if undefined
+            label={plan && plan !== 'Free' && !isNaN(Number(plan)) ? `Gói ${plan}` : (plan || 'Free')}
             size="small"
             sx={{
                 bgcolor: bg,
                 color: color,
                 fontWeight: 700,
                 borderRadius: 1,
-                fontSize: '0.75rem'
+                fontSize: '0.75rem',
+                border: `2px solid ${borderColor}`,
+                px: 0.5
             }}
         />
     )
@@ -135,16 +137,18 @@ export default function UserManagement() {
             // Supabase 'profiles' table usually has: id, email (maybe), full_name, avatar_url, credits, ...
             const mappedUsers = data.map((u: any) => ({
                 id: u.user_id,
-                name: u.full_name || u.email || 'Unnamed User',
-                email: u.email || 'No Email', // Note: Email might not be in profiles table depending on schema
+                name: u.display_name || 'Unnamed User',
+                email: u.email || 'No Email',
                 role: u.role || 'User',
-                plan: u.plan || 'Free',
+                plan: u.purchased_package_id || 'Free',
                 credits: u.current_credits || 0,
-                phone: u.phone || '',
                 created: u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A',
                 avatar: u.avatar_url || `https://i.pravatar.cc/150?u=${u.user_id}`,
                 banned: u.banned || false
             }));
+
+            console.log('[UserManagement] Sample mapped user:', mappedUsers[0]);
+            console.log('[UserManagement] Raw data sample:', data[0]);
 
             setUsers(mappedUsers);
             setLoading(false);
@@ -179,25 +183,37 @@ export default function UserManagement() {
     const handleSaveUser = async () => {
         if (!currentUser) return;
 
-        // Optimistic Update
-        setUsers(users.map(u => u.id === currentUser.id ? currentUser : u));
-        handleCloseEdit();
-
-        // API Call
+        // API Call first
         const updates = {
             role: currentUser.role,
-            plan: currentUser.plan,
             current_credits: parseInt(currentUser.credits), // Ensure number
             // Add other editable fields here
         };
 
         const success = await storageService.updateUser(currentUser.id, updates, token || undefined);
+
         if (success) {
             toast.success('Cập nhật người dùng thành công');
+
+            // Refresh users list from database to get latest data
+            const freshUsers = await storageService.getAllUsers(token || undefined);
+            const mappedUsers = freshUsers.map((u: any) => ({
+                id: u.user_id,
+                name: u.display_name || 'Unnamed User',
+                email: u.email || 'No Email',
+                role: u.role || 'User',
+                plan: u.purchased_package_id || 'Free',
+                credits: u.current_credits || 0,
+                created: u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A',
+                avatar: u.avatar_url || `https://i.pravatar.cc/150?u=${u.user_id}`,
+                banned: u.banned || false
+            }));
+            setUsers(mappedUsers);
         } else {
             toast.error('Lỗi khi cập nhật người dùng');
-            // Revert on failure (optional, requires keeping old state)
         }
+
+        handleCloseEdit();
     };
 
     const handleChange = (field: string, value: any) => {
@@ -365,7 +381,6 @@ export default function UserManagement() {
                             <TableCell sx={{ color: '#6B7280', fontWeight: 600, border: 'none', fontSize: '0.875rem' }}>Gói</TableCell>
                             <TableCell sx={{ color: '#6B7280', fontWeight: 600, border: 'none', fontSize: '0.875rem' }}>Tín dụng</TableCell>
                             <TableCell sx={{ color: '#6B7280', fontWeight: 600, border: 'none', fontSize: '0.875rem' }}>Vai trò</TableCell>
-                            <TableCell sx={{ color: '#6B7280', fontWeight: 600, border: 'none', fontSize: '0.875rem' }}>Điện thoại</TableCell>
                             <TableCell sx={{ color: '#6B7280', fontWeight: 600, border: 'none', fontSize: '0.875rem' }}>Ngày tạo</TableCell>
                             <TableCell sx={{ border: 'none' }}>Hành động</TableCell>
                         </TableRow>
@@ -410,9 +425,6 @@ export default function UserManagement() {
                                     </TableCell>
                                     <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
                                         <RoleBadge role={row.role} />
-                                    </TableCell>
-                                    <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
-                                        <Typography variant="body2" color="#6B7280">{row.phone || '-'}</Typography>
                                     </TableCell>
                                     <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
                                         <Typography variant="body2" color="#6B7280">{row.created}</Typography>
@@ -475,27 +487,13 @@ export default function UserManagement() {
                                 disabled
                                 InputProps={{ readOnly: true }}
                             />
-                            <Stack direction="row" spacing={2}>
-                                <FormControl fullWidth>
-                                    <InputLabel>Gói</InputLabel>
-                                    <Select
-                                        value={currentUser.plan || 'Free'}
-                                        label="Gói"
-                                        onChange={(e) => handleChange('plan', e.target.value)}
-                                    >
-                                        <MenuItem value="Free">Free</MenuItem>
-                                        <MenuItem value="Pro">Pro</MenuItem>
-                                        <MenuItem value="Enterprise">Enterprise</MenuItem>
-                                    </Select>
-                                </FormControl>
-                                <TextField
-                                    label="Tín dụng"
-                                    type="number"
-                                    fullWidth
-                                    value={currentUser.credits}
-                                    onChange={(e) => handleChange('credits', e.target.value)}
-                                />
-                            </Stack>
+                            <TextField
+                                label="Tín dụng"
+                                type="number"
+                                fullWidth
+                                value={currentUser.credits}
+                                onChange={(e) => handleChange('credits', e.target.value)}
+                            />
                             <FormControl fullWidth>
                                 <InputLabel>Vai trò</InputLabel>
                                 <Select
@@ -505,7 +503,7 @@ export default function UserManagement() {
                                 >
                                     <MenuItem value="Admin">Quản trị viên (Admin)</MenuItem>
                                     <MenuItem value="User">Người dùng (User)</MenuItem>
-                                    <MenuItem value="Supervisor">Giám sát viên (Supervisor)</MenuItem>
+                                    <MenuItem value="Editor">Biên tập viên (Editor)</MenuItem>
                                 </Select>
                             </FormControl>
                         </Box>

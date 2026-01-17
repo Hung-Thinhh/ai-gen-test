@@ -62,6 +62,8 @@ const SparkLine = ({ data, color, height = 40 }: { data: number[], color: string
 
 // Simplified Area Chart for demo - in real app use Recharts
 const AreaChartMock = ({ data = [], labels = [] }: { data: number[], labels: string[] }) => {
+    const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null);
+
     return (
         <Box sx={{ width: '100%', height: 250, position: 'relative' }}>
             {/* Simple Placeholder Visualization */}
@@ -69,8 +71,56 @@ const AreaChartMock = ({ data = [], labels = [] }: { data: number[], labels: str
                 {data.map((val, i) => {
                     const max = Math.max(...data, 1);
                     const h = (val / max) * 100;
+                    const isHovered = hoveredIndex === i;
+
                     return (
-                        <div key={i} style={{ width: '10%', height: `${h}%`, backgroundColor: 'rgba(15, 108, 189, 0.2)', borderTop: '2px solid #0F6CBD', position: 'relative' }}>
+                        <div
+                            key={i}
+                            onMouseEnter={() => setHoveredIndex(i)}
+                            onMouseLeave={() => setHoveredIndex(null)}
+                            style={{
+                                width: '10%',
+                                height: `${h}%`,
+                                backgroundColor: isHovered ? 'rgba(15, 108, 189, 0.4)' : 'rgba(15, 108, 189, 0.2)',
+                                borderTop: '2px solid #0F6CBD',
+                                position: 'relative',
+                                cursor: 'pointer',
+                                transition: 'background-color 0.2s ease'
+                            }}
+                        >
+                            {/* Tooltip */}
+                            {isHovered && (
+                                <div style={{
+                                    position: 'absolute',
+                                    bottom: '100%',
+                                    left: '50%',
+                                    transform: 'translateX(-50%)',
+                                    backgroundColor: '#1F2937',
+                                    color: 'white',
+                                    padding: '8px 12px',
+                                    borderRadius: '6px',
+                                    fontSize: '14px',
+                                    fontWeight: 600,
+                                    whiteSpace: 'nowrap',
+                                    marginBottom: '8px',
+                                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                                    zIndex: 10
+                                }}>
+                                    {val} ảnh
+                                    <div style={{
+                                        position: 'absolute',
+                                        bottom: '-4px',
+                                        left: '50%',
+                                        transform: 'translateX(-50%)',
+                                        width: 0,
+                                        height: 0,
+                                        borderLeft: '4px solid transparent',
+                                        borderRight: '4px solid transparent',
+                                        borderTop: '4px solid #1F2937'
+                                    }} />
+                                </div>
+                            )}
+
                             <div style={{ position: 'absolute', bottom: -25, left: '50%', transform: 'translateX(-50%)', fontSize: '10px', color: '#666' }}>
                                 {labels[i]?.split('-').slice(1).join('/') || ''}
                             </div>

@@ -527,6 +527,8 @@ export const getAllUsers = async (token?: string) => {
  */
 export const updateUser = async (userId: string, updates: any, token?: string) => {
     try {
+        console.log('[StorageService] updateUser called with:', { userId, updates });
+
         // Call Neon-based API instead of Supabase
         const response = await fetch('/api/users', {
             method: 'PATCH',
@@ -537,13 +539,19 @@ export const updateUser = async (userId: string, updates: any, token?: string) =
             body: JSON.stringify({ user_id: userId, ...updates })
         });
 
+        console.log('[StorageService] updateUser response status:', response.status);
+
         if (!response.ok) {
-            console.error("Error updating user:", response.statusText);
+            const errorData = await response.json();
+            console.error("[StorageService] Error updating user:", response.statusText, errorData);
             return false;
         }
+
+        const data = await response.json();
+        console.log('[StorageService] updateUser success:', data);
         return true;
     } catch (error) {
-        console.error("Error updating user:", error);
+        console.error("[StorageService] Error updating user:", error);
         return false;
     }
 };

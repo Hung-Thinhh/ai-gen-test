@@ -44,7 +44,7 @@ export async function GET() {
             if (row.user_id) activeUserIds.add(row.user_id);
 
             // Chart Data
-            const day = row.created_at.split('T')[0];
+            const day = (row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at)).split('T')[0];
             dailyGenerations[day] = (dailyGenerations[day] || 0) + (row.generation_count || 1);
             dailyCredits[day] = (dailyCredits[day] || 0) + (row.credits_used || 0);
 
@@ -56,10 +56,18 @@ export async function GET() {
 
         const errorRate = historyData?.length ? (errorCount / historyData.length) * 100 : 0;
 
-        // Format Chart Data
-        const chartLabels = Object.keys(dailyGenerations).sort().slice(-7); // Last 7 days
-        const chartData = chartLabels.map(day => dailyGenerations[day]);
-        const creditData = chartLabels.map(day => dailyCredits[day]);
+        // Generate last 7 days array (always 7 days)
+        const last7Days: string[] = [];
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            last7Days.push(date.toISOString().split('T')[0]);
+        }
+
+        // Format Chart Data with 0 for days without data
+        const chartLabels = last7Days;
+        const chartData = chartLabels.map(day => dailyGenerations[day] || 0);
+        const creditData = chartLabels.map(day => dailyCredits[day] || 0);
 
         const topModels = Object.entries(modelUsage)
             .sort(([, a], [, b]) => b - a)
@@ -86,10 +94,10 @@ export async function GET() {
 
             // Chart Data
             if (row.completed_at) {
-                const day = row.completed_at.split('T')[0];
+                const day = (row.completed_at instanceof Date ? row.completed_at.toISOString() : String(row.completed_at)).split('T')[0];
                 dailyRevenue[day] = (dailyRevenue[day] || 0) + amount;
             } else if (row.created_at) {
-                const day = row.created_at.split('T')[0];
+                const day = (row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at)).split('T')[0];
                 dailyRevenue[day] = (dailyRevenue[day] || 0) + amount;
             }
         });
