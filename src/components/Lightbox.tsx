@@ -59,7 +59,8 @@ const Lightbox: React.FC<LightboxProps> = ({ images, selectedIndex, onClose, onN
 
     const currentItem = selectedIndex !== null ? images[selectedIndex] : null;
 
-    const handleDownloadCurrent = () => {
+    const handleDownloadCurrent = (e?: React.MouseEvent) => {
+        if (e && e.stopPropagation) e.stopPropagation();
         if (!currentItem) return;
         const url = typeof currentItem === 'string' ? currentItem : currentItem.src;
         // Generate random ID: timestamp + random number
@@ -117,11 +118,12 @@ const Lightbox: React.FC<LightboxProps> = ({ images, selectedIndex, onClose, onN
 
                     <div className="relative w-full h-full flex items-center justify-center overflow-hidden" onClick={onClose}>
                         <button
-                            className="lightbox-action-btn absolute top-20 left-4 z-[60] p-2 bg-orange-500! hover:bg-black/70 rounded-full text-white backdrop-blur-sm transition-all"
+                            type="button"
+                            className="absolute top-20 left-4 z-[60] p-2 w-12 h-12 flex items-center justify-center rounded-full bg-orange-500! text-white backdrop-blur-sm transition-all hover:bg-black/70 hover:scale-110 active:scale-95 cursor-pointer"
                             onClick={(e) => { e.stopPropagation(); onClose(); }}
                             title="Đóng (Esc)"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6 pointer-events-none" style={{ pointerEvents: 'none' }}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>
@@ -163,29 +165,32 @@ const Lightbox: React.FC<LightboxProps> = ({ images, selectedIndex, onClose, onN
                                 {/* Image Actions */}
                                 <div className="absolute md:top-4 md:top-[5%] top-[-15%] right-2 flex gap-4 z-50">
                                     <button
-                                        className="lightbox-action-btn bg-black/50 hover:bg-black/70 p-2 rounded-full text-white backdrop-blur-sm transition-all"
+                                        type="button"
+                                        className="w-12 h-12 flex items-center justify-center rounded-full bg-black/50 border border-white/20 text-white backdrop-blur-sm transition-all hover:bg-black/70 hover:scale-110 active:scale-95 cursor-pointer z-50"
                                         onClick={handleZoomOut}
                                         title="Thu nhỏ"
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                        <svg onClick={handleZoomOut} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 pointer-events-none" style={{ pointerEvents: 'none' }}>
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM13 10H7" />
                                         </svg>
                                     </button>
                                     <button
-                                        className="lightbox-action-btn bg-black/50 hover:bg-black/70 p-2 rounded-full text-white backdrop-blur-sm transition-all"
+                                        type="button"
+                                        className="w-12 h-12 flex items-center justify-center rounded-full bg-black/50 border border-white/20 text-white backdrop-blur-sm transition-all hover:bg-black/70 hover:scale-110 active:scale-95 cursor-pointer z-50"
                                         onClick={handleZoomIn}
                                         title="Phóng to"
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                        <svg onClick={handleZoomIn} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 pointer-events-none" style={{ pointerEvents: 'none' }}>
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10 7v6m3-3H7" />
                                         </svg>
                                     </button>
                                     <button
-                                        className="lightbox-action-btn bg-black/50 hover:bg-black/70 p-2 rounded-full text-white backdrop-blur-sm transition-all"
+                                        type="button"
+                                        className="w-12 h-12 flex items-center justify-center rounded-full bg-black/50 border border-white/20 text-white backdrop-blur-sm transition-all hover:bg-black/70 hover:scale-110 active:scale-95 cursor-pointer z-50"
                                         onClick={handleDownloadCurrent}
                                         title="Tải xuống"
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                        <svg onClick={handleDownloadCurrent} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 pointer-events-none" style={{ pointerEvents: 'none' }}>
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
                                         </svg>
                                     </button>

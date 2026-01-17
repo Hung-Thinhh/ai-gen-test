@@ -155,7 +155,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 {/* Model Version Selector (Desktop) - Only show in Tools */}
                 {settings?.apps.some((app: AppConfig) => app.id === currentView.viewId) && (
                     <div className={cn(
-                        "fixed z-40 gap-4", // Increased z-index to be above content
+                        "fixed z-40 gap-4 w-[200px]", // Increased z-index to be above content
                         "hidden md:flex md:top-[80px] md:left-8 md:flex-row", // Positioned below header (top-20/80px) and left aligned
                         "top-4 right-2 flex-row"
                     )}>

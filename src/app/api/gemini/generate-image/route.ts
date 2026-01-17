@@ -440,16 +440,31 @@ export async function POST(req: NextRequest) {
 
         // Return user-friendly error messages
         let userMessage = 'Đã xảy ra lỗi khi tạo ảnh. Vui lòng thử lại.';
+        let statusCode = 500;
+        let errorCode = 'INTERNAL_ERROR';
 
-        if (error.message?.includes('safety') || error.message?.includes('blocked')) {
+        const errorMessage = error.message || String(error);
+
+        if (errorMessage.includes('safety') || errorMessage.includes('blocked') || errorMessage.includes('IMAGE_SAFETY')) {
             userMessage = 'Nội dung bị chặn vì vi phạm chính sách an toàn. Vui lòng thử prompt khác.';
-        } else if (error.message?.includes('quota') || error.message?.includes('429')) {
+            statusCode = 400; // Bad Request (Content Policy)
+            errorCode = 'SAFETY_VIOLATION';
+        } else if (errorMessage.includes('quota') || errorMessage.includes('429')) {
             userMessage = 'Hệ thống đang quá tải. Vui lòng thử lại sau.';
+            statusCode = 429; // Too Many Requests
+            errorCode = 'QUOTA_EXCEEDED';
+        } else if (errorMessage.includes('400')) {
+            statusCode = 400;
+            errorCode = 'BAD_REQUEST';
         }
 
         return NextResponse.json(
-            { error: userMessage },
-            { status: 500 }
+            {
+                error: userMessage,
+                code: errorCode,
+                details: errorMessage
+            },
+            { status: statusCode }
         );
     }
 }
