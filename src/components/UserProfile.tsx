@@ -214,7 +214,14 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onClose, onOpenSetting
                         )}
                     </div>
                 )}
-
+                {!isLoggedIn &&
+                    <button
+                        onClick={() => router.push('/pricing')}
+                        className="w-full bg-orange-500 text-white px-6 py-3 rounded-full font-semibold hover:bg-orange-600 transition-all border border-orange-500/20"
+                    >
+                        Bảng giá
+                    </button>
+                }
                 {/* Logout Button */}
                 {isLoggedIn && (
                     <button

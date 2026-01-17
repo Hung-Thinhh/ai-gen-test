@@ -127,9 +127,22 @@ export const downloadImage = async (url: string, filenameWithoutExtension: strin
             else if (url.startsWith('data:image/webp')) extension = 'webp';
         } else {
             // For blob: and https: URLs, fetch them
-            const response = await fetch(url, { mode: 'cors' });
-            if (!response.ok) throw new Error(`Fetch failed: ${response.statusText}`);
-            blob = await response.blob();
+            try {
+                const response = await fetch(url, { mode: 'cors' });
+                if (!response.ok) throw new Error(`Fetch failed: ${response.statusText}`);
+                blob = await response.blob();
+            } catch (fetchError) {
+                // If direct fetch fails (e.g. CORS), try via proxy for http/s urls
+                if (url.startsWith('http')) {
+                    console.log("Direct fetch failed, trying proxy...", fetchError);
+                    const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(url)}`;
+                    const proxyResponse = await fetch(proxyUrl);
+                    if (!proxyResponse.ok) throw new Error(`Proxy fetch failed: ${proxyResponse.statusText}`);
+                    blob = await proxyResponse.blob();
+                } else {
+                    throw fetchError;
+                }
+            }
 
             const mimeType = blob.type;
             if (mimeType === 'image/png') extension = 'png';
