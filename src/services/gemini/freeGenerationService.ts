@@ -62,7 +62,11 @@ export async function generateFreeImage(
 
             // Extract tool_key from URL (e.g., /tool/free-generation -> free-generation)
             // Use provided toolKey if available, otherwise fallback to URL or 'unknown'
-            const finalToolKey = toolKey || (typeof window !== 'undefined' ? window.location.pathname.split('/').pop() : 'unknown');
+            let finalToolKey = toolKey || 'unknown';
+            if (!toolKey && typeof window !== 'undefined' && window.location?.pathname) {
+                const pathParts = window.location.pathname.split('/');
+                finalToolKey = pathParts.pop() || 'unknown';
+            }
             config.tool_key = finalToolKey;
 
             const response = await callGeminiWithRetry(parts, config);
