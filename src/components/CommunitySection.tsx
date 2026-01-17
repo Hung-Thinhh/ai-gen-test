@@ -35,6 +35,7 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import { Pagination, Autoplay } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/pagination';
+import Link from 'next/link';
 
 export const CommunitySection = () => {
     return (
@@ -214,31 +215,195 @@ export const CommunitySection = () => {
                         {/* Text Content */}
                         <div className="flex-1 p-10 md:p-16 text-left space-y-8">
                             <h2 className="text-3xl md:text-4xl font-bold leading-tight text-white">
-                                Bắt đầu tạo ảnh của bạn<br />
-                                <span className="text-orange-500 md:ml-10 ml-0">với sức mạnh của Duky AI</span>
+                                Sẵn sàng tạo nên tuyệt tác?<br />
+                                <span className="text-orange-400 md:ml-10 ml-0">Với sức mạnh của Duky AI </span>
                             </h2>
-                            <button className="px-8 py-3 ml-20 bg-white text-orange-500 cursor-pointer font-semibold rounded-full hover:bg-gray-100 transition-colors transform hover:scale-105 duration-500">
-                                Thử ngay
-                            </button>
+                            <Link href="/pricing" className="inline-block ml-20">
+                                <button className="cta-button relative px-10 py-4 text-white font-black text-xl rounded-lg border-4 border-orange-500 transition-all duration-300 overflow-visible cursor-pointer bg-black hover:bg-black hover:text-orange-500 hover:shadow-[0_0_50px_#ea8b19]">
+                                    <span className="box relative block">
+                                        Nâng cấp ngay
+
+
+                                    </span>
+                                    {/* Star 1 */}
+                                    <div className="star-1 absolute w-6 h-6 transition-all duration-1000 ease-[cubic-bezier(0.05,0.83,0.43,0.96)] z-[-5]" style={{ top: '-46%', left: '-15%' }}>
+                                        <svg className="w-4 h-4 md:w-5 md:h-5 text-orange-400" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clipRule="evenodd" />
+                                        </svg>
+                                    </div>
+
+                                    {/* Star 2 */}
+                                    <div className="star-2 absolute w-4 h-4 transition-all duration-1000 ease-[cubic-bezier(0,0.4,0,1.01)] z-[-5]" style={{ top: '56%', left: '7%' }}>
+                                        <svg className="w-4 h-4 md:w-5 md:h-5 text-orange-400" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clipRule="evenodd" />
+                                        </svg>
+                                    </div>
+
+                                    {/* Star 3 */}
+                                    <div className="star-3 absolute w-2 h-2 transition-all duration-1000 ease-[cubic-bezier(0,0.4,0,1.01)] z-[-5]" style={{ top: '1%', left: '11%' }}>
+                                        <svg className="w-4 h-4 md:w-5 md:h-5 text-orange-400" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clipRule="evenodd" />
+                                        </svg>
+                                    </div>
+
+                                    {/* Star 4 */}
+                                    <div className="star-4 absolute w-3 h-3 transition-all duration-800 ease-[cubic-bezier(0,0.4,0,1.01)] z-[-5]" style={{ top: '57%', left: '72%' }}>
+                                        <svg className="w-4 h-4 md:w-5 md:h-5 text-orange-400" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clipRule="evenodd" />
+                                        </svg>
+                                    </div>
+
+                                    {/* Star 5 */}
+                                    <div className="star-5 absolute w-4 h-4 transition-all duration-600 ease-[cubic-bezier(0,0.4,0,1.01)] z-[-5]" style={{ top: '25%', left: '45%' }}>
+                                        <svg className="w-4 h-4 md:w-5 md:h-5 text-orange-400" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clipRule="evenodd" />
+                                        </svg>
+                                    </div>
+
+                                    {/* Star 6 */}
+                                    <div className="star-6 absolute w-2 h-2 transition-all duration-800 ease-linear z-[-5]" style={{ top: '5%', left: '50%' }}>
+                                        <svg className="w-4 h-4 md:w-5 md:h-5 text-orange-400" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clipRule="evenodd" />
+                                        </svg>
+                                    </div>
+                                    <style jsx>{`
+                                        .cta-button {
+                                            background: linear-gradient(30deg, #000 35%, #ea8b19 73%);
+                                        }
+                                        
+                                        .box {
+                                            text-transform: uppercase;
+                                            font-weight: 900;
+                                            transition: .5s linear;
+                                        }
+                                        
+                                        .box:before {
+                                            position: absolute;
+                                            content: '';
+                                            left: 0;
+                                            bottom: 0;
+                                            height: 4px;
+                                            width: 100%;
+                                            border-bottom: 4px solid transparent;
+                                            border-left: 4px solid transparent;
+                                            box-sizing: border-box;
+                                            transform: translateX(100%);
+                                        }
+                                        
+                                        .box:after {
+                                            position: absolute;
+                                            content: '';
+                                            top: 0;
+                                            left: 0;
+                                            width: 100%;
+                                            height: 4px;
+                                            border-top: 4px solid transparent;
+                                            border-right: 4px solid transparent;
+                                            box-sizing: border-box;
+                                            transform: translateX(-100%);
+                                        }
+                                        
+                                        .cta-button:hover .box {
+                                            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+                                            color: white;
+                                            background: black;
+                                        }
+                                        
+                                        .cta-button:hover .box:before {
+                                            border-color: #fff;
+                                            height: 100%;
+                                            transform: translateX(0);
+                                            transition: .3s transform linear, .3s height linear .3s;
+                                        }
+                                        
+                                        .cta-button:hover .box:after {
+                                            border-color: #ea8b19;
+                                            height: 100%;
+                                            transform: translateX(0);
+                                            transition: .3s transform linear, .3s height linear .5s;
+                                        }
+                                        
+                                        .cta-button:hover .star-1 {
+                                            top: -110%;
+                                            left: -60%;
+                                            width: 30px;
+                                            height: auto;
+                                            filter: drop-shadow(0 0 10px #ea8b19);
+                                            z-index: 2;
+                                        }
+                                        
+                                        .cta-button:hover .star-2 {
+                                            top: -45%;
+                                            left: 0%;
+                                            width: 20px;
+                                            height: auto;
+                                            filter: drop-shadow(0 0 10px #ea8b19);
+                                            z-index: 2;
+                                        }
+                                        
+                                        .cta-button:hover .star-3 {
+                                            top: 55%;
+                                            left: 15%;
+                                            width: 11px;
+                                            height: auto;
+                                            filter: drop-shadow(0 0 10px #ea8b19);
+                                            z-index: 2;
+                                        }
+                                        
+                                        .cta-button:hover .star-4 {
+                                            top: 45%;
+                                            left: 85%;
+                                            width: 15px;
+                                            height: auto;
+                                            filter: drop-shadow(0 0 10px #ea8b19);
+                                            z-index: 2;
+                                        }
+                                        
+                                        .cta-button:hover .star-5 {
+                                            top: 25%;
+                                            left: 140%;
+                                            width: 25px;
+                                            height: auto;
+                                            filter: drop-shadow(0 0 10px #ea8b19);
+                                            z-index: 2;
+                                        }
+                                        
+                                        .cta-button:hover .star-6 {
+                                            top: -5%;
+                                            left: 60%;
+                                            width: 15px;
+                                            height: auto;
+                                            filter: drop-shadow(0 0 10px #ea8b19);
+                                            z-index: 2;
+                                        }
+                                    `}</style>
+                                </button>
+                            </Link>
                         </div>
 
                         {/* Image Grid / Tablet Mockup */}
                         <div className="flex-1 w-full relative">
                             <div className="md:absolute right-0 top-1/2 md:-translate-y-1/2 w-full md:w-[120%] h-full md:h-[140%] flex items-center justify-center p-8 md:p-0">
-                                <div className="relative w-full max-w-md md:max-w-none md:w-[600px] aspect-[4/3] border-white/20 bg-gradient-to-br from-white/10  to-white/20 backdrop-blur-xl rounded-2xl border border-white/50 p-2 shadow-2xl rotate-0 md:-rotate-6 md:translate-x-10 ">
-                                    <div className="grid grid-cols-4 gap-2 h-full">
+                                <div className="relative w-full max-w-md md:max-w-none md:w-[600px] aspect-[4/3] border-white/20 bg-gradient-to-br from-white/10  to-white/20 backdrop-blur-xl rounded-2xl border border-white/50 p-2 shadow-2xl -rotate-6 md:translate-x-10 ">
+                                    <div className="grid grid-cols-4 gap-2 h-full overflow-hidden">
                                         {/* Using a mix of placeholder images to simulate the gallery */}
                                         <div className="col-span-1 space-y-2">
-                                            <img src="/img/baby.webp" className="w-full h-1/2 object-cover rounded-lg" alt="" />
-                                            <img src="/img/beauty.webp" className="w-full h-1/2 object-cover rounded-lg" alt="" />
+                                            <img src="https://pub-15159732d3b14718981f4ec71d2578eb.r2.dev/1768569626305-nhblt.png" className="w-full h-1/2 object-cover rounded-lg" alt="" />
+                                            <img src="https://pub-15159732d3b14718981f4ec71d2578eb.r2.dev/1768466804739-65stxr.png" className="w-full h-1/2 object-cover rounded-lg" alt="" />
                                         </div>
                                         <div className="col-span-1 space-y-2 mt-4">
-                                            <img src="/img/doanhnhan.webp" className="w-full h-1/2 object-cover rounded-lg" alt="" />
-                                            <img src="/img/figure.webp" className="w-full h-1/2 object-cover rounded-lg" alt="" />
+                                            <img src="https://pub-15159732d3b14718981f4ec71d2578eb.r2.dev/1768470105777-ky5i1.png" className="w-full h-1/2 object-cover rounded-lg" alt="" />
+                                            <img src="https://res.cloudinary.com/dmxmzannb/image/upload/f_auto,q_auto/v1768301559/z455qfebzkh6htmk9nce.webp" className="w-full h-1/2 object-cover rounded-lg" alt="" />
                                         </div>
                                         <div className="col-span-1 space-y-2">
-                                            <img src="/img/kientruc.webp" className="w-full h-1/2 object-cover rounded-lg" alt="" />
-                                            <img src="/img/thoitrang.webp" className="w-full h-1/2 object-cover rounded-lg" alt="" />
+                                            <img src="https://res.cloudinary.com/dmxmzannb/image/upload/f_auto,q_auto/v1768199833/dxbmcqbui1vsguds5leb.webp" className="w-full h-1/2 object-cover rounded-lg" alt="" />
+                                            <img src="https://res.cloudinary.com/dmxmzannb/image/upload/f_auto,q_auto/v1768281828/xw6xdjfojdcdskwzsqtz.webp" className="w-full h-1/2 object-cover rounded-lg" alt="" />
                                         </div>
                                         <div className="col-span-1 space-y-2 mt-4">
                                             <img src="/img/trungthu.webp" className="w-full h-1/2 object-cover rounded-lg" alt="" />

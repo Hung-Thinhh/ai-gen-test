@@ -6,7 +6,8 @@ import React, { ChangeEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { generateBackgroundFromConcept } from '../services/gemini/advancedImageService';
 import ActionablePolaroidCard from './ActionablePolaroidCard';
-import { AppScreenHeader, handleFileUpload as utilHandleFileUpload, ResultsView, OptionsPanel, useAppControls } from './uiUtils';
+import Lightbox from './Lightbox';
+import { AppScreenHeader, handleFileUpload as utilHandleFileUpload, ResultsView, OptionsPanel, useAppControls, useLightbox } from './uiUtils';
 
 interface ConceptStudioState { stage: 'configuring' | 'generating' | 'results'; conceptImage: string | null; resultImage: string | null; error: string | null; }
 interface ConceptStudioProps { mainTitle: string; subtitle: string; useSmartTitleWrapping: boolean; smartTitleWrapWords: number; uploaderCaption: string; uploaderDescription: string; addImagesToGallery: (images: string[]) => void; appState: ConceptStudioState; onStateChange: (newState: ConceptStudioState) => void; onReset: () => void; onGoBack: () => void; logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: { api_model_used?: string; credits_used?: number; generation_count?: number; }) => void; }
@@ -14,6 +15,8 @@ interface ConceptStudioProps { mainTitle: string; subtitle: string; useSmartTitl
 const ConceptStudio: React.FC<ConceptStudioProps> = (props) => {
     const { uploaderCaption, uploaderDescription, addImagesToGallery, appState, onStateChange, onReset, logGeneration, ...headerProps } = props;
     const { t, checkCredits, modelVersion } = useAppControls();
+    const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
+    const lightboxImages = [appState.conceptImage, appState.resultImage].filter((img): img is string => !!img);
 
     const handleGenerate = async () => {
         if (!appState.conceptImage) return;
@@ -49,7 +52,7 @@ const ConceptStudio: React.FC<ConceptStudioProps> = (props) => {
         <div className="w-full pb-4 max-w-4xl">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 w-full max-w-7xl mx-auto px-4">
                 <div className="flex flex-col items-center gap-2">
-                    <label htmlFor="concept-upload" className="cursor-pointer w-full"><ActionablePolaroidCard type={appState.conceptImage ? 'multi-input' : 'uploader'} caption={uploaderCaption} status="done" mediaUrl={appState.conceptImage || undefined} placeholderType="magic" onImageChange={(url) => onStateChange({ ...appState, conceptImage: url })} /></label>
+                    <label htmlFor="concept-upload" className="cursor-pointer w-full"><ActionablePolaroidCard type={appState.conceptImage ? 'multi-input' : 'uploader'} caption={uploaderCaption} status="done" mediaUrl={appState.conceptImage || undefined} placeholderType="magic" onClick={appState.conceptImage ? () => openLightbox(0) : undefined} onImageChange={(url) => onStateChange({ ...appState, conceptImage: url })} /></label>
                     <input id="concept-upload" type="file" className="hidden" accept="image/*" onChange={(e) => { utilHandleFileUpload(e, (url) => { onStateChange({ ...appState, conceptImage: url, resultImage: null, error: null }); /* addImagesToGallery([url]); */ }); }} />
                     <p className="base-font font-bold text-neutral-300 text-center max-w-xs text-xs sm:text-sm">{uploaderDescription}</p>
                 </div>
@@ -82,10 +85,10 @@ const ConceptStudio: React.FC<ConceptStudioProps> = (props) => {
 
         {/* Results Stage */}
         {appState.stage === 'results' && (
-            <ResultsView stage={appState.stage} originalImage={appState.conceptImage} onOriginalClick={() => { }} error={appState.error} isMobile={false} actions={(<><button onClick={() => onStateChange({ ...appState, stage: 'configuring' })} className="btn btn-secondary">{t('common_edit')}</button><button onClick={onReset} className="btn btn-secondary">{t('common_startOver')}</button></>)}>
-                {appState.resultImage && (<motion.div key="result" initial={{ opacity: 0 }} animate={{ opacity: 1 }}><ActionablePolaroidCard type="output" caption={t('conceptStudio_result')} status="done" mediaUrl={appState.resultImage} onImageChange={(url) => { if (url) { onStateChange({ ...appState, resultImage: url }); addImagesToGallery([url]); } }} /></motion.div>)}
+            <ResultsView stage={appState.stage} originalImage={appState.conceptImage} onOriginalClick={appState.conceptImage ? () => openLightbox(0) : undefined} error={appState.error} isMobile={false} actions={(<><button onClick={() => onStateChange({ ...appState, stage: 'configuring' })} className="btn btn-secondary">{t('common_edit')}</button><button onClick={onReset} className="btn btn-secondary">{t('common_startOver')}</button></>)}>
+                {appState.resultImage && (<motion.div key="result" initial={{ opacity: 0 }} animate={{ opacity: 1 }}><ActionablePolaroidCard type="output" caption={t('conceptStudio_result')} status="done" mediaUrl={appState.resultImage} onClick={() => openLightbox(lightboxImages.indexOf(appState.resultImage!))} onImageChange={(url) => { if (url) { onStateChange({ ...appState, resultImage: url }); addImagesToGallery([url]); } }} /></motion.div>)}
             </ResultsView>
-        )}</div>);
+        )}<Lightbox images={lightboxImages} selectedIndex={lightboxIndex} onClose={closeLightbox} onNavigate={navigateLightbox} /></div>);
 };
 
 export default ConceptStudio;

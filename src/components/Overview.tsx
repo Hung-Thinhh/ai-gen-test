@@ -352,7 +352,7 @@ const Overview: React.FC = () => {
                         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                             <button
                                 onClick={() => setActiveCategory('all')}
-                                className={`px-4 !py-[5px] rounded-full text-sm  font-medium whitespace-nowrap w-[129px] cursor-pointer transition-all ${activeCategory === 'all'
+                                className={`px-4 !py-[5px] rounded-full text-sm !min-w-auto  font-medium whitespace-nowrap w-[129px] cursor-pointer transition-all ${activeCategory === 'all'
                                     ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
                                     : 'bg-white/5 text-white/70 hover:bg-white/10'
                                     }`}
@@ -363,7 +363,7 @@ const Overview: React.FC = () => {
                                 <button
                                     key={cat.id}
                                     onClick={() => setActiveCategory(cat.id)}
-                                    className={`px-4 !py-[5px] rounded-full text-sm font-medium whitespace-nowrap w-auto cursor-pointer transition-all ${activeCategory === cat.id
+                                    className={`px-4 !py-[5px] rounded-full !min-w-auto text-sm font-medium whitespace-nowrap w-auto cursor-pointer transition-all ${activeCategory === cat.id
                                         ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
                                         : 'border border-orange-500/60 text-white hover:bg-orange-500'
                                         }`}
@@ -374,7 +374,7 @@ const Overview: React.FC = () => {
                         </div>
                         <Link
                             href="/prompt-library"
-                            className="px-4 py-2 text-sm font-medium text-orange-500 hover:text-orange-400 whitespace-nowrap transition-colors flex items-center gap-1"
+                            className="md:px-4 px-2 py-2 md:mb-[12px] text-sm font-medium text-orange-500 hover:text-orange-400 whitespace-nowrap transition-colors flex items-center gap-1"
                         >
                             Xem thêm
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -405,7 +405,7 @@ const Overview: React.FC = () => {
                                             e.stopPropagation();
                                             handleCopyPrompt(prompt);
                                         }}
-                                        className="absolute top-2 right-2 z-20 p-2 bg-black/60 hover:bg-orange-500/90 backdrop-blur-sm rounded-lg transition-all duration-200 group/copy"
+                                        className="absolute top-2 right-2 z-20  !p-2 bg-black/60 hover:bg-orange-500/90 backdrop-blur-sm rounded-lg transition-all duration-200 group/copy"
                                         title="Copy prompt"
                                     >
                                         <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

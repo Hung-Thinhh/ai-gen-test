@@ -39,24 +39,13 @@ export const GalleryToolbar: React.FC<GalleryToolbarProps> = ({
 
     if (isSelectionMode) {
         return (
-            <div className="flex justify-between items-center mt-4 mb-4 flex-shrink-0">
-                <h3 className="base-font font-bold text-2xl text-yellow-400">{t('galleryToolbar_selected', selectedCount)}</h3>
-                <div className="flex items-center gap-2">
-                    {onCombineHorizontal && (
-                        <button onClick={onCombineHorizontal} className="btn btn-secondary btn-sm" disabled={selectedCount < 2 || isCombining}>
-                            {isCombining ? t('galleryToolbar_combining') : t('galleryToolbar_combineHorizontal')}
-                        </button>
-                    )}
-                    {onCombineVertical && (
-                        <button onClick={onCombineVertical} className="btn btn-secondary btn-sm" disabled={selectedCount < 2 || isCombining}>
-                            {isCombining ? t('galleryToolbar_combining') : t('galleryToolbar_combineVertical')}
-                        </button>
-                    )}
-                    <div className="w-px h-5 bg-white/20" />
-                    <button onClick={onDeleteSelected} className="btn btn-secondary btn-sm !bg-red-500/20 !border-red-500/80 hover:!bg-red-500" disabled={selectedCount === 0 || isCombining}>
+            <div className="flex flex-col md:flex-row md:justify-between md:items-center mt-4 mb-4 flex-shrink-0 gap-3 md:gap-0">
+                <h3 className="base-font font-bold text-2xl text-yellow-400 text-center md:text-left">{t('galleryToolbar_selected', selectedCount)}</h3>
+                <div className="flex items-center gap-2 justify-center md:justify-end">
+                    <button onClick={onDeleteSelected} className="btn btn-secondary btn-sm !bg-red-500/20 !border-red-500/80 hover:!bg-red-500" disabled={selectedCount === 0}>
                         {t('common_delete')}
                     </button>
-                    <button onClick={onToggleSelectionMode} className="btn btn-secondary btn-sm" aria-label={t('common_cancel')} disabled={isCombining}>
+                    <button onClick={onToggleSelectionMode} className="btn btn-secondary btn-sm" aria-label={t('common_cancel')}>
                         {t('common_cancel')}
                     </button>
                 </div>
@@ -65,14 +54,9 @@ export const GalleryToolbar: React.FC<GalleryToolbarProps> = ({
     }
 
     return (
-        <div className="flex justify-between items-center mt-4 mb-4 flex-shrink-0">
-            <h3 className="base-font font-bold text-2xl text-yellow-400 pb-5">{title}</h3>
-            <div className="flex items-center gap-2">
-                {onUploadClick && (
-                    <button onClick={onUploadClick} className="btn btn-secondary btn-sm text-sm" title={t('galleryToolbar_uploadTooltip')}>
-                        {t('galleryToolbar_upload')}
-                    </button>
-                )}
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center mt-4 mb-4 flex-shrink-0 gap-3 md:gap-0">
+            <h3 className="base-font font-bold text-2xl text-yellow-400 text-center md:text-left">{title}</h3>
+            <div className="flex items-center gap-2 justify-center md:justify-end">
                 {onDownloadAll && <button onClick={onDownloadAll} className="btn btn-secondary btn-sm text-sm" disabled={imageCount === 0}>{t('common_downloadAll')}</button>}
                 <button onClick={onToggleSelectionMode} className="btn btn-secondary btn-sm text-sm" disabled={imageCount === 0}>{t('common_select')}</button>
 

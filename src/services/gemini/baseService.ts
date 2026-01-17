@@ -75,6 +75,10 @@ export function processApiError(error: unknown): Error {
     if (errorMessage.toLowerCase().includes('safety') || errorMessage.toLowerCase().includes('blocked')) {
         return new Error("Yêu cầu của bạn đã bị chặn vì lý do an toàn. Vui lòng thử với một hình ảnh hoặc prompt khác.");
     }
+    // Credit errors: return as-is without wrapping
+    if (errorMessage.includes('hết Credit') || errorMessage.includes('Insufficient credits')) {
+        return new Error(errorMessage);
+    }
 
     // Return original Error object or a new one for other cases
     if (error instanceof Error) {
@@ -353,6 +357,19 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
 
             // PRIORITY: Check for Server-Side R2 URL first (Optimized flow)
             if ((data as any).imageUrl) {
+                // SUCCESS: Update credits in UI immediately (same as inlineData path)
+                try {
+                    if (typeof window !== 'undefined' && (data as any).newCredits !== undefined) {
+                        // Dispatch credit update event with new balance from server
+                        const event = new CustomEvent('user-credits-updated', {
+                            detail: { credits: (data as any).newCredits }
+                        });
+                        window.dispatchEvent(event);
+                        devLog('[baseService] Credits updated in UI (R2 URL):', (data as any).newCredits);
+                    }
+                } catch (refreshError) {
+                    devWarn('[baseService] Failed to update credits in UI:', refreshError);
+                }
                 // Return data as is, the service will use imageUrl
                 return data;
             }

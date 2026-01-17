@@ -429,9 +429,9 @@ export const Pricing: React.FC<PricingProps> = ({ onClose }) => {
                             }`}
                     >
                         Gói năm
-                        <span className="bg-white/20 text-[10px] px-1.5 py-0.5 rounded-xl ml-1 flex items-center gap-0.5">
+                        {/* <span className="bg-white/20 text-[10px] px-1.5 py-0.5 rounded-xl ml-1 flex items-center gap-0.5">
                             Giảm 20% <span>🔥</span>
-                        </span>
+                        </span> */}
                     </button>
                     <button
                         onClick={() => setBillingCycle('monthly')}

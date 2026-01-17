@@ -386,7 +386,7 @@ export const getGuestCredits = async (guestId: string): Promise<number> => {
         console.log(`[getGuestCredits] Fetching specific guest credits via API for: ${guestId}`);
 
         // Use Server API instead of direct Supabase
-        const res = await fetch(`/api/credits/guest?guestId=${guestId}`);
+        const res = await fetch(`/api/guest/credits?guestId=${guestId}`);
 
         if (!res.ok) {
             console.warn(`[getGuestCredits] API request failed: ${res.status}`);

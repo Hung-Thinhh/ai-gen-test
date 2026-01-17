@@ -114,7 +114,7 @@ export const api = {
         // Guest credits
         guest: {
             get: (guestId: string) =>
-                apiClient.get<{ credits: number }>(`/api/credits/guest?guestId=${guestId}`, false),
+                apiClient.get<{ credits: number }>(`/api/guest/credits?guestId=${guestId}`, false),
             reserve: (guestId: string, amount: number) =>
                 apiClient.post('/api/credits/guest/reserve', { guestId, amount }, false),
         },

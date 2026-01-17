@@ -87,7 +87,7 @@ export const LeonardoBanner = () => {
                     className="w-32 h-40 md:w-48 md:h-60 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20"
                 >
                     <img
-                        src="/img/beauty.webp"
+                        src="https://pub-15159732d3b14718981f4ec71d2578eb.r2.dev/1768468422339-m212a.png"
                         alt="AI Generated Portrait"
                         className="w-full h-full object-cover rounded-xl"
                     />
@@ -105,7 +105,7 @@ export const LeonardoBanner = () => {
                     className="w-20 h-24 md:w-52 md:h-64 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20"
                 >
                     <img
-                        src="/img/thoitrang.webp"
+                        src="https://res.cloudinary.com/dmxmzannb/image/upload/f_auto,q_auto/v1768216136/mmtmjsb4lpgpf4jtap0j.webp"
                         alt="AI Generated Art"
                         className="w-full h-full object-cover rounded-xl"
                     />
@@ -123,7 +123,7 @@ export const LeonardoBanner = () => {
                     className="w-20 h-38 md:w-56 md:h-72 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20"
                 >
                     <img
-                        src="/img/doanhnhan.webp"
+                        src="https://res.cloudinary.com/dmxmzannb/image/upload/f_auto,q_auto/v1768297111/h3iqw2os6titioiulq8l.webp"
                         alt="AI Portrait"
                         className="w-full h-full object-cover"
                     />
@@ -141,7 +141,7 @@ export const LeonardoBanner = () => {
                     className="w-32 h-40 md:w-44 md:h-56 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20"
                 >
                     <img
-                        src="/img/baby.webp"
+                        src="https://res.cloudinary.com/dmxmzannb/image/upload/f_auto,q_auto/v1768206045/krxq16y49k91zevbw6os.webp"
                         alt="AI Generated"
                         className="w-full h-full object-cover"
                     />
@@ -220,7 +220,7 @@ export const LeonardoBanner = () => {
                     <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-white/10 bg-gradient-to-br from-white/10  to-white/15 backdrop-blur-sm p-4">
                         {/* Mockup placeholder - replace with actual screenshot */}
                         <img
-                            src="/img/trungthu.webp"
+                            src="https://pub-15159732d3b14718981f4ec71d2578eb.r2.dev/1768622719139-5ilv1h.png"
                             alt="AI Portrait"
                             className="w-full h-full object-cover"
                         />

@@ -39,6 +39,42 @@ export const LeonardoHeader = () => {
         }
     }, [session, isLoggedIn, guestCredits]);
 
+    // Fetch fresh credits from API (on mount and when route changes)
+    useEffect(() => {
+        const fetchFreshCredits = async () => {
+            try {
+                if (isLoggedIn) {
+                    // Fetch user credits from API
+                    const response = await fetch('/api/user/me');
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.current_credits !== undefined) {
+                            console.log('[LeonardoHeader] Fresh user credits from API:', data.current_credits);
+                            setCurrentCredits(data.current_credits);
+                        }
+                    }
+                } else {
+                    // Fetch guest credits from API
+                    const guestId = localStorage.getItem('guest_device_id');
+                    if (guestId) {
+                        const response = await fetch(`/api/guest/credits?guestId=${guestId}`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.credits !== undefined) {
+                                console.log('[LeonardoHeader] Fresh guest credits from API:', data.credits);
+                                setCurrentCredits(data.credits);
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('[LeonardoHeader] Failed to fetch fresh credits:', error);
+            }
+        };
+
+        fetchFreshCredits();
+    }, [isLoggedIn, pathname]); // Re-fetch when route changes or login status changes
+
     // Listen for credit updates from generation
     useEffect(() => {
         const handleCreditsUpdate = (event: CustomEvent) => {

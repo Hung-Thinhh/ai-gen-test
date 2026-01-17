@@ -248,6 +248,7 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
 
             // If out of credits, reset to configuring stage (remove loading)
             if (errorMessage.includes('hết Credit') || errorMessage.includes('Insufficient credits')) {
+                toast.error(errorMessage); // Show error notification to user
                 onStateChange({
                     ...preGenState,
                     stage: 'configuring',

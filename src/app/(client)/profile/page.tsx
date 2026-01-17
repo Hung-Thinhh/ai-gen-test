@@ -1,5 +1,22 @@
-import RouteSetter from '@/components/RouteSetter';
+"use client";
+
+import { useEffect } from 'react';
+import UserProfile from '@/components/UserProfile';
+import { useAppControls } from '@/components/uiContexts';
+import { useRouter } from 'next/navigation';
 
 export default function ProfilePage() {
-    return <RouteSetter viewId="profile" />;
+    const { setActivePage } = useAppControls();
+    const router = useRouter();
+
+    useEffect(() => {
+        setActivePage('profile' as any);
+    }, [setActivePage]);
+
+    return (
+        <UserProfile
+            onClose={() => router.push('/')}
+            onOpenSettings={() => router.push('/settings')}
+        />
+    );
 }

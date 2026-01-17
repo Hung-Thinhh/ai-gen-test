@@ -6,12 +6,14 @@ import React, { ChangeEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { generateCloneEffect } from '../services/gemini/advancedImageService';
 import ActionablePolaroidCard from './ActionablePolaroidCard';
+import Lightbox from './Lightbox';
 import {
     AppScreenHeader,
     handleFileUpload as utilHandleFileUpload,
     ResultsView,
     OptionsPanel,
     useAppControls,
+    useLightbox,
 } from './uiUtils';
 
 interface CloneEffectState {
@@ -54,6 +56,10 @@ const CloneEffect: React.FC<CloneEffectProps> = (props) => {
     } = props;
 
     const { t, checkCredits, modelVersion } = useAppControls();
+    const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
+
+    // Lightbox images: uploaded image + result image
+    const lightboxImages = [appState.uploadedImage, appState.resultImage].filter((img): img is string => !!img);
 
     const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
         utilHandleFileUpload(e, (imageDataUrl) => {
@@ -120,6 +126,7 @@ const CloneEffect: React.FC<CloneEffectProps> = (props) => {
                                         status="done"
                                         mediaUrl={appState.uploadedImage || undefined}
                                         placeholderType="person"
+                                        onClick={appState.uploadedImage ? () => openLightbox(lightboxImages.indexOf(appState.uploadedImage!)) : undefined}
                                         onImageChange={(url) => onStateChange({ ...appState, uploadedImage: url })}
                                     />
                                 </label>
@@ -184,16 +191,27 @@ const CloneEffect: React.FC<CloneEffectProps> = (props) => {
 
             {/* Results Stage */}
             {appState.stage === 'results' && (
-                <ResultsView stage={appState.stage} originalImage={appState.uploadedImage} onOriginalClick={() => { }} error={appState.error} isMobile={false}
+                <ResultsView stage={appState.stage} originalImage={appState.uploadedImage}
+                    onOriginalClick={appState.uploadedImage ? () => openLightbox(0) : undefined}
+                    error={appState.error} isMobile={false}
                     actions={(<><button onClick={() => onStateChange({ ...appState, stage: 'configuring' })} className="btn btn-secondary">{t('common_edit')}</button><button onClick={onReset} className="btn btn-secondary">{t('common_startOver')}</button></>)}>
                     {appState.resultImage && (
                         <motion.div key="result" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                             <ActionablePolaroidCard type="output" caption={t('cloneEffect_result')} status="done" mediaUrl={appState.resultImage}
+                                onClick={() => openLightbox(lightboxImages.indexOf(appState.resultImage!))}
                                 onImageChange={(url) => { if (url) { onStateChange({ ...appState, resultImage: url }); addImagesToGallery([url]); } }} />
                         </motion.div>
                     )}
                 </ResultsView>
             )}
+
+            {/* Lightbox */}
+            <Lightbox
+                images={lightboxImages}
+                selectedIndex={lightboxIndex}
+                onClose={closeLightbox}
+                onNavigate={navigateLightbox}
+            />
         </div>
     );
 };

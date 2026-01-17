@@ -1,11 +1,15 @@
 "use client";
 
-import MainApp from "@/components/MainApp";
-import { useAppControls } from "@/components/uiContexts";
-import { useEffect } from "react";
+import { useEffect } from 'react';
+import Overview from '@/components/Overview';
+import { useAppControls } from '@/components/uiContexts';
 
-export default function Home() {
+export default function HomePage() {
+  const { setActivePage } = useAppControls();
 
+  useEffect(() => {
+    setActivePage('overview' as any);
+  }, [setActivePage]);
 
-  return <MainApp />;
+  return <Overview />;
 }
