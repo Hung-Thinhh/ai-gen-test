@@ -44,7 +44,7 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images: r
         // (Assuming homogeneous array)
         if (typeof rawImages[0] === 'string') {
             return (rawImages as string[]).map((url, index) => ({
-                history_id: `legacy-${index}-${url.substring(url.length - 10)}`,
+                history_id: `legacy-${index}-${typeof url === 'string' ? url.substring(url.length - 10) : index}`,
                 output_images: [url],
                 input_prompt: '',
             }));

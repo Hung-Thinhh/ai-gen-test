@@ -8,35 +8,11 @@ export async function middleware(request: NextRequest) {
     // Skip logging for static assets to reduce noise
     const isStaticAsset = pathname.match(/\.(woff2?|ttf|otf|eot|css|js|map|ico|svg|png|jpg|jpeg|gif|webp)$/);
     if (!isStaticAsset) {
-        console.log('[Middleware] 🚀 EXECUTING for:', pathname);
-    }
-    const validPrefixes = [
-        '/',
-        '/tool',
-        '/gallery',
-        '/prompt-library',
-        '/storyboarding',
-        '/settings',
-        '/profile',
-        '/history',
-        '/auth',
-        '/admin',  // Admin panel routes
-        '/studio',
-        '/pricing',
-        '/payment',
-        '/api',
-        '/_next',
-    ];
-
-    // Check if pathname starts with any valid prefix
-    const isValidRoute = validPrefixes.some(prefix => pathname.startsWith(prefix));
-
-    if (!isValidRoute) {
-        console.log(`[Middleware] Invalid route: ${pathname}, redirecting to home`);
-        const redirectUrl = new URL('/', request.url);
-        return NextResponse.redirect(redirectUrl);
+        console.log('[Middleware] 🚀 Request:', pathname);
     }
 
+    // Let Next.js handle routing naturally
+    // Invalid routes will automatically show 404 page
     return NextResponse.next();
 }
 

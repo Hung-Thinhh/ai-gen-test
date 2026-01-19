@@ -111,12 +111,13 @@ export async function POST(req: NextRequest) {
         // Insert into generation_history
         const result = await sql`
             INSERT INTO generation_history (
-                user_id, output_images, input_prompt, tool_key, created_at
+                user_id, output_images, input_prompt, tool_key, tool_id, created_at
             ) VALUES (
                 ${userId},
                 ${JSON.stringify(imagesToSave)}::jsonb,
                 ${prompt || null},
                 ${tool_key || null},
+                ${body.tool_id || 0},
                 NOW()
             )
             RETURNING history_id, output_images, input_prompt, created_at, tool_key

@@ -96,7 +96,7 @@ export const ToolShowcase = () => {
                     big_title="Studio"
                     description="Thử nghiệm các ý tưởng thiết kế giúp chuyển đổi concept chỉ bằng một cú nhấp chuột."
                     image="/img/showcase1.webp"
-                    onClick={() => router.push('/tool/poster-creator')}
+                    onClick={() => router.push('/poster/cosmetic-poster')}
                 />
 
                 {/* Vertical Divider */}

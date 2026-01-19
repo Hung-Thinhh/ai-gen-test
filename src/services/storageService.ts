@@ -1296,6 +1296,58 @@ export const getAllStudios = async () => {
 };
 
 /**
+ * Fetches all poster tools (tool_custom with tool_type_id = 2)
+ */
+export const getAllPosterTools = async () => {
+    try {
+        console.log("[Storage] Fetching poster tools from API...");
+        const response = await fetch('/api/tool-custom?tool_type_id=2');
+        const result = await response.json();
+
+        if (!result.success) {
+            console.error("Error fetching poster tools:", result.error);
+            return [];
+        }
+
+        let tools = result.data || [];
+        tools.sort((a: any, b: any) => {
+            const orderA = a.sort_order || 0;
+            const orderB = b.sort_order || 0;
+            if (orderA === 0 && orderB !== 0) return 1;
+            if (orderA !== 0 && orderB === 0) return -1;
+            if (orderA === 0 && orderB === 0) return 0;
+            return orderA - orderB;
+        });
+
+        return tools;
+    } catch (error) {
+        console.error("Error fetching poster tools:", error);
+        return [];
+    }
+};
+
+/**
+ * Fetches a poster tool by slug
+ */
+export const getPosterToolBySlug = async (slug: string) => {
+    try {
+        console.log(`[Storage] Fetching poster tool by slug: ${slug}`);
+        const response = await fetch(`/api/tool-custom?slug=${slug}`);
+        const result = await response.json();
+
+        if (!result.success || !result.data) {
+            console.error("Error fetching poster tool:", result.error);
+            return null;
+        }
+
+        return result.data;
+    } catch (error) {
+        console.error("Error fetching poster tool by slug:", error);
+        return null;
+    }
+};
+
+/**
  * Creates a new studio.
  */
 export const createStudio = async (studio: any, token?: string) => {

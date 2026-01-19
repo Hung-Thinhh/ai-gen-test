@@ -1,13 +1,75 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import MilkTeaPosterGenerator from './MilkTeaPosterGenerator';
+import { useEffect, useState, useMemo } from 'react';
+import PosterCreator from './MilkTeaPosterGenerator';
+import { PosterCreatorState } from './uiTypes';
+import { useAppControls } from './uiContexts';
 
 interface MilkTeaPosterWrapperProps {
     onGoBack: () => void;
 }
 
 export default function MilkTeaPosterWrapper({ onGoBack }: MilkTeaPosterWrapperProps) {
+    const { addImagesToGallery, logGeneration } = useAppControls();
+
+    const [appState, setAppState] = useState<PosterCreatorState>({
+        productImages: [],
+        referenceImage: null,
+        secondaryObjectImage: null,
+        textEffectImage: null,
+        generatedImage: null,
+        historicalImages: [],
+        stage: 'configuring',
+        error: null,
+        options: {
+            aspectRatio: '1:1 (Vuông - Instagram)',
+            posterType: 'Poster quảng cáo sản phẩm',
+            backgroundStyle: 'Studio thuần túy',
+            lightingStyle: 'Ánh sáng studio 3 điểm',
+            productAngle: 'Chính diện thẳng',
+            domain: 'Trà sữa & Đồ uống',
+            colorScheme: 'Tự động theo ảnh tham khảo',
+            headline: '',
+            subheadline: '',
+            callToAction: '',
+            includeText: false,
+            notes: '',
+            environmentDescription: '',
+            imageCount: 1,
+            enableAdvancedStyling: false,
+        },
+    });
+
+    const handleReset = () => {
+        setAppState({
+            productImages: [],
+            referenceImage: null,
+            secondaryObjectImage: null,
+            textEffectImage: null,
+            generatedImage: null,
+            historicalImages: [],
+            stage: 'configuring',
+            error: null,
+            options: {
+                aspectRatio: '1:1 (Vuông - Instagram)',
+                posterType: 'Poster quảng cáo sản phẩm',
+                backgroundStyle: 'Studio thuần túy',
+                lightingStyle: 'Ánh sáng studio 3 điểm',
+                productAngle: 'Chính diện thẳng',
+                domain: 'Trà sữa & Đồ uống',
+                colorScheme: 'Tự động theo ảnh tham khảo',
+                headline: '',
+                subheadline: '',
+                callToAction: '',
+                includeText: false,
+                notes: '',
+                environmentDescription: '',
+                imageCount: 1,
+                enableAdvancedStyling: false,
+            },
+        });
+    };
+
     const [studio, setStudio] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -59,5 +121,53 @@ export default function MilkTeaPosterWrapper({ onGoBack }: MilkTeaPosterWrapperP
         );
     }
 
-    return <MilkTeaPosterGenerator studio={studio} onGoBack={onGoBack} />;
+    // Transform DB style presets to component format
+    const stylePresets = useMemo(() => {
+        if (!studio?.style_presets || studio.style_presets.length === 0) {
+            return undefined;
+        }
+
+        const presetsMap: Record<string, any> = {};
+        studio.style_presets.forEach((preset: any) => {
+            const key = preset.name.toLowerCase().replace(/\s+/g, '_').replace(/&/g, '');
+            presetsMap[key] = {
+                name: preset.name_vi || preset.name,
+                description: preset.metadata?.description_vi || preset.metadata?.description || '',
+                prompt: preset.prompt_text,
+                buildPrompt: () => preset.prompt_text
+            };
+        });
+
+        return presetsMap;
+    }, [studio?.style_presets]);
+
+    // Extract domain context from DB (tool_custom.domain_prompts column)
+    const domainContext = useMemo(() => {
+        if (typeof studio?.domain_prompts === 'string') {
+            return studio.domain_prompts;
+        } else if (studio?.domain_prompts && typeof studio.domain_prompts === 'object') {
+            const keys = Object.keys(studio.domain_prompts);
+            return studio.domain_prompts[keys[0]] || undefined;
+        }
+        return undefined;
+    }, [studio?.domain_prompts]);
+
+    return (
+        <PosterCreator
+            mainTitle={studio?.name || 'Milk Tea Poster Creator'}
+            subtitle="Tạo poster trà sữa chuyên nghiệp"
+            useSmartTitleWrapping={true}
+            smartTitleWrapWords={4}
+            uploaderCaption="Tải ảnh sản phẩm"
+            uploaderDescription="Chọn ảnh trà sữa của bạn"
+            addImagesToGallery={addImagesToGallery}
+            appState={appState}
+            onStateChange={setAppState}
+            onReset={handleReset}
+            onGoBack={() => { }}
+            logGeneration={logGeneration}
+            stylePresets={stylePresets}
+            domainContext={domainContext}
+        />
+    );
 }

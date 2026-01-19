@@ -695,7 +695,7 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 // User: Fetch directly from Supabase profiles bucket/table
                 // Use fresh client = true to bypass cache
                 fetchedImages = await storageService.getUserCloudGallery(user.id, true, token || undefined);
-                
+
             } else if (guestId) {
                 // Guest: Fetch directly from guest_sessions
                 // Use fresh client = true to bypass cache
@@ -774,10 +774,10 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     // Sync URL → State (for direct access and back/forward buttons)
     useEffect(() => {
         if (!settings) return; // Wait for settings to load
-        // Ignore admin routes to prevents conflict with AdminLayout
-        if (pathname?.startsWith('/admin')) return;
-        // Ignore payment routes - they have their own navigation logic
+        // Skip payment, admin, and test pages (no routing sync needed)
         if (pathname?.startsWith('/payment')) return;
+        if (pathname?.startsWith('/admin')) return;
+        if (pathname?.startsWith('/poster')) return; // Skip all test pages
 
         let targetView = 'overview';
         const path = pathname;
