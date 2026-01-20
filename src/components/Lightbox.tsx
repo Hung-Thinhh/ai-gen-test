@@ -119,7 +119,7 @@ const Lightbox: React.FC<LightboxProps> = ({ images, selectedIndex, onClose, onN
                     <div className="relative w-full h-full flex items-center justify-center overflow-hidden" onClick={onClose}>
                         <button
                             type="button"
-                            className="absolute top-20 left-4 z-[60] p-2 w-12 h-12 flex items-center justify-center rounded-full bg-orange-500! text-white backdrop-blur-sm transition-all hover:bg-black/70 hover:scale-110 active:scale-95 cursor-pointer"
+                            className="absolute top-20 left-4 z-[60] !p-2 w-12 h-12 flex items-center justify-center rounded-full bg-orange-500! text-white backdrop-blur-sm transition-all hover:bg-black/70 hover:scale-110 active:scale-95 cursor-pointer"
                             onClick={(e) => { e.stopPropagation(); onClose(); }}
                             title="Đóng (Esc)"
                         >
@@ -166,7 +166,7 @@ const Lightbox: React.FC<LightboxProps> = ({ images, selectedIndex, onClose, onN
                                 <div className="absolute md:top-4 md:top-[5%] top-[-15%] right-2 flex gap-4 z-50">
                                     <button
                                         type="button"
-                                        className="w-12 h-12 flex items-center justify-center rounded-full bg-black/50 border border-white/20 text-white backdrop-blur-sm transition-all hover:bg-black/70 hover:scale-110 active:scale-95 cursor-pointer z-50"
+                                        className="w-12 h-12 !p-2 flex items-center justify-center rounded-full bg-black/50 border border-white/20 text-white backdrop-blur-sm transition-all hover:bg-black/70 hover:scale-110 active:scale-95 cursor-pointer z-50"
                                         onClick={handleZoomOut}
                                         title="Thu nhỏ"
                                     >
@@ -176,7 +176,7 @@ const Lightbox: React.FC<LightboxProps> = ({ images, selectedIndex, onClose, onN
                                     </button>
                                     <button
                                         type="button"
-                                        className="w-12 h-12 flex items-center justify-center rounded-full bg-black/50 border border-white/20 text-white backdrop-blur-sm transition-all hover:bg-black/70 hover:scale-110 active:scale-95 cursor-pointer z-50"
+                                        className="w-12 h-12 !p-2 flex items-center justify-center rounded-full bg-black/50 border border-white/20 text-white backdrop-blur-sm transition-all hover:bg-black/70 hover:scale-110 active:scale-95 cursor-pointer z-50"
                                         onClick={handleZoomIn}
                                         title="Phóng to"
                                     >
@@ -186,7 +186,7 @@ const Lightbox: React.FC<LightboxProps> = ({ images, selectedIndex, onClose, onN
                                     </button>
                                     <button
                                         type="button"
-                                        className="w-12 h-12 flex items-center justify-center rounded-full bg-black/50 border border-white/20 text-white backdrop-blur-sm transition-all hover:bg-black/70 hover:scale-110 active:scale-95 cursor-pointer z-50"
+                                        className="w-12 h-12 !p-2 flex items-center justify-center rounded-full bg-black/50 border border-white/20 text-white backdrop-blur-sm transition-all hover:bg-black/70 hover:scale-110 active:scale-95 cursor-pointer z-50"
                                         onClick={handleDownloadCurrent}
                                         title="Tải xuống"
                                     >

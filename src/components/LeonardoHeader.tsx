@@ -101,13 +101,13 @@ export const LeonardoHeader = () => {
                     : "border-white/5"
             )}
         >
-            <div className="container mx-auto px-6 h-16 flex items-center justify-between">
+            <div className="container mx-auto px-6 h-10 md:h-16 flex items-center justify-between">
                 {/* Logo - Left side */}
                 <Link href="/">
                     <button
                         className="flex items-center gap-3 group cursor-pointer"
                     >
-                        <div className="w-12 h-12 p-2 rounded-xl overflow-hidden shadow-lg shadow-orange-500/30 group-hover:shadow-orange-500/50 transition-all duration-300">
+                        <div className="md:w-12 md:h-12 w-8 h-8 p-2 rounded-xl overflow-hidden shadow-lg shadow-orange-500/30 group-hover:shadow-orange-500/50 transition-all duration-300">
                             <img
                                 src="/img/logo_site.webp"
                                 alt="Duky AI Logo"

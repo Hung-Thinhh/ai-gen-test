@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import PosterCreator from './MilkTeaPosterGenerator';
+import PosterCreator from './MilkTeaPosterGeneratorV2'; // CHANGED: Using V2 for new UI
 import { PosterCreatorState } from './uiTypes';
 import { useAppControls } from './uiContexts';
 

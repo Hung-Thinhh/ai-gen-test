@@ -24,8 +24,8 @@ export const ModelVersionSelector: React.FC<ModelVersionSelectorProps> = ({
                 onClick={() => onModelChange('v2')}
                 className={cn(
                     'rounded-full font-bold transition-all duration-200',
-                    'md:px-4 md:py-1.5 md:text-xs',
-                    'px-2 py-1 text-[10px]',
+                    'md:px-4 md:py-1.5 md:!text-xs',
+                    '!px-2 py-1 !text-[10px]',
                     modelVersion === 'v2' ? 'text-black shadow-md' : 'text-neutral-400 hover:text-white'
                 )}
                 style={modelVersion === 'v2' ? { backgroundColor: '#f97316' } : {}} // Orange-500
@@ -36,8 +36,8 @@ export const ModelVersionSelector: React.FC<ModelVersionSelectorProps> = ({
                 onClick={() => onModelChange('v3')}
                 className={cn(
                     'rounded-full font-bold transition-all duration-200',
-                    'md:px-4 md:py-1.5 md:text-xs',
-                    'px-2 py-1 text-[10px]',
+                    'md:px-4 md:py-1.5 md:!text-xs',
+                    '!px-2 py-1 !text-[10px]',
                     modelVersion === 'v3' ? 'text-black shadow-md' : 'text-neutral-400 hover:text-white'
                 )}
                 style={modelVersion === 'v3' ? { backgroundColor: '#f97316' } : {}} // Orange-500

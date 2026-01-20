@@ -32,7 +32,7 @@ interface ActionablePolaroidCardProps {
     caption: string;
     status: 'pending' | 'done' | 'error';
     error?: string;
-    placeholderType?: 'person' | 'architecture' | 'clothing' | 'magic' | 'style';
+    placeholderType?: 'person' | 'architecture' | 'clothing' | 'magic' | 'style' | 'photo' | 'art' | 'furniture';
     isMobile?: boolean;
     onClick?: () => void;
 
@@ -48,10 +48,14 @@ interface ActionablePolaroidCardProps {
     regenerationTitle?: string;
     regenerationDescription?: string;
     regenerationPlaceholder?: string;
+    type_box?: 'big' | 'small';
+    uploadLabel?: string;
 }
 
 
 const ActionablePolaroidCard: React.FC<ActionablePolaroidCardProps> = ({
+    uploadLabel,
+    type_box,
     mediaUrl,
     caption,
     status,
@@ -228,6 +232,8 @@ const ActionablePolaroidCard: React.FC<ActionablePolaroidCardProps> = ({
                 />
             )}
             <PolaroidCard
+                uploadLabel={uploadLabel}
+                type_box={type_box}
                 mediaUrl={mediaUrl}
                 caption={caption}
                 status={status}

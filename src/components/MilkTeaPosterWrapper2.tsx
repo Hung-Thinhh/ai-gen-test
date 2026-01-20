@@ -10,7 +10,7 @@ import { useAppControls } from './uiUtils';
 
 // Import the actual PosterCreator component (will rename MilkTeaPosterGenerator export)
 // @ts-ignore - Will fix import after renaming
-import PosterCreatorInternal from './MilkTeaPosterGenerator';
+import PosterCreatorInternal from './MilkTeaPosterGeneratorV2'; // CHANGED: Using V2 for new UI
 
 interface MilkTeaPosterGeneratorProps {
     studio: any;

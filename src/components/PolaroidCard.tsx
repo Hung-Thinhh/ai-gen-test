@@ -24,7 +24,12 @@ import {
     CloudUploadIcon,
     DeleteIcon,
 } from './icons';
-
+import {
+    GridIcon,
+    ShapesIcon,
+    TextIcon,
+    UploadIcon
+} from './icons/PosterIcons';
 type ImageStatus = 'pending' | 'done' | 'error';
 
 interface PolaroidCardProps {
@@ -40,12 +45,14 @@ interface PolaroidCardProps {
     onSelectFromGallery?: () => void;
     onCaptureFromWebcam?: () => void;
     isMobile?: boolean;
-    placeholderType?: 'person' | 'architecture' | 'clothing' | 'magic' | 'style';
+    placeholderType?: 'person' | 'architecture' | 'clothing' | 'magic' | 'style' | 'photo' | 'art' | 'furniture';
     onClick?: () => void;
     isDraggingOver?: boolean;
     onDragOver?: (e: DragEvent) => void;
     onDragLeave?: (e: DragEvent) => void;
     onDrop?: (e: DragEvent) => void;
+    type_box?: 'big' | 'small';
+    uploadLabel?: string;
 }
 
 const LoadingSpinner = () => (
@@ -62,31 +69,36 @@ const ErrorDisplay = ({ message }: { message?: string }) => (
 );
 
 // FIX: Modified Placeholder to safely handle `type` as a string, preventing type errors.
-const Placeholder = ({ type = 'person' }: { type?: string }) => {
+const Placeholder = ({ type = 'person', type_box, uploadLabel }: { type?: string; type_box?: 'big' | 'small'; uploadLabel?: string }) => {
     const { t } = useAppControls();
     const icons = {
         person: <PlaceholderPersonIcon className="placeholder-icon" />,
-        architecture: <PlaceholderArchitectureIcon className="placeholder-icon" />,
+        architecture: <ShapesIcon className="placeholder-icon" />,
         clothing: <PlaceholderClothingIcon className="placeholder-icon" />,
         magic: <PlaceholderMagicIcon className="placeholder-icon" />,
         style: <PlaceholderStyleIcon className="placeholder-icon" />,
+        photo: <UploadIcon className="placeholder-icon !w-20 md:!w-40 !h-20 md:!h-40" />,
+        art: <TextIcon className="placeholder-icon" />,
+        furniture: <GridIcon className="placeholder-icon" />,
+
     };
 
     type IconKey = keyof typeof icons;
     const key: IconKey = (type && Object.prototype.hasOwnProperty.call(icons, type)) ? type as IconKey : 'person';
 
     return (
-        <div className="placeholder-upload-wrapper">
-            <div className="placeholder-upload-box">
+        <div className="placeholder-upload-wrapper" style={type_box === 'big' ? { borderWidth: '3px' } : { borderColor: 'rgba(75, 75, 75, 0.67)' }}>
+            <div className="placeholder-upload-box !p-0 md:!p-4">
                 {icons[key]}
-                <span className="text-neutral-400 text-sm font-medium">{t('common_selectImage')}</span>
+                <span className={`text-md font-medium ${type_box === 'big' ? 'text-md text-white' : 'text-[10px] md:text-xs text-neutral-400'}`}>{uploadLabel || t('common_selectImage')}</span>
+                {type_box === 'big' && <span className="text-neutral-400 text-xs font-medium">JPG, PNG tối đa 10MB</span>}
             </div>
         </div>
     );
 };
 
 
-const PolaroidCard: React.FC<PolaroidCardProps> = ({ mediaUrl, caption, status, error, onShake, onDownload, onEdit, onClear, onSwapImage, onSelectFromGallery, onCaptureFromWebcam, isMobile, placeholderType = 'person', onClick, isDraggingOver, onDragOver, onDragLeave, onDrop }) => {
+const PolaroidCard: React.FC<PolaroidCardProps> = ({ mediaUrl, caption, status, error, onShake, onDownload, onEdit, onClear, onSwapImage, onSelectFromGallery, onCaptureFromWebcam, isMobile, placeholderType = 'person', onClick, isDraggingOver, onDragOver, onDragLeave, onDrop, type_box, uploadLabel }) => {
     const { t } = useAppControls();
     const hasMedia = status === 'done' && mediaUrl;
     // FIX: Do not assume blob: is video. Default to image.
@@ -105,7 +117,7 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ mediaUrl, caption, status, 
 
     return (
         <div
-            className={cn("polaroid-card p-2", isClickable && "cursor-pointer")}
+            className={cn("polaroid-card !p-0 md:!p-2", isClickable && "cursor-pointer")}
             onClick={handleClick}
             onDragOver={onDragOver}
             onDragLeave={onDragLeave}
@@ -133,7 +145,7 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ mediaUrl, caption, status, 
                                 loop
                                 muted
                                 playsInline
-                                className="w-full h-full object-cover block"
+                                className="w-full h-full object-cover block rounded-xl"
                             />
                         ) : (
                             <img
@@ -141,12 +153,12 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ mediaUrl, caption, status, 
                                 src={mediaUrl}
                                 alt={caption}
                                 loading="lazy"
-                                className="w-full h-full object-cover block"
+                                className={`w-full md:h-full  object-cover block rounded-xl ${type_box === 'big' ? 'h-[300px]' : ''}`}
                             />
                         )}
                     </>
                 )}
-                {status === 'done' && !mediaUrl && <Placeholder type={placeholderType} />}
+                {status === 'done' && !mediaUrl && <Placeholder type={placeholderType} type_box={type_box} uploadLabel={uploadLabel} />}
 
                 {/* --- BUTTON CONTAINER --- */}
                 <div className={cn(
@@ -160,7 +172,7 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ mediaUrl, caption, status, 
                                 e.stopPropagation();
                                 onEdit(caption);
                             }}
-                            className="hidden md:flex p-2 items-center justify-center bg-neutral-800/80 rounded-full text-white hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            className="hidden !p-2 items-center justify-center bg-neutral-800/80 rounded-full text-white hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
                             aria-label={`${t('common_edit')} ${caption}`}
                         >
                             <EditorIcon className="h-5 w-5 pointer-events-none" />
@@ -172,10 +184,10 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ mediaUrl, caption, status, 
                                 e.stopPropagation();
                                 onClear();
                             }}
-                            className="p-2 flex items-center justify-center bg-red-500/60 rounded-full text-white hover:bg-red-600/80 focus:outline-none focus:ring-2 focus:ring-red-400"
+                            className="!p-2 w-8 md:w-10 md:w-auto flex items-center justify-center bg-red-500/60 rounded-full text-white hover:bg-red-600/80 focus:outline-none focus:ring-2 focus:ring-red-400"
                             aria-label={t('common_clearImage')}
                         >
-                            <DeleteIcon className="h-5 w-5 pointer-events-none" />
+                            <DeleteIcon className="h-4 w-4 md:h-5 md:w-5 pointer-events-none" />
                         </button>
                     )}
                     {hasMedia && onSwapImage && (
@@ -184,7 +196,7 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ mediaUrl, caption, status, 
                                 e.stopPropagation();
                                 onSwapImage();
                             }}
-                            className="p-2 flex items-center justify-center bg-neutral-800/80 rounded-full text-white hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            className="!p-2 w-10 md:w-auto hidden items-center justify-center bg-neutral-800/80 rounded-full text-white hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
                             aria-label={`${t('common_swapImage')} ${caption}`}
                         >
                             <SwapIcon className="h-5 w-5 pointer-events-none" strokeWidth={2} />
@@ -196,10 +208,10 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ mediaUrl, caption, status, 
                                 e.stopPropagation();
                                 onSelectFromGallery();
                             }}
-                            className="p-2 flex items-center justify-center bg-neutral-800/80 rounded-full text-white hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            className="!p-2 w-8 md:w-10 md:w-auto flex items-center justify-center bg-neutral-800/80 rounded-full text-white hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
                             aria-label={t('common_selectFromGallery')}
                         >
-                            <GalleryIcon className="h-5 w-5 pointer-events-none" strokeWidth={2} />
+                            <GalleryIcon className="h-4 w-4 md:h-5 md:w-5 pointer-events-none" strokeWidth={2} />
                         </button>
                     )}
                     {onCaptureFromWebcam && (
@@ -208,7 +220,7 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ mediaUrl, caption, status, 
                                 e.stopPropagation();
                                 onCaptureFromWebcam();
                             }}
-                            className="p-2 flex items-center justify-center bg-neutral-800/80 rounded-full text-white hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            className="!p-2 hidden md:flex items-center justify-center bg-neutral-800/80 rounded-full text-white hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
                             aria-label={t('common_captureFromWebcam')}
                         >
                             <WebcamIcon
@@ -226,7 +238,7 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ mediaUrl, caption, status, 
                                 e.stopPropagation();
                                 onShake(caption);
                             }}
-                            className="p-2 hidden md:flex items-center justify-center bg-neutral-800/80 rounded-full text-white hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            className="!p-2 hidden md:flex items-center justify-center bg-neutral-800/80 rounded-full text-white hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
                             aria-label={`${t('common_regenerate')} ${caption}`}
                         >
                             <RegenerateIcon className="h-5 w-5 pointer-events-none" />
@@ -238,7 +250,7 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ mediaUrl, caption, status, 
                                 e.stopPropagation();
                                 onDownload(caption);
                             }}
-                            className="p-2 hidden md:flex items-center justify-center bg-neutral-800/80 rounded-full text-white hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            className="!p-2 hidden md:flex items-center justify-center bg-neutral-800/80 rounded-full text-white hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
                             aria-label={`${t('common_download')} ${caption}`}
                         >
                             <DownloadIcon className="h-5 w-5 pointer-events-none" strokeWidth={2} />
