@@ -778,6 +778,8 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         if (pathname?.startsWith('/payment')) return;
         if (pathname?.startsWith('/admin')) return;
         if (pathname?.startsWith('/poster')) return; // Skip all test pages
+        if (pathname?.startsWith('/video-generator')) return; // Skip Video Generator page
+
 
         let targetView = 'overview';
         const path = pathname;

@@ -723,7 +723,7 @@ ${aspectRatioPrompt}
 
             // Add all generated images to gallery
             if (generatedImages.length > 0) {
-                await addImagesToGallery(generatedImages);
+                // await addImagesToGallery(generatedImages); // FIX: Duplicate save causing double images in gallery
 
                 logGeneration('milktea-poster-v2', appState, generatedImages[0], {
                     api_model_used: modelVersion,
