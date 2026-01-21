@@ -7,9 +7,9 @@ const POSTGRES_URL = process.env.POSTGRES_URL || process.env.NEON_DATABASE_URL!;
 // Create connection pool
 const pool = new Pool({
     connectionString: POSTGRES_URL,
-    max: 10, // Reduce max connections to prevent exhaustion in dev HMR
+    max: 20, // Reduce max connections to prevent exhaustion in dev HMR
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000, // Increase timeout to 10s
+    connectionTimeoutMillis: 5000, // Increase timeout to 10s
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined, // Optional SSL for Prod
 });
 
