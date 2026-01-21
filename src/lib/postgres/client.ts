@@ -9,8 +9,8 @@ const pool = new Pool({
     connectionString: POSTGRES_URL,
     max: 20, // Reduce max connections to prevent exhaustion in dev HMR
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000, // Increase timeout to 10s
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined, // Optional SSL for Prod
+    connectionTimeoutMillis: 5000,
+    ssl: false, // Disable SSL as server does not support it
 });
 
 // SQL tagged template function (compatible with Neon syntax)
