@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
-import React, { useState, useRef, useCallback, ChangeEvent, memo } from 'react';
+import React, { useState, useRef, useCallback, useEffect, ChangeEvent, memo } from 'react';
 import PolaroidCard from './PolaroidCard';
 import {
     handleFileUpload,
@@ -129,6 +129,43 @@ const ActionablePolaroidCard: React.FC<ActionablePolaroidCardProps> = ({
             handleFile(e.dataTransfer.files[0]);
         }
     }, [handleFile]);
+
+    // NEW: Handle paste from clipboard
+    const handlePaste = useCallback((e: ClipboardEvent) => {
+        e.preventDefault();
+        const items = e.clipboardData?.items;
+        if (!items) return;
+
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            if (item.type.startsWith('image/')) {
+                const file = item.getAsFile();
+                if (file) {
+                    handleFile(file);
+                    // Show toast to indicate success
+                    import('react-hot-toast').then(({ default: toast }) => {
+                        toast.success('Ảnh đã được paste!', {
+                            duration: 2000,
+                            position: 'bottom-right'
+                        });
+                    });
+                    break;
+                }
+            }
+        }
+    }, [handleFile]);
+
+    // NEW: Add paste listener when component can receive uploads
+    useEffect(() => {
+        const canPaste = type !== 'output' && type !== 'display' && onImageChange;
+        if (!canPaste) return;
+
+        // Attach paste listener to window
+        window.addEventListener('paste', handlePaste);
+        return () => {
+            window.removeEventListener('paste', handlePaste);
+        };
+    }, [handlePaste, type, onImageChange]);
 
     const handleSwapClick = useCallback(() => {
         fileInputRef.current?.click();

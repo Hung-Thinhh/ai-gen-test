@@ -714,7 +714,7 @@ export const GalleryPicker: React.FC<GalleryPickerProps> = ({ isOpen, onClose, o
                                     <div className="gallery-grid">
                                         {images.map((img, index) => (
                                             <ImageThumbnail
-                                                key={`${img.slice(-20)}-${index}`}
+                                                key={typeof img === 'string' ? `${img.slice(-20)}-${index}` : `img-${index}`}
                                                 index={index}
                                                 imageUrl={img}
                                                 isSelectionMode={isSelectionMode}

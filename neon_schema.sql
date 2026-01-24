@@ -203,10 +203,141 @@ CREATE TABLE guest_sessions (
 -- Indexes for guest_sessions
 
 
--- IMPORTANT NOTES:
--- 1. Schema was inferred from sample data - please verify all column types
--- 2. Add FOREIGN KEY constraints manually if needed
--- 3. Add UNIQUE constraints where appropriate
--- 4. Configure Row Level Security (RLS) policies if needed
--- 5. Add DEFAULT values for columns as needed
+-- Table: video_apps
+DROP TABLE IF EXISTS video_apps CASCADE;
+CREATE TABLE video_apps (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    name text NOT NULL,
+    description text,
+    thumbnail_url text, -- App icon/cover
+    preview_video_url text, -- Demo video result
+    
+    -- Config Model (Fixed per App)
+    model_config jsonb NOT NULL,
+    -- Example: { "model": "kling/ai-avatar-standard", "mode": "normal" }
+    
+    -- Input Fields Config (Dynamic Form)
+    input_schema jsonb NOT NULL,
+    -- Example: [ { "id": "text", "type": "textarea", "label": "Prompt" } ]
+    
+    -- Prompt Template (Handlebars style {{var}})
+    prompt_template text, 
+    
+    category text DEFAULT 'general',
+    is_active boolean DEFAULT true,
+    sort_order integer DEFAULT 0,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+-- Seed Data: Video Apps
+INSERT INTO video_apps (id, name, description, model_config, input_schema, prompt_template, thumbnail_url) VALUES 
+(
+    '11111111-1111-1111-1111-111111111111', 
+    'Talking Avatar (Lip Sync)', 
+    'Tạo video nhân vật nói chuyện khớp với file ghi âm.', 
+    '{"model": "kling/ai-avatar-standard"}', 
+    '[
+        {"id": "image_url", "type": "image", "label": "Ảnh Nhân Vật", "required": true},
+        {"id": "audio_url", "type": "audio", "label": "File Ghi Âm", "required": true}
+    ]', 
+    null, -- No prompt needed
+    'https://files.catbox.moe/lip_sync_thumb.jpg'
+),
+(
+    '22222222-2222-2222-2222-222222222222', 
+    'Cinematic Text-to-Video', 
+    'Tạo video điện ảnh từ mô tả văn bản.', 
+    '{"model": "veo/v3", "aspect_ratio": "16:9"}', 
+    '[
+        {"id": "prompt", "type": "textarea", "label": "Mô tả video", "placeholder": "A futuristic city...", "required": true}
+    ]', 
+    '{{prompt}}', -- Use prompt directly
+    'https://files.catbox.moe/t2v_thumb.jpg'
+),
+(
+    '33333333-3333-3333-3333-333333333333', 
+    'Image Animation', 
+    'Tạo chuyển động cho hình ảnh tĩnh.', 
+    '{"model": "veo/v3"}', 
+    '[
+        {"id": "image_urls", "type": "image", "label": "Ảnh Tĩnh", "required": true},
+        {"id": "prompt", "type": "textarea", "label": "Mô tả chuyển động", "placeholder": "Wind blowing, camera zoom in..."}
+    ]', 
+    '{{prompt}}',
+    'https://files.catbox.moe/i2v_thumb.jpg'
+),
+(
+    '44444444-4444-4444-4444-444444444444',
+    'Premium Zen TVC',
+    'Quảng cáo cao cấp, tĩnh lặng. Phù hợp: trà, rượu, nước hoa, trang sức.',
+    '{"model": "veo/v3"}',
+    '[
+        {"id": "image_urls", "type": "image", "label": "Ảnh Sản Phẩm", "required": true},
+        {"id": "product_name", "type": "text", "label": "Tên Sản Phẩm", "placeholder": "VD: Trà Ô Long Premium", "required": true}
+    ]',
+    'Professional luxury commercial for {{product_name}}. Slow smooth camera dolly movement, soft natural lighting with warm golden tones, steam rising elegantly, minimalist zen background. Premium packaging showcase, mindful peaceful atmosphere. No voiceover, natural ambient sounds only. 4K cinematic quality.',
+    'https://files.catbox.moe/premium_zen.jpg'
+),
+(
+    '55555555-5555-5555-5555-555555555555',
+    'Fresh Nature TVC',
+    'Tươi mát, năng động. Phù hợp: nước giải khát, thực phẩm organic, mỹ phẩm thiên nhiên.',
+    '{"model": "veo/v3"}',
+    '[
+        {"id": "image_urls", "type": "image", "label": "Ảnh Sản Phẩm", "required": true},
+        {"id": "product_name", "type": "text", "label": "Tên Sản Phẩm", "placeholder": "VD: Nước Ép Táo Xanh", "required": true}
+    ]',
+    'Vibrant commercial for {{product_name}}. Dynamic camera movements through fresh green nature, morning dew on leaves, water droplets sparkling in bright daylight. Natural ingredients floating, energetic healthy vibe. Bright saturated green tones, outdoor fresh atmosphere. No voiceover, natural ambient sounds only. 4K quality.',
+    'https://files.catbox.moe/fresh_nature.jpg'
+),
+(
+    '66666666-6666-6666-6666-666666666666',
+    'Modern Lifestyle TVC',
+    'Hiện đại, trendy. Phù hợp: tech, fashion, cafe, startup products.',
+    '{"model": "veo/v3"}',
+    '[
+        {"id": "image_urls", "type": "image", "label": "Ảnh Sản Phẩm", "required": true},
+        {"id": "product_name", "type": "text", "label": "Tên Sản Phẩm", "placeholder": "VD: SmartWatch X Pro", "required": true}
+    ]',
+    'Cool modern commercial for {{product_name}}. Quick dynamic cuts, urban contemporary setting, high contrast dramatic lighting. Sleek product angles, Instagram-worthy aesthetic, vibrant neon accents. Young lifestyle vibe, trendy music video style. No voiceover, natural ambient sounds only. 4K cinematic.',
+    'https://files.catbox.moe/modern_lifestyle.jpg'
+),
+(
+    '77777777-7777-7777-7777-777777777777',
+    'Soft Minimalist TVC',
+    'Nhẹ nhàng, tối giản. Phù hợp: mỹ phẩm, nước hoa, sản phẩm cho bé, trang sức tinh tế.',
+    '{"model": "veo/v3"}',
+    '[
+        {"id": "image_urls", "type": "image", "label": "Ảnh Sản Phẩm", "required": true},
+        {"id": "product_name", "type": "text", "label": "Tên Sản Phẩm", "placeholder": "VD: Nước Hoa Lavender", "required": true}
+    ]',
+    'Gentle minimalist commercial for {{product_name}}. Soft pastel colors, delicate floating movements, white clean background. Subtle lighting with dreamy glow, powder and flower petals gently falling. Calm peaceful atmosphere, refined elegant presentation. No voiceover, natural ambient sounds only. 4K quality.',
+    'https://files.catbox.moe/soft_minimal.jpg'
+),
+(
+    '88888888-8888-8888-8888-888888888888',
+    'Clean & Pure TVC',
+    'Trong sáng, thuần khiết. Phù hợp: sữa, nước tinh khiết, skincare, organic baby products.',
+    '{"model": "veo/v3"}',
+    '[
+        {"id": "image_urls", "type": "image", "label": "Ảnh Sản Phẩm", "required": true},
+        {"id": "product_name", "type": "text", "label": "Tên Sản Phẩm", "placeholder": "VD: Sữa Tươi Organic", "required": true}
+    ]',
+    'Pure clean commercial for {{product_name}}. Crystal clear lighting, white pristine environment, gentle milk or water splash. Soft focus bokeh, natural purity aesthetic. Fresh morning light, innocent gentle vibe. Laboratory clean atmosphere. No voiceover, natural ambient sounds only. 4K cinematic.',
+    'https://files.catbox.moe/clean_pure.jpg'
+),
+(
+    '99999999-9999-9999-9999-999999999999',
+    'Product Explosion TVC',
+    'Hiệu ứng sản phẩm nổ tung, nguyên liệu bay trong không khí. Phù hợp: thực phẩm, đồ uống, mỹ phẩm.',
+    '{"model": "veo/v3"}',
+    '[
+        {"id": "image_urls", "type": "image", "label": "Ảnh Sản Phẩm", "required": true},
+        {"id": "product_name", "type": "text", "label": "Tên Sản Phẩm", "placeholder": "VD: Nutella, Oat Milk", "required": true}
+    ]',
+    'Photorealistic cinematic commercial for {{product_name}}. Sunlit kitchen setting with morning light streaming through curtains. Product jar/bottle begins vibrating, then bursts open—releasing explosion of swirling ingredients, components flying and orbiting mid-air in slow motion. Elements assemble into perfect product showcase on wooden table. Slow orbital camera movement from low angle to overhead reveal. Ingredients catch golden sunlight, creating dreamy glow. Gravity-defying product assembly, particles and droplets suspended beautifully. Final shot: beautifully arranged product with steam and glow. No voiceover, natural ambient sounds only. 16:9 cinematic, high detail, no text.',
+    'https://files.catbox.moe/explosion_tvc.jpg'
+);
+
 

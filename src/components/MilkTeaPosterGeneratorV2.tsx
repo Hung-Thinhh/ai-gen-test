@@ -230,7 +230,7 @@ export const MilkTeaPosterGeneratorV2: React.FC<PosterGeneratorV2Props> = ({
     const productAngleOptions = Object.keys(ANGLE_PROMPTS);
 
     // Local UI State
-    const [selectedStyle, setSelectedStyle] = useState<string>(Object.keys(availablePresets)[0] || 'studio_professional');
+    const [selectedStyle, setSelectedStyle] = useState<string | null>(Object.keys(availablePresets)[0] || 'studio_professional');
     const [productDesc, setProductDesc] = useState('');
     const [envDesc, setEnvDesc] = useState('');
     const [selectedAspectRatio, setSelectedAspectRatio] = useState('1:1 (Vuông - Instagram)');
@@ -432,9 +432,12 @@ ${appState.secondaryObjectImage ? '9. **SECONDARY OBJECTS:** Incorporate element
                 environmentContext += 'Include secondary objects from the uploaded reference as surrounding elements. ';
             }
 
-            // Get style preset
-            const preset = STYLE_PRESETS[selectedStyle];
-            const styleDescription = preset?.prompt || preset?.buildPrompt?.(desc, posterTypePrompt, bgPrompt, lightPrompt, anglePrompt, notes) || '';
+            // Get style preset (nếu có chọn)
+            let styleDescription = '';
+            if (selectedStyle) {
+                const preset = STYLE_PRESETS[selectedStyle];
+                styleDescription = preset?.prompt || preset?.buildPrompt?.(desc, posterTypePrompt, bgPrompt, lightPrompt, anglePrompt, notes) || '';
+            }
 
             mainPrompt = `
 GENERATE A NEW IMAGE:
@@ -932,7 +935,7 @@ ${aspectRatioPrompt}
                                         title={config.title}
                                         description={config.description}
                                         isSelected={selectedStyle === key}
-                                        onClick={() => setSelectedStyle(key)}
+                                        onClick={() => setSelectedStyle(selectedStyle === key ? null : key)}
                                     />
                                 ))}
                             </div>
@@ -958,7 +961,7 @@ ${aspectRatioPrompt}
                                                 title={config.title}
                                                 description={config.description}
                                                 isSelected={selectedStyle === key}
-                                                onClick={() => setSelectedStyle(key)}
+                                                onClick={() => setSelectedStyle(selectedStyle === key ? null : key)}
                                             />
                                         </SwiperSlide>
                                     ))}

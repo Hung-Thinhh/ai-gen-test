@@ -13,6 +13,7 @@ export interface CreateVideoParams {
     image_start?: string; // Image ID
     image_end?: string; // Image ID
     image_ref?: string; // Image ID
+    images?: string[]; // Array of Image IDs or URLs
     quantity?: number;
 }
 

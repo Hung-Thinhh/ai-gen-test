@@ -485,11 +485,16 @@ const PosterCreator: React.FC<PosterCreatorProps> = (props) => {
             // Convert URL to data URL if needed
             let imageDataUrl = imageUrl;
             if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('blob:')) {
-                console.log('[PosterCreator] Converting URL to data URL');
-                const response = await fetch(imageUrl);
+                console.log('[PosterCreator] Converting URL to data URL via proxy');
+
+                // Use API proxy to avoid CORS issues with R2
+                const proxyUrl = `/api/proxy/image/fetch?url=${encodeURIComponent(imageUrl)}`;
+                const response = await fetch(proxyUrl);
+
                 if (!response.ok) {
-                    throw new Error(`Failed to fetch image: ${response.statusText}`);
+                    throw new Error(`Failed to fetch image via proxy: ${response.statusText}`);
                 }
+
                 const blob = await response.blob();
                 imageDataUrl = await new Promise<string>((resolve, reject) => {
                     const reader = new FileReader();
@@ -500,7 +505,11 @@ const PosterCreator: React.FC<PosterCreatorProps> = (props) => {
             }
 
             // Use editImageWithPrompt to regenerate with custom prompt
+            console.log('[PosterCreator] Calling editImageWithPrompt với prompt:', customPrompt);
+            console.log('[PosterCreator] ImageDataUrl length:', imageDataUrl.length);
             const resultUrl = await editImageWithPrompt(imageDataUrl, customPrompt);
+            console.log('[PosterCreator] Received resultUrl:', resultUrl.substring(0, 50) + '...');
+            console.log('[PosterCreator] ResultUrl === imageDataUrl?', resultUrl === imageDataUrl);
 
             // Embed metadata if enabled
             const settingsToEmbed = {
@@ -519,11 +528,21 @@ const PosterCreator: React.FC<PosterCreatorProps> = (props) => {
                 input_prompt: customPrompt
             });
 
-            // Add to display images
+            // Replace old image with new one, or add if not found
             setDisplayImages(prev => {
-                const newImages = [...prev, urlWithMetadata];
-                // Keep only last MAX_DISPLAY_IMAGES
-                return newImages.slice(-MAX_DISPLAY_IMAGES);
+                const oldImageIndex = prev.findIndex(img => img === imageUrl);
+
+                if (oldImageIndex !== -1) {
+                    // Replace the old image with the new one at the same position
+                    const newImages = [...prev];
+                    newImages[oldImageIndex] = urlWithMetadata;
+                    return newImages;
+                } else {
+                    // If old image not found, add to the end (fallback)
+                    const newImages = [...prev, urlWithMetadata];
+                    // Keep only last MAX_DISPLAY_IMAGES
+                    return newImages.slice(-MAX_DISPLAY_IMAGES);
+                }
             });
 
             // Add to gallery
