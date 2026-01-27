@@ -247,6 +247,14 @@
       "icon": "🆔",
       "supportsCanvasPreset": true,
       "previewImageUrl": "/img/img_base.webp"
+    },
+    {
+      "id": "product-process-creator",
+      "titleKey": "app_product-process-creator_title",
+      "descriptionKey": "app_product-process-creator_description",
+      "icon": "🏭",
+      "supportsCanvasPreset": true,
+      "previewImageUrl": "/img/img_base.webp"
     }
   ],
   "avatarCreator": {

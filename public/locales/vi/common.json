@@ -651,6 +651,8 @@
   "profile_signout": "Đăng xuất",
   "app_poster-creator_title": "Tạo Poster Sản Phẩm",
   "app_poster-creator_description": "Tạo poster và mockup sản phẩm chuyên nghiệp từ ảnh",
+  "app_product-process-creator_title": "Quy trình Sản phẩm",
+  "app_product-process-creator_description": "Tạo ảnh minh họa quy trình sản xuất kiểu diorama",
   "posterCreator_mainTitle": "Tạo Poster Sản Phẩm",
   "posterCreator_subtitle": "Biến ảnh sản phẩm thành poster và mockup chuyên nghiệp",
   "posterCreator_uploaderCaption": "Ảnh sản phẩm",

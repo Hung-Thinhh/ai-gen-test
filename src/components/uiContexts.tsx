@@ -74,7 +74,8 @@ export const useImageEditor = (): ImageEditorContextType => {
 
 // --- App Control Context ---
 
-const AppControlContext = createContext<AppControlContextType | undefined>(undefined);
+
+export const AppControlContext = createContext<AppControlContextType | undefined>(undefined);
 
 export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { user, isLoggedIn, token, isLoading: authLoading } = useAuth();

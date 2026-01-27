@@ -4,7 +4,7 @@ export const MOCK_APPS = [
         slug: 'talking-avatar',
         name: 'Talking Avatar (Lip Sync)',
         description: 'Tạo video nhân vật nói chuyện khớp với file ghi âm.',
-        thumbnail_url: 'https://files.catbox.moe/lip_sync_thumb.jpg',
+        thumbnail_url: 'https://res.cloudinary.com/dmxmzannb/video/upload/v1769417333/Firstperson_view_of_1080p_202601261543_wqyu7o.mp4',
         model_config: { model: "kling/ai-avatar-standard" },
         input_schema: [
             { id: "image_url", type: "image", label: "Ảnh Nhân Vật", required: true },
@@ -17,7 +17,7 @@ export const MOCK_APPS = [
         slug: 'cinematic-text-to-video',
         name: 'Cinematic Text-to-Video',
         description: 'Tạo video điện ảnh từ mô tả văn bản. Chất lượng cao.',
-        thumbnail_url: 'https://files.catbox.moe/t2v_thumb.jpg',
+        thumbnail_url: 'https://res.cloudinary.com/dmxmzannb/video/upload/v1769417333/Firstperson_view_of_1080p_202601261543_wqyu7o.mp4',
         model_config: { model: "veo3_fast", aspect_ratio: "16:9" },
         input_schema: [
             { id: "prompt", type: "textarea", label: "Mô tả video", placeholder: "A futuristic city...", required: true }
@@ -30,7 +30,7 @@ export const MOCK_APPS = [
         slug: 'image-animation',
         name: 'Image Animation',
         description: 'Tạo chuyển động cho hình ảnh tĩnh.',
-        thumbnail_url: 'https://files.catbox.moe/i2v_thumb.jpg',
+        thumbnail_url: 'https://res.cloudinary.com/dmxmzannb/video/upload/v1769417333/Firstperson_view_of_1080p_202601261543_wqyu7o.mp4',
         model_config: { model: "veo3_fast" },
         input_schema: [
             { id: "image_urls", type: "image", label: "Ảnh Tĩnh", required: true },
@@ -43,7 +43,7 @@ export const MOCK_APPS = [
         slug: 'premium-zen-tvc',
         name: 'Premium Zen TVC',
         description: 'Quảng cáo cao cấp, tĩnh lặng. Phù hợp: trà, rượu, nước hoa, trang sức.',
-        thumbnail_url: 'https://files.catbox.moe/premium_zen.jpg',
+        thumbnail_url: 'https://res.cloudinary.com/dmxmzannb/video/upload/v1769417333/Firstperson_view_of_1080p_202601261543_wqyu7o.mp4',
         model_config: { model: "veo/v3" },
         input_schema: [
             { id: "image_urls", type: "image", label: "Ảnh Sản Phẩm", required: true },
@@ -57,7 +57,7 @@ export const MOCK_APPS = [
         slug: 'fresh-nature-tvc',
         name: 'Fresh Nature TVC',
         description: 'Tươi mát, năng động. Phù hợp: nước giải khát, thực phẩm organic, mỹ phẩm thiên nhiên.',
-        thumbnail_url: 'https://files.catbox.moe/fresh_nature.jpg',
+        thumbnail_url: 'https://res.cloudinary.com/dmxmzannb/video/upload/v1769417333/Firstperson_view_of_1080p_202601261543_wqyu7o.mp4',
         model_config: { model: "veo/v3" },
         input_schema: [
             { id: "image_urls", type: "image", label: "Ảnh Sản Phẩm", required: true },
@@ -71,7 +71,7 @@ export const MOCK_APPS = [
         slug: 'modern-lifestyle-tvc',
         name: 'Modern Lifestyle TVC',
         description: 'Hiện đại, trendy. Phù hợp: tech, fashion, cafe, startup products.',
-        thumbnail_url: 'https://files.catbox.moe/modern_lifestyle.jpg',
+        thumbnail_url: 'https://res.cloudinary.com/dmxmzannb/video/upload/v1769417333/Firstperson_view_of_1080p_202601261543_wqyu7o.mp4',
         model_config: { model: "veo/v3" },
         input_schema: [
             { id: "image_urls", type: "image", label: "Ảnh Sản Phẩm", required: true },
@@ -85,7 +85,7 @@ export const MOCK_APPS = [
         slug: 'soft-minimalist-tvc',
         name: 'Soft Minimalist TVC',
         description: 'Nhẹ nhàng, tối giản. Phù hợp: mỹ phẩm, nước hoa, sản phẩm cho bé, trang sức tinh tế.',
-        thumbnail_url: 'https://files.catbox.moe/soft_minimal.jpg',
+        thumbnail_url: 'https://res.cloudinary.com/dmxmzannb/video/upload/v1769417333/Firstperson_view_of_1080p_202601261543_wqyu7o.mp4',
         model_config: { model: "veo3_fast", aspect_ratio: "16:9" },
         input_schema: [
             { id: "image_urls", type: "image", label: "Ảnh Sản Phẩm", required: true },
@@ -99,7 +99,7 @@ export const MOCK_APPS = [
         slug: 'clean-pure-tvc',
         name: 'Clean & Pure TVC',
         description: 'Trong sáng, thuần khiết. Phù hợp: sữa, nước tinh khiết, skincare, organic baby products.',
-        thumbnail_url: 'https://files.catbox.moe/clean_pure.jpg',
+        thumbnail_url: 'https://res.cloudinary.com/dmxmzannb/video/upload/v1769417333/Firstperson_view_of_1080p_202601261543_wqyu7o.mp4',
         model_config: { model: "veo3_fast", aspect_ratio: "16:9" },
         input_schema: [
             { id: "image_urls", type: "image", label: "Ảnh Sản Phẩm", required: true },
@@ -113,7 +113,7 @@ export const MOCK_APPS = [
         slug: 'product-explosion-tvc',
         name: 'Product Explosion TVC',
         description: 'Hiệu ứng sản phẩm nổ tung, nguyên liệu bay trong không khí. Phù hợp: thực phẩm, đồ uống, mỹ phẩm.',
-        thumbnail_url: 'https://files.catbox.moe/explosion_tvc.jpg',
+        thumbnail_url: 'https://res.cloudinary.com/dmxmzannb/video/upload/v1769417333/Firstperson_view_of_1080p_202601261543_wqyu7o.mp4',
         model_config: { model: "veo3_fast", aspect_ratio: "16:9" },
         input_schema: [
             { id: "image_urls", type: "image", label: "Ảnh Sản Phẩm", required: true },

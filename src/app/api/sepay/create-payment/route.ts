@@ -9,6 +9,21 @@ export async function POST(req: NextRequest) {
 
         console.log('[SePay] Creating payment for package:', packageId, 'user:', userId);
 
+        // 0. Cleanup expired pending transactions (older than 10 minutes)
+        try {
+            const cleanupCount = await sql`
+                DELETE FROM payment_transactions 
+                WHERE status = 'pending' 
+                AND created_at < (NOW() - INTERVAL '10 minutes')
+            `;
+            if (cleanupCount && cleanupCount.length > 0) {
+                console.log(`[SePay] Cleaned up ${cleanupCount.length} expired pending transactions`);
+            }
+        } catch (cleanupError) {
+            console.error('[SePay] Cleanup error (non-fatal):', cleanupError);
+            // We continue even if cleanup fails to not block new payments
+        }
+
         // 1. Validate input
         if (!packageId || !userId) {
             return NextResponse.json(
@@ -70,12 +85,18 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const price = Number(selectedPackage.price_vnd);
+        let price = Number(selectedPackage.price_vnd);
         if (!price || price <= 0) {
             return NextResponse.json(
                 { success: false, error: 'Invalid package price' } as CreatePaymentResponse,
                 { status: 400 }
             );
+        }
+
+        // 4.5. DEV MODE: Override price to 2000 VND for all paid packages
+        if (isDev) {
+            console.log(`[SePay] DEV MODE: Overriding price from ${price} to 2000 VND`);
+            price = 2000;
         }
 
         // 5. Create unique order ID

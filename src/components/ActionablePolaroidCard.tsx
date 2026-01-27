@@ -132,9 +132,27 @@ const ActionablePolaroidCard: React.FC<ActionablePolaroidCardProps> = ({
 
     // NEW: Handle paste from clipboard
     const handlePaste = useCallback((e: ClipboardEvent) => {
-        e.preventDefault();
+        // If the user is focusing an input or textarea, let the browser handle it normally
+        const target = e.target as HTMLElement;
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+            return;
+        }
+
         const items = e.clipboardData?.items;
         if (!items) return;
+
+        let hasImage = false;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.startsWith('image/')) {
+                hasImage = true;
+                break;
+            }
+        }
+
+        // Only prevent default if we have an image to process
+        if (!hasImage) return;
+
+        e.preventDefault();
 
         for (let i = 0; i < items.length; i++) {
             const item = items[i];

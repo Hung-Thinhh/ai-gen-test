@@ -30,12 +30,32 @@ export function VideoAppsList() {
                         )}
 
                         <div className="relative w-full aspect-video bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-xl mb-4 overflow-hidden group-hover:scale-105 transition-transform duration-300">
-                            <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
+                            {/* Render Thumbnail (Video or Image) */}
+                            {app.thumbnail_url ? (
+                                app.thumbnail_url.endsWith('.mp4') ? (
+                                    <video
+                                        src={app.thumbnail_url}
+                                        autoPlay
+                                        loop
+                                        muted
+                                        playsInline
+                                        className="absolute inset-0 w-full h-full object-cover z-0"
+                                    />
+                                ) : (
+                                    <img
+                                        src={app.thumbnail_url}
+                                        alt={app.name}
+                                        className="absolute inset-0 w-full h-full object-cover z-0"
+                                    />
+                                )
+                            ) : null}
+
+                            <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between z-20">
                                 <span className="text-xs font-mono text-orange-400 bg-black/70 backdrop-blur-sm px-2 py-1 rounded border border-orange-500/30">
                                     {app.model_config.model.split('/')[1] || app.model_config.model}
                                 </span>
                             </div>
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent z-10"></div>
                         </div>
 
                         <div className="relative z-10">
