@@ -6,6 +6,7 @@ import React, { useState, ChangeEvent, useCallback, useEffect, useRef } from 're
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { generateEntrepreneurImage, editImageWithPrompt, analyzeForEntrepreneurConcepts } from '../services/geminiService';
+import { processApiError } from '@/services/gemini/baseService';
 import ActionablePolaroidCard from './ActionablePolaroidCard';
 import Lightbox from './Lightbox';
 import {
@@ -191,12 +192,13 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
                     historicalImages: [...generatingState.historicalImages, { idea, url: urlWithMetadata }],
                 });
                 addImagesToGallery([urlWithMetadata]);
-            } catch (err) {
-                const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+                addImagesToGallery([urlWithMetadata]);
+            } catch (err: any) {
+                const error = processApiError(err);
                 onStateChange({
                     ...generatingState,
                     stage: 'results',
-                    generatedImages: { [idea]: { status: 'error' as const, error: errorMessage } },
+                    generatedImages: { [idea]: { status: 'error' as const, error: error.message } },
                 });
             }
             return;
@@ -247,8 +249,11 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
                 }
                 ideasToGenerate = ideasToGenerate.filter(i => i !== randomConceptString).concat(randomIdeas);
                 ideasToGenerate = [...new Set(ideasToGenerate)];
-            } catch (err) {
-                toast.error(t('entrepreneurCreator_analysisError'));
+                ideasToGenerate.filter(i => i !== randomConceptString).concat(randomIdeas);
+                ideasToGenerate = [...new Set(ideasToGenerate)];
+            } catch (err: any) {
+                const error = processApiError(err);
+                toast.error(`Lỗi phân tích: ${error.message}`);
                 setIsAnalyzing(false);
                 return;
             } finally {
@@ -315,17 +320,19 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
                 onStateChange(currentAppState);
                 addImagesToGallery([urlWithMetadata]);
 
-            } catch (err) {
-                const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+                addImagesToGallery([urlWithMetadata]);
+
+            } catch (err: any) {
+                const error = processApiError(err);
                 currentAppState = {
                     ...currentAppState,
                     generatedImages: {
                         ...currentAppState.generatedImages,
-                        [idea]: { status: 'error' as const, error: errorMessage },
+                        [idea]: { status: 'error' as const, error: error.message },
                     },
                 };
                 onStateChange(currentAppState);
-                console.error(`Failed to generate image for ${idea}:`, err);
+                console.error(`Failed to generate image for ${idea}:`, error);
             }
         };
 
@@ -394,14 +401,15 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
                 historicalImages: [...appState.historicalImages, { idea: `${idea}-edit`, url: urlWithMetadata }],
             });
             addImagesToGallery([urlWithMetadata]);
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+            addImagesToGallery([urlWithMetadata]);
+        } catch (err: any) {
+            const error = processApiError(err);
             onStateChange({
                 ...appState,
                 // FIX: Add 'as const' to prevent type widening of 'status' to string.
-                generatedImages: { ...appState.generatedImages, [idea]: { status: 'error' as const, error: errorMessage } }
+                generatedImages: { ...appState.generatedImages, [idea]: { status: 'error' as const, error: error.message } }
             });
-            console.error(`Failed to regenerate image for ${idea}:`, err);
+            console.error(`Failed to regenerate image for ${idea}:`, error);
         }
     };
 

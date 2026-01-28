@@ -28,6 +28,9 @@ interface GalleryItem {
     history_id: string;
     output_images: string[];
     input_prompt?: string;
+    created_at?: string;
+    tool_key?: string;
+    model?: string;
     [key: string]: any; // Allow other properties
 }
 
@@ -335,7 +338,7 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images: r
                                 }
                                 return (
                                     <ImageThumbnail
-                                        key={`${img.history_id}`}
+                                        key={`${img.history_id}-${actualIndex}`}
                                         index={actualIndex}
                                         imageUrl={imageUrl}
                                         isSelectionMode={isSelectionMode}
@@ -445,7 +448,18 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images: r
                     </motion.div>
                 )}
             </AnimatePresence>
-            <Lightbox images={images.filter(item => item?.output_images?.[0]).map(item => item.output_images![0])} selectedIndex={selectedImageIndex} prompts={images.map(item => item.input_prompt || null)} onClose={closeLightbox} onNavigate={navigateLightbox} />
+            <Lightbox
+                images={images.filter(item => item?.output_images?.[0]).map(item => ({
+                    src: item.output_images![0],
+                    prompt: item.input_prompt,
+                    createdAt: item.created_at,
+                    toolKey: item.tool_key,
+                    model: item.model
+                }))}
+                selectedIndex={selectedImageIndex}
+                onClose={closeLightbox}
+                onNavigate={navigateLightbox}
+            />
         </div>
     );
 };

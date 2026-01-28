@@ -23,6 +23,7 @@ import { SearchableSelect } from './SearchableSelect';
 import type { PosterCreatorState } from './uiTypes';
 import { generateStyledImage } from '../services/gemini/advancedImageService';
 import { editImageWithPrompt } from '../services/geminiService';
+import { processApiError, GeminiErrorCodes, GeminiError } from '@/services/gemini/baseService';
 import { embedJsonInPng } from './uiFileUtilities';
 
 // --- PROMPT COMPONENTS ---
@@ -247,6 +248,7 @@ const PosterCreator: React.FC<PosterCreatorProps> = (props) => {
     const [localCTA, setLocalCTA] = useState(appState.options.callToAction || '');
     const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
     const [pendingImageSlots, setPendingImageSlots] = useState<number>(0); // Track how many images are still loading
+    const [batchErrors, setBatchErrors] = useState<string[]>([]); // Track errors in current batch
     const [displayImages, setDisplayImages] = useState<string[]>([]); // Images created in current session
     const [isGenerating, setIsGenerating] = useState<boolean>(false); // Prevent double execution
     const MAX_DISPLAY_IMAGES = 4; // Maximum images to show on screen
@@ -388,13 +390,15 @@ const PosterCreator: React.FC<PosterCreatorProps> = (props) => {
             // Remove loading slot
             setPendingImageSlots(prev => Math.max(0, prev - 1));
             toast.success('Đã tạo lại ảnh thành công!', { id: 'regenerating' });
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
-            console.error('[PosterCreator] Regeneration error:', errorMessage);
+            setPendingImageSlots(prev => Math.max(0, prev - 1));
+            toast.success('Đã tạo lại ảnh thành công!', { id: 'regenerating' });
+        } catch (err: any) {
+            const error = processApiError(err);
+            console.error('[PosterCreator] Regeneration error:', error);
 
             // Remove loading slot on error
             setPendingImageSlots(prev => Math.max(0, prev - 1));
-            toast.error(`Lỗi tạo lại ảnh: ${errorMessage}`, { id: 'regenerating' });
+            toast.error(`Lỗi tạo lại ảnh: ${error.message}`, { id: 'regenerating' });
         }
     }, [appState, checkCredits, modelVersion, logGeneration, addImagesToGallery]);
 
@@ -832,6 +836,7 @@ ${aspectRatioPrompt}
         generatedBlobUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
         generatedBlobUrlsRef.current = [];
         setDisplayImages([]);
+        setBatchErrors([]);
         setPendingImageSlots(imageCount); // Set slots immediately for feedback
 
         // Switch to configuring stage immediately (ensure UI shows results section)
@@ -935,23 +940,18 @@ ${aspectRatioPrompt}
                     setDisplayImages(prev => [...prev, imageUrlForDisplay]);
                     return { success: true };
 
-                } catch (err) {
-                    console.error(`❌ [PosterCreator] Error generating image ${index + 1}:`, err);
-                    const errorMessage = err instanceof Error ? err.message : String(err);
-                    console.error('[PosterCreator] Error details:', {
-                        message: errorMessage,
-                        stack: err instanceof Error ? err.stack : undefined,
-                        imageCount: imagesToUse.length,
-                        promptLength: prompt.length,
-                        aspectRatio: geminiAspectRatio
-                    });
+                } catch (err: any) {
+                    const error = processApiError(err);
+                    console.error(`❌ [PosterCreator] Error generating image ${index + 1}:`, error);
 
                     // Show error to user
-                    toast.error(`Lỗi khi tạo ảnh ${index + 1}: ${errorMessage}`, {
-                        duration: 5000
-                    });
+                    // toast.error(`Lỗi khi tạo ảnh ${index + 1}: ${errorMessage}`, {
+                    //    duration: 5000
+                    // });
 
-                    return { success: false, error: errorMessage };
+                    setBatchErrors(prev => [...prev, error.message]);
+
+                    return { success: false, error: error.message };
                 } finally {
                     // Decrement pending count regardless of success/failure
                     setPendingImageSlots(prev => Math.max(0, prev - 1));
@@ -966,12 +966,9 @@ ${aspectRatioPrompt}
             const allFailed = results.every(r => !r.success);
             if (allFailed && imageCount > 0) {
                 const firstError = results.find(r => !r.success)?.error || "Unknown error";
-                let userFriendlyError = firstError;
 
-                // Map common errors to friendly messages
-                if (firstError.includes('hết Credit')) userFriendlyError = "Bạn đã hết Credit. Vui lòng nạp thêm.";
-                if (firstError.includes('safety') || firstError.includes('block')) userFriendlyError = "Nội dung bị hệ thống chặn vì an toàn. Vui lòng thử mô tả khác.";
-                if (firstError.includes('400')) userFriendlyError = "Không thể tạo ảnh với yêu cầu này. Vui lòng thử lại.";
+                // We rely on the processApiError message which is already friendly
+                const userFriendlyError = firstError;
 
                 onStateChange({
                     ...appState,
@@ -1154,6 +1151,7 @@ ${aspectRatioPrompt}
                                             onClick={() => {
                                                 // Clear local state first
                                                 setDisplayImages([]);
+                                                setBatchErrors([]);
                                                 setPendingImageSlots(0);
                                                 generatedBlobUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
                                                 generatedBlobUrlsRef.current = [];
@@ -1186,6 +1184,18 @@ ${aspectRatioPrompt}
                                                 onClick={() => openLightbox(appState.productImages.length + index)}
                                                 onRegenerate={(prompt) => handleRegeneration(imgUrl, prompt)}
                                                 onGenerateVideoFromPrompt={(prompt) => generateVideo(imgUrl, prompt)}
+                                            />
+                                        ))}
+
+                                        {/* Show Errors */}
+                                        {batchErrors.map((errorMsg, index) => (
+                                            <ActionablePolaroidCard
+                                                key={`error-${index}`}
+                                                type="output"
+                                                status="error"
+                                                error={errorMsg}
+                                                caption={t('common_error') || 'Lỗi'}
+                                                isMobile={false}
                                             />
                                         ))}
 
@@ -1232,7 +1242,7 @@ ${aspectRatioPrompt}
                                                         {t('common_creating') || 'Đang tạo...'}
                                                     </p>
                                                     <p className="text-neutral-400 text-xs mt-1">
-                                                        Ảnh {displayImages.length + index + 1}/{displayImages.length + pendingImageSlots}
+                                                        Ảnh {displayImages.length + batchErrors.length + index + 1}/{displayImages.length + batchErrors.length + pendingImageSlots}
                                                     </p>
                                                 </div>
                                             </div>

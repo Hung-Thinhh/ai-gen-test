@@ -147,25 +147,71 @@ export async function DELETE(req: NextRequest) {
         if (!userId) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
         // Support both query param and body formats
-        let historyId = req.nextUrl.searchParams.get('history_id') || req.nextUrl.searchParams.get('url');
+        let identifier = req.nextUrl.searchParams.get('history_id') || req.nextUrl.searchParams.get('url');
 
-        if (!historyId) {
+        if (!identifier) {
             const body = await req.json();
-            historyId = body.history_id || body.url;
+            identifier = body.history_id || body.url;
         }
 
-        if (!historyId) return NextResponse.json({ error: 'Missing history_id or url' }, { status: 400 });
+        if (!identifier) return NextResponse.json({ error: 'Missing history_id or url' }, { status: 400 });
 
-        // Delete from generation_history
-        const result = await sql`
-            DELETE FROM generation_history 
-            WHERE user_id = ${userId} AND history_id = ${historyId}::uuid
-        `;
+        // Check if identifier is a URL
+        const isUrl = identifier.startsWith('http');
 
-        return NextResponse.json({
-            success: true,
-            deleted: result.length || 0
-        });
+        if (isUrl) {
+            const imageUrl = identifier;
+            // Find records containing this image
+            // Note: We search using JSONB @> operator or LIKE for legacy/text fallback
+            const histories = await sql`
+                SELECT history_id, output_images
+                FROM generation_history 
+                WHERE user_id = ${userId} 
+                AND (output_images @> ${JSON.stringify([imageUrl])}::jsonb OR output_images::text LIKE ${'%' + imageUrl + '%'})
+            `;
+
+            let deletedCount = 0;
+            let updatedCount = 0;
+
+            for (const history of histories) {
+                const outputImages = history.output_images;
+                if (Array.isArray(outputImages) && outputImages.includes(imageUrl)) {
+                    // Remove image
+                    const updatedImages = outputImages.filter((url: string) => url !== imageUrl);
+
+                    if (updatedImages.length === 0) {
+                        // Delete empty record
+                        await sql`DELETE FROM generation_history WHERE history_id = ${history.history_id}`;
+                        deletedCount++;
+                    } else {
+                        // Update record
+                        await sql`
+                            UPDATE generation_history 
+                            SET output_images = ${JSON.stringify(updatedImages)}::jsonb 
+                            WHERE history_id = ${history.history_id}
+                        `;
+                        updatedCount++;
+                    }
+                }
+            }
+            return NextResponse.json({
+                success: true,
+                deleted: deletedCount,
+                updated: updatedCount
+            });
+
+        } else {
+            // Assume UUID history_id
+            const result = await sql`
+                DELETE FROM generation_history 
+                WHERE user_id = ${userId} AND history_id = ${identifier}::uuid
+            `;
+            return NextResponse.json({
+                success: true,
+                deleted: result.length || 0
+            });
+        }
+
     } catch (e: any) {
         console.error('[API] DELETE /api/user/gallery error:', e);
         return NextResponse.json({ error: e.message }, { status: 500 });

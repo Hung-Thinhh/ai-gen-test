@@ -18,6 +18,7 @@ import { embedJsonInPng } from './uiFileUtilities';
 import { PosterCreatorState } from './uiTypes';
 import { ImageUploadGrid, UploadSlot } from './upload';
 import SearchableSelect from './SearchableSelect';
+import { processApiError } from '@/services/gemini/baseService';
 
 // --- STYLES ---
 const PROCESS_STYLES: Record<string, string> = {

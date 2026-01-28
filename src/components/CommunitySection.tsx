@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ZaloCTA } from './ZaloCTA';
+import { CommunityGallery } from './CommunityGallery';
 import Image from 'next/image'
 
 const testimonials = [
@@ -46,7 +47,7 @@ export const CommunitySection = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.8 }}
-                className="benefit relative z-20 container max-w-[1300px] mx-auto px-6 mt-10 z-999 hidden md:block"
+                className="benefit relative z-20 container max-w-[1300px]  mx-auto px-6 mt-10 z-999 hidden md:block"
             >
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-[1300px] mx-auto">
                     {/* Item 1 */}
@@ -98,20 +99,20 @@ export const CommunitySection = () => {
                     </div>
                 </div>
             </motion.div>
-            <div className="container mx-auto max-w-[1300px] px-6 md:pt-30">
+            <div className=" mx-auto md:pt-30">
 
                 {/* Header */}
                 <motion.h2
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className="text-3xl leading-12 md:text-4xl font-bold text-center mb-16 bg-gradient-to-r from-orange-400 to-orange-600 bg-clip-text text-transparent"
+                    className="text-3xl max-w-[1300px] mx-auto leading-12 md:text-4xl font-bold text-center mb-16 bg-gradient-to-r from-orange-400 to-orange-600 bg-clip-text text-transparent"
                 >
                     Gia nhập cộng đồng với chúng tôi
                 </motion.h2>
 
                 {/* Testimonials Slider */}
-                <div className="relative mb-20 px-4 md:px-0">
+                <div className="relative max-w-[1300px] mx-auto mb-20 px-4 md:px-0">
                     <Swiper
                         modules={[Pagination, Autoplay]}
                         spaceBetween={24}
@@ -157,6 +158,11 @@ export const CommunitySection = () => {
 
                 {/* CTA Banner */}
                 <ZaloCTA />
+
+                {/* Community Gallery */}
+                <div className="mt-20">
+                    <CommunityGallery />
+                </div>
 
                 {/* Partners Section */}
                 <div className="text-center mt-30">

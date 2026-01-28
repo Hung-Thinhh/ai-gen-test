@@ -14,6 +14,8 @@ import {
     useLightbox,
     useAppControls,
 } from './uiUtils';
+import { toast } from 'react-hot-toast';
+import { processApiError } from '@/services/gemini/baseService';
 
 interface PortraitGeneratorState {
     stage: 'configuring' | 'generating' | 'results';
@@ -320,8 +322,10 @@ const PortraitGenerator: React.FC<PortraitGeneratorProps> = (props) => {
                     ? promptParts
                     : `${promptParts}. Variation ${index + 1}: Create a unique but equally stunning version.`;
                 return await generateStyledImage(variedPrompt, images, undefined, opts.aspectRatio || undefined, 'portrait-generator');
-            } catch (err) {
-                console.error(`Failed to generate image ${index + 1}:`, err);
+            } catch (err: any) {
+                const error = processApiError(err);
+                console.error(`Failed to generate image ${index + 1}:`, error);
+                toast.error(`${error.message}`);
                 return null;
             }
         };

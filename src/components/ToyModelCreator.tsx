@@ -5,6 +5,7 @@
 import React, { ChangeEvent, useCallback, useEffect, useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { generateToyModelImage, editImageWithPrompt } from '../services/geminiService';
+import { processApiError } from '@/services/gemini/baseService';
 import ActionablePolaroidCard from './ActionablePolaroidCard';
 import Lightbox from './Lightbox';
 import {
@@ -211,9 +212,10 @@ const ToyModelCreator: React.FC<ToyModelCreatorProps> = (props) => {
                 historicalImages: [...appState.historicalImages, urlWithMetadata],
             });
             addImagesToGallery([urlWithMetadata]);
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
-            onStateChange({ ...appState, stage: 'results', error: errorMessage });
+            addImagesToGallery([urlWithMetadata]);
+        } catch (err: any) {
+            const error = processApiError(err);
+            onStateChange({ ...appState, stage: 'results', error: error.message });
         }
     };
 
@@ -249,9 +251,10 @@ const ToyModelCreator: React.FC<ToyModelCreatorProps> = (props) => {
                 historicalImages: [...appState.historicalImages, urlWithMetadata],
             });
             addImagesToGallery([urlWithMetadata]);
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
-            onStateChange({ ...appState, stage: 'results', error: errorMessage });
+            addImagesToGallery([urlWithMetadata]);
+        } catch (err: any) {
+            const error = processApiError(err);
+            onStateChange({ ...appState, stage: 'results', error: error.message });
         }
     };
 

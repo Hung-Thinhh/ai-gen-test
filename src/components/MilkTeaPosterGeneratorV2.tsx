@@ -39,6 +39,8 @@ import {
 } from './uiUtils';
 import type { PosterCreatorState } from './uiTypes';
 import { generateStyledImage } from '../services/gemini/advancedImageService';
+import { processApiError, GeminiErrorCodes, GeminiError } from '@/services/gemini/baseService';
+import { embedJsonInPng } from './uiFileUtilities';
 
 // --- PROMPT COMPONENTS ---
 const BACKGROUND_PROMPTS: Record<string, string> = {
@@ -708,7 +710,8 @@ ${aspectRatioPrompt}
                         return imageUrl;
                     }
                     return null;
-                } catch (error: any) {
+                } catch (err: any) {
+                    const error = processApiError(err);
                     console.error(`[V2] Error generating image ${index + 1}:`, error);
                     toast.error(`Lỗi tạo ảnh ${index + 1}: ${error.message}`);
                     return null;
@@ -742,7 +745,8 @@ ${aspectRatioPrompt}
             } else {
                 toast.error('Không tạo được ảnh nào!');
             }
-        } catch (error: any) {
+        } catch (err: any) {
+            const error = processApiError(err);
             console.error('[V2] Generation error:', error);
             toast.error(`Lỗi: ${error.message}`);
             onStateChange({ ...appState, error: error.message, stage: 'configuring' });

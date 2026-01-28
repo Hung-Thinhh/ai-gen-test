@@ -51,40 +51,73 @@ const devError = (...args: any[]) => {
 
 
 // --- Centralized Error Processor ---
+// --- Error Code Standards ---
+export const GeminiErrorCodes = {
+    MODEL_REFUSAL: 'MODEL_REFUSAL',       // 400: AI từ chối trả lời (policy/inability)
+    SAFETY_VIOLATION: 'SAFETY_VIOLATION', // 400: Vi phạm bộ lọc an toàn
+    QUOTA_EXCEEDED: 'QUOTA_EXCEEDED',     // 429: Hết lượt/Quá tải
+    INSUFFICIENT_CREDITS: 'INSUFFICIENT_CREDITS', // 402: Hết tiền
+    INTERNAL_ERROR: 'INTERNAL_ERROR',     // 500: Lỗi server
+    BAD_REQUEST: 'BAD_REQUEST',            // 400: Lỗi request
+    GENERATION_FAILED: 'GENERATION_FAILED', // 500: Lỗi tạo ảnh (IMAGE_OTHER, STOP...)
+    SERVER_BUSY: 'SERVER_BUSY'            // 503: Server bận/Overloaded
+} as const;
+
+export class GeminiError extends Error {
+    code: string;
+    description?: string;
+
+    constructor(message: string, code: string = GeminiErrorCodes.INTERNAL_ERROR, description?: string) {
+        super(message);
+        this.name = "GeminiError";
+        this.code = code;
+        this.description = description;
+    }
+}
+
+// --- Centralized Error Processor ---
 export function processApiError(error: unknown): Error {
+    // 0. Check for structured API error objects (e.g. { error: "Message", code: "SAFETY_VIOLATION" })
+    const anyError = error as any;
+
+    // Case A: Already a GeminiError?
+    if (error instanceof GeminiError) return error;
+
+    // Case B: Structured error from Server (props: error, code, details)
+    // Server is the single source of truth. Trust what it says.
+    if (anyError?.error && typeof anyError.error === 'string') {
+        const code = anyError.code || GeminiErrorCodes.INTERNAL_ERROR;
+        return new GeminiError(anyError.error, code, anyError.details);
+    }
+
+    // 1. Prevent double wrapping
+    if (error instanceof Error && error.message.startsWith("Đã xảy ra lỗi không mong muốn từ AI")) {
+        return error;
+    }
+
     const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
     console.group("Gemini API Error Debug");
     console.error("Raw Error Object:", error);
     console.error("Error Message String:", errorMessage);
     console.groupEnd();
 
+    // Case C: Client-side or Network Errors (Not from API response structure)
     if (errorMessage.includes('ReadableStream uploading is not supported')) {
-        return new Error("Ứng dụng tạm thời chưa tương thích ứng dụng di động, mong mọi người thông cảm");
+        return new GeminiError("Ứng dụng tạm thời chưa tương thích ứng dụng di động, mong mọi người thông cảm", GeminiErrorCodes.BAD_REQUEST);
     }
     if (errorMessage.toLowerCase().includes('api key not valid')) {
-        return new Error("API Key không hợp lệ. Vui lòng liên hệ quản trị viên để được hỗ trợ.");
+        return new GeminiError("Hệ thống đang gặp lỗi key. Vui lòng thử lại sau.", GeminiErrorCodes.INTERNAL_ERROR);
     }
     if (errorMessage.includes('not configured')) {
-        return new Error("Chưa cấu hình API Key. Vui lòng kiểm tra file .env của bạn.");
-    }
-    if (errorMessage.includes('429') || errorMessage.toLowerCase().includes('quota') || errorMessage.toLowerCase().includes('rate limit') || errorMessage.toLowerCase().includes('resource_exhausted')) {
-        console.log(errorMessage);
-
-        return new Error("Ứng dụng tạm thời đạt giới hạn sử dụng trong ngày, hãy quay trở lại vào ngày tiếp theo.");
-    }
-    if (errorMessage.toLowerCase().includes('safety') || errorMessage.toLowerCase().includes('blocked')) {
-        return new Error("Yêu cầu của bạn đã bị chặn vì lý do an toàn. Vui lòng thử với một hình ảnh hoặc prompt khác.");
-    }
-    // Credit errors: return as-is without wrapping
-    if (errorMessage.includes('hết Credit') || errorMessage.includes('Insufficient credits')) {
-        return new Error(errorMessage);
+        return new GeminiError("Hệ thống đang gặp lỗi cấu hình. Vui lòng thử lại sau.", GeminiErrorCodes.INTERNAL_ERROR);
     }
 
-    // Return original Error object or a new one for other cases
+    // Fallback: Generic Internal Error
     if (error instanceof Error) {
-        return new Error("Đã xảy ra lỗi không mong muốn từ AI. Vui lòng thử lại sau. Chi tiết: " + error.message);
+        // Keep original stack trrace if possible by extending
+        return new GeminiError("Đã xảy ra lỗi không mong muốn từ AI. Vui lòng thử lại sau. Chi tiết: " + error.message, GeminiErrorCodes.INTERNAL_ERROR);
     }
-    return new Error("Đã có lỗi không mong muốn từ AI: " + errorMessage);
+    return new GeminiError("Đã có lỗi không mong muốn từ AI: " + errorMessage, GeminiErrorCodes.INTERNAL_ERROR);
 }
 
 /**
@@ -93,9 +126,12 @@ export function processApiError(error: unknown): Error {
  * @returns An object containing the mime type and data.
  */
 export function parseDataUrl(imageDataUrl: string): { mimeType: string; data: string } {
-    const match = imageDataUrl.match(/^data:(image\/\w+);base64,(.*)$/);
+    const match = imageDataUrl.match(/^data:(image\/[^;]+);base64,(.+)$/);
     if (!match) {
-        throw new Error("Invalid image data URL format. Expected 'data:image/...;base64,...'");
+        // Log the start of the invalid string for debugging
+        const preview = imageDataUrl.length > 50 ? imageDataUrl.substring(0, 50) + '...' : imageDataUrl;
+        console.error(`Invalid image data URL format. Input preview: "${preview}"`);
+        throw new Error(`Invalid image data URL format. Expected 'data:image/...;base64,...'. Input starts with: ${preview}`);
     }
     const [, mimeType, data] = match;
     return { mimeType, data };
@@ -112,16 +148,14 @@ export async function normalizeImageInput(input: string): Promise<{ mimeType: st
         return parseDataUrl(input);
     }
 
-    try {
-        const response = await fetch(input);
+    const fetchAndConvert = async (url: string) => {
+        const response = await fetch(url);
         if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
         const blob = await response.blob();
-
-        return new Promise((resolve, reject) => {
+        return new Promise<{ mimeType: string; data: string }>((resolve, reject) => {
             const reader = new FileReader();
             reader.onloadend = () => {
                 const base64data = reader.result as string;
-                // reader.result includes "data:image/xyz;base64," prefix
                 const match = base64data.match(/^data:(.+);base64,(.+)$/);
                 if (match) {
                     resolve({ mimeType: match[1], data: match[2] });
@@ -132,8 +166,20 @@ export async function normalizeImageInput(input: string): Promise<{ mimeType: st
             reader.onerror = reject;
             reader.readAsDataURL(blob);
         });
-    } catch (error) {
-        throw new Error(`Failed to process image URL: ${error instanceof Error ? error.message : String(error)}`);
+    };
+
+    try {
+        // Try fetching directly first
+        return await fetchAndConvert(input);
+    } catch (directError) {
+        console.warn(`[baseService] Direct fetch failed, trying proxy. Error: ${directError}`);
+        try {
+            // Fallback to proxy
+            const proxyUrl = `/api/proxy/image/fetch?url=${encodeURIComponent(input)}`;
+            return await fetchAndConvert(proxyUrl);
+        } catch (proxyError) {
+            throw new Error(`Failed to process image URL (Proxy fallback also failed): ${proxyError instanceof Error ? proxyError.message : String(proxyError)}`);
+        }
     }
 }
 
@@ -292,9 +338,9 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
             // Add timeout to detect hanging requests
             const controller = new AbortController();
             const timeoutId = setTimeout(() => {
-                devError('[Gemini Debug] Request timeout after 60s!');
+                devError('[Gemini Debug] Request timeout after 180s!');
                 controller.abort();
-            }, 60000); // 60 second timeout
+            }, 180000); // 180 second timeout
 
             let response;
             try {
@@ -309,7 +355,8 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
                         parts,
                         config: finalConfig,
                         model: model,
-                        tool_key: config.tool_key || undefined // Forward tool_key to API
+                        tool_key: config.tool_key || undefined, // Forward tool_key to API
+                        input_prompt: (parts as any[]).find((p: any) => p.text)?.text || '' // Explicitly send prompt text
                     }),
                     signal: controller.signal
                 });
@@ -339,13 +386,15 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
                         throw new Error("Bạn đã hết Credit. Vui lòng nạp thêm để tiếp tục.");
                     }
 
-                    throw new Error(errorData.error || `Server responded with ${response.status}`);
+                    // Throw the raw error data object so processApiError can handle structured errors (e.g. SAFETY_VIOLATION)
+                    // without redundant wrapping.
+                    throw errorData;
                 }
             } catch (fetchError: any) {
                 clearTimeout(timeoutId);
                 if (fetchError.name === 'AbortError') {
                     devError('[Gemini Debug] Request was aborted due to timeout');
-                    throw new Error('Request timeout - Server không phản hồi sau 60 giây');
+                    throw new Error('Request timeout - Server không phản hồi sau 180 giây');
                 }
                 throw fetchError;
             }

@@ -23,6 +23,7 @@ import {
     DownloadIcon,
     CloudUploadIcon,
     DeleteIcon,
+    ShareIcon,
 } from './icons';
 import {
     GridIcon,
@@ -40,6 +41,7 @@ interface PolaroidCardProps {
     onShake?: (caption: string) => void;
     onDownload?: (caption: string) => void;
     onEdit?: (caption: string) => void;
+    onShare?: (caption: string) => void;
     onClear?: () => void;
     onSwapImage?: () => void;
     onSelectFromGallery?: () => void;
@@ -98,7 +100,7 @@ const Placeholder = ({ type = 'person', type_box, uploadLabel }: { type?: string
 };
 
 
-const PolaroidCard: React.FC<PolaroidCardProps> = ({ mediaUrl, caption, status, error, onShake, onDownload, onEdit, onClear, onSwapImage, onSelectFromGallery, onCaptureFromWebcam, isMobile, placeholderType = 'person', onClick, isDraggingOver, onDragOver, onDragLeave, onDrop, type_box, uploadLabel }) => {
+const PolaroidCard: React.FC<PolaroidCardProps> = ({ mediaUrl, caption, status, error, onShake, onDownload, onEdit, onShare, onClear, onSwapImage, onSelectFromGallery, onCaptureFromWebcam, isMobile, placeholderType = 'person', onClick, isDraggingOver, onDragOver, onDragLeave, onDrop, type_box, uploadLabel }) => {
     const { t } = useAppControls();
     const hasMedia = status === 'done' && mediaUrl;
     // FIX: Do not assume blob: is video. Default to image.
@@ -250,10 +252,23 @@ const PolaroidCard: React.FC<PolaroidCardProps> = ({ mediaUrl, caption, status, 
                                 e.stopPropagation();
                                 onDownload(caption);
                             }}
-                            className="!p-2 hidden md:flex items-center justify-center bg-neutral-800/80 rounded-full text-white hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            className="!p-2 md:flex items-center justify-center bg-neutral-800/80 rounded-full text-white hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
+
                             aria-label={`${t('common_download')} ${caption}`}
                         >
                             <DownloadIcon className="h-5 w-5 pointer-events-none" strokeWidth={2} />
+                        </button>
+                    )}
+                    {hasMedia && onShare && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onShare(caption);
+                            }}
+                            className="!p-2 md:flex items-center justify-center bg-neutral-800/80 rounded-full text-white hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            aria-label="Chia sẻ"
+                        >
+                            <ShareIcon className="h-5 w-5 pointer-events-none" strokeWidth={2} />
                         </button>
                     )}
                 </div>

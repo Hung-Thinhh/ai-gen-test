@@ -27,7 +27,9 @@ export async function GET(req: NextRequest) {
                 output_images,
                 input_prompt,
                 created_at,
-                tool_key
+                created_at,
+                tool_key,
+                api_model_used
             FROM generation_history 
             WHERE user_id = ${userId}
             ORDER BY created_at DESC
@@ -39,12 +41,12 @@ export async function GET(req: NextRequest) {
         const promptsList = [];
         let baseCount = 0;
         let urlCount = 0;
-        
+
         for (const record of data) {
             if (record.output_images && Array.isArray(record.output_images)) {
                 for (let i = 0; i < record.output_images.length; i++) {
                     const img = record.output_images[i];
-                    
+
                     // Filter out base64 images, only keep R2 URLs
                     if (!img || typeof img !== 'string') continue;
                     if (img.startsWith('data:')) {
@@ -54,14 +56,15 @@ export async function GET(req: NextRequest) {
                     if (!img.startsWith('https://')) {
                         continue;
                     }
-                    
+
                     urlCount++;
                     imagesList.push({
                         id: `${record.history_id}_${i}`,
                         history_id: record.history_id,
                         url: img,
                         created_at: record.created_at,
-                        tool_key: record.tool_key
+                        tool_key: record.tool_key,
+                        model: record.api_model_used
                     });
                     // Map each image with its prompt
                     promptsList.push(record.input_prompt || null);
@@ -70,18 +73,18 @@ export async function GET(req: NextRequest) {
         }
 
         console.log(`[API] GET /api/gallery: Found ${imagesList.length} URL images (skipped ${baseCount} base64 images)`);
-        console.log('[API] Sample images:', imagesList.slice(0, 2).map(img => ({ 
-            url: img.url.substring(0, 60) + '...', 
-            tool: img.tool_key 
+        console.log('[API] Sample images:', imagesList.slice(0, 2).map(img => ({
+            url: img.url.substring(0, 60) + '...',
+            tool: img.tool_key
         })));
         console.log('[API] Sample prompts:', promptsList.slice(0, 2).map(p => p?.substring(0, 50) + '...' || 'null'));
 
-        const response = { 
+        const response = {
             images: imagesList,
             prompts: promptsList,
-            total: imagesList.length 
+            total: imagesList.length
         };
-        
+
         console.log('[API] Response summary:', {
             total: response.total,
             prompts_count: promptsList.filter(p => p).length,

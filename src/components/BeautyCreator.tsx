@@ -6,6 +6,7 @@ import React, { useState, useCallback, useEffect, useRef, ChangeEvent } from 're
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { generateBeautyImage, editImageWithPrompt, analyzeForBeautyConcepts } from '../services/geminiService';
+import { processApiError } from '@/services/gemini/baseService';
 import ActionablePolaroidCard from './ActionablePolaroidCard';
 import Lightbox from './Lightbox';
 import {
@@ -187,12 +188,13 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
                     historicalImages: [...generatingState.historicalImages, { idea, url: urlWithMetadata }],
                 });
                 addImagesToGallery([urlWithMetadata]);
-            } catch (err) {
-                const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+                addImagesToGallery([urlWithMetadata]);
+            } catch (err: any) {
+                const error = processApiError(err);
                 onStateChange({
                     ...generatingState,
                     stage: 'results',
-                    generatedImages: { [idea]: { status: 'error' as const, error: errorMessage } },
+                    generatedImages: { [idea]: { status: 'error' as const, error: error.message } },
                 });
             }
             return;
@@ -242,8 +244,11 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
                 }
                 ideasToGenerate = ideasToGenerate.filter(i => i !== randomConceptString).concat(randomIdeas);
                 ideasToGenerate = [...new Set(ideasToGenerate)];
-            } catch (err) {
-                toast.error(t('beautyCreator_analysisError'));
+                ideasToGenerate = ideasToGenerate.filter(i => i !== randomConceptString).concat(randomIdeas);
+                ideasToGenerate = [...new Set(ideasToGenerate)];
+            } catch (err: any) {
+                const error = processApiError(err);
+                toast.error(`Lỗi phân tích: ${error.message}`);
                 setIsAnalyzing(false);
                 return;
             } finally {
@@ -313,12 +318,14 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
                 onStateChange(currentAppState);
                 addImagesToGallery([urlWithMetadata]);
 
-            } catch (err) {
-                const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+                addImagesToGallery([urlWithMetadata]);
+
+            } catch (err: any) {
+                const error = processApiError(err);
                 currentAppState = {
                     ...currentAppState,
                     // FIX: Add 'as const' to prevent type widening of 'status' to string.
-                    generatedImages: { ...currentAppState.generatedImages, [idea]: { status: 'error' as const, error: errorMessage } },
+                    generatedImages: { ...currentAppState.generatedImages, [idea]: { status: 'error' as const, error: error.message } },
                 };
                 onStateChange(currentAppState);
             }
@@ -373,10 +380,11 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
                 historicalImages: [...appState.historicalImages, { idea: `${idea}-edit`, url: urlWithMetadata }],
             });
             addImagesToGallery([urlWithMetadata]);
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+            addImagesToGallery([urlWithMetadata]);
+        } catch (err: any) {
+            const error = processApiError(err);
             // FIX: Add 'as const' to prevent type widening of 'status' to string.
-            onStateChange({ ...appState, generatedImages: { ...appState.generatedImages, [idea]: { status: 'error' as const, error: errorMessage } } });
+            onStateChange({ ...appState, generatedImages: { ...appState.generatedImages, [idea]: { status: 'error' as const, error: error.message } } });
         }
     };
 

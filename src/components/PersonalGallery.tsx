@@ -1,15 +1,13 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
 import React, { useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion'; // Added AnimatePresence
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAppControls, useLightbox } from './uiUtils';
-import Lightbox from './Lightbox';
+import Lightbox, { LightboxItem } from './Lightbox';
 import { GalleryIcon } from './icons';
 
 export const PersonalGallery: React.FC = () => {
     const { imageGallery, t, handleSelectApp, language } = useAppControls();
+    const [galleryItems, setGalleryItems] = React.useState<LightboxItem[]>([]);
+    const [isLoading, setIsLoading] = React.useState(true);
 
     // Custom lightbox hook for this component
     const {
@@ -19,17 +17,53 @@ export const PersonalGallery: React.FC = () => {
         navigateLightbox
     } = useLightbox();
 
-    // Get latest 10 images (reversed to show newest first if imageGallery is chronological, 
-    // assuming imageGallery appends new images at the end? Usually yes. 
-    // Let's reverse it to show newest top-left)
-    const displayImages = useMemo(() => {
-        if (!imageGallery) return [];
-        return [...imageGallery].reverse().slice(0, 10);
+    // Fetch Full Gallery Data (Images + Prompts)
+    React.useEffect(() => {
+        const fetchGalleryData = async () => {
+            try {
+                const response = await fetch('/api/gallery');
+                if (response.ok) {
+                    const data = await response.json();
+                    const items: LightboxItem[] = (data.images || []).map((img: any, index: number) => ({
+                        src: img.url,
+                        type: (img.url.endsWith('.mp4') || img.url.endsWith('.webm')) ? 'video' : 'image',
+                        prompt: data.prompts?.[index] || undefined,
+                        createdAt: img.created_at,
+                        toolKey: img.tool_key,
+                        model: img.model
+                    }));
+                    setGalleryItems(items);
+                }
+            } catch (error) {
+                console.warn('PersonalGallery failed to fetch API data:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchGalleryData();
     }, [imageGallery]);
 
-    const lightboxImages = displayImages; // Lightbox should cycle through these 10
+    // Use API data if available, otherwise context data (fallback)
+    const displayItems = useMemo(() => {
+        // If we have rich items from API, use them
+        if (galleryItems.length > 0) {
+            return galleryItems.slice(0, 10);
+        }
 
-    if (!displayImages || displayImages.length === 0) {
+        // Fallback to simple strings from context, converted to LightboxItem
+        if (imageGallery && imageGallery.length > 0) {
+            return [...imageGallery].reverse().slice(0, 10).map(url => ({
+                src: url,
+                type: (url.endsWith('.mp4') || url.endsWith('.webm')) ? 'video' : 'image',
+            } as LightboxItem));
+        }
+
+        return [];
+    }, [galleryItems, imageGallery]);
+
+
+    if ((!displayItems || displayItems.length === 0) && !isLoading) {
         return (
             <div className="w-full py-12 px-4 text-center">
                 <div className="bg-neutral-800/50 rounded-2xl p-8 max-w-2xl mx-auto border border-neutral-700/50">
@@ -76,7 +110,7 @@ export const PersonalGallery: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 max-w-6xl mx-auto">
-                {displayImages.map((img, index) => (
+                {displayItems.map((item, index) => (
                     <motion.div
                         key={index}
                         initial={{ opacity: 0, scale: 0.9 }}
@@ -87,22 +121,30 @@ export const PersonalGallery: React.FC = () => {
                         className="aspect-[3/4] rounded-xl overflow-hidden cursor-pointer relative group border border-neutral-800 bg-neutral-800"
                         onClick={() => openLightbox(index)}
                     >
-                        <img
-                            src={img}
-                            alt={`Gallery image ${index + 1}`}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                            loading="lazy"
-                        />
+                        {item.type === 'video' ? (
+                            <div className="w-full h-full flex items-center justify-center bg-black">
+                                <video src={item.src} className="max-w-full max-h-full" muted />
+                            </div>
+                        ) : (
+                            <img
+                                src={item.src}
+                                alt={`Gallery image ${index + 1}`}
+                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                loading="lazy"
+                            />
+                        )}
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
                     </motion.div>
                 ))}
             </div>
 
             <Lightbox
-                images={lightboxImages}
+                images={displayItems}
                 selectedIndex={lightboxIndex}
                 onClose={closeLightbox}
                 onNavigate={navigateLightbox}
+            // Prompts are now embedded in displayItems, so we don't strictly need this, 
+            // but Lightbox supports it as fallback.
             />
         </div>
     );

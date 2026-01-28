@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { executeAppTask, pollUntilComplete, type VideoAppConfig } from '@/services/kieService';
 import ActionablePolaroidCard from '../ActionablePolaroidCard';
+import { processApiError } from '@/services/gemini/baseService';
 
 interface DynamicAppDetailProps {
     app: VideoAppConfig;
@@ -79,9 +80,10 @@ export function DynamicAppDetail({ app, onBack }: DynamicAppDetailProps) {
             setProgress(100);
             toast.success('Video created successfully!');
 
-        } catch (error: any) {
+        } catch (err: any) {
+            const error = processApiError(err);
             console.error(error);
-            toast.error(error.message || 'Generation failed');
+            toast.error(error.message);
             setStatus('Failed');
         } finally {
             setIsGenerating(false);

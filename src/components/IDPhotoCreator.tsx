@@ -5,6 +5,7 @@
 import React, { useState, DragEvent, ChangeEvent } from 'react';
 import { motion } from 'framer-motion';
 import { generateStyledImage } from '../services/gemini/advancedImageService';
+import { processApiError } from '@/services/gemini/baseService';
 import { cn, cropImageToAspectRatio } from '../lib/utils';
 import { useAppControls } from './uiUtils';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -312,11 +313,12 @@ export default function IDPhotoCreator({ appState, onStateChange, onBack }: IDPh
                 stage: 'results',
                 error: null
             });
-        } catch (err) {
+        } catch (err: any) {
+            const error = processApiError(err);
             onStateChange({
                 ...appState,
                 stage: 'results',
-                error: err instanceof Error ? err.message : "An unknown error occurred."
+                error: error.message
             });
         } finally {
             setIsLoading(false);
@@ -330,12 +332,13 @@ export default function IDPhotoCreator({ appState, onStateChange, onBack }: IDPh
             const [width, height] = printSize.split('x').map(Number);
             const sheetUrl = await createPrintSheet(generatedImage, width, height);
             onStateChange({ ...appState, printSheet: sheetUrl });
-        } catch (err) {
+        } catch (err: any) {
+            const error = processApiError(err);
             // Keep current stage but show error? Or use alert?
             // Using error state for simpler UI
             onStateChange({
                 ...appState,
-                error: err instanceof Error ? `Sheet creation failed: ${err.message}` : "An unknown error occurred."
+                error: `Sheet creation failed: ${error.message}`
             });
         } finally {
             setIsCreatingSheet(false);

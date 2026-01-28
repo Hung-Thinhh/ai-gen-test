@@ -7,6 +7,7 @@ import React, { useState, ChangeEvent, useCallback, useEffect, useRef } from 're
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { generateMidAutumnImage, analyzeForConcepts } from '../services/geminiService';
+import { processApiError } from '@/services/gemini/baseService';
 import ActionablePolaroidCard from './ActionablePolaroidCard';
 import Lightbox from './Lightbox';
 import {
@@ -199,12 +200,13 @@ const MidAutumnCreator: React.FC<MidAutumnCreatorProps> = (props) => {
                     historicalImages: [...generatingState.historicalImages, { idea, url: urlWithMetadata }],
                 });
                 addImagesToGallery([urlWithMetadata]);
-            } catch (err) {
-                const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+                addImagesToGallery([urlWithMetadata]);
+            } catch (err: any) {
+                const error = processApiError(err);
                 onStateChange({
                     ...generatingState,
                     stage: 'results',
-                    generatedImages: { [idea]: { status: 'error' as const, error: errorMessage } } as any,
+                    generatedImages: { [idea]: { status: 'error' as const, error: error.message } } as any,
                 });
             }
             return;
@@ -256,8 +258,9 @@ const MidAutumnCreator: React.FC<MidAutumnCreatorProps> = (props) => {
                 }
                 ideasToGenerate = ideasToGenerate.filter(i => i !== randomConceptString).concat(randomIdeas);
                 ideasToGenerate = [...new Set(ideasToGenerate)];
-            } catch (err) {
-                toast.error(t('midAutumnCreator_analysisError'));
+            } catch (err: any) {
+                const error = processApiError(err);
+                toast.error(`Lỗi phân tích: ${error.message}`);
                 setIsAnalyzing(false);
                 return;
             } finally {
@@ -324,17 +327,19 @@ const MidAutumnCreator: React.FC<MidAutumnCreatorProps> = (props) => {
                 onStateChange(currentAppState);
                 addImagesToGallery([urlWithMetadata]);
 
-            } catch (err) {
-                const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+                addImagesToGallery([urlWithMetadata]);
+
+            } catch (err: any) {
+                const error = processApiError(err);
                 currentAppState = {
                     ...currentAppState,
                     generatedImages: {
                         ...currentAppState.generatedImages,
-                        [idea]: { status: 'error' as const, error: errorMessage } as any,
+                        [idea]: { status: 'error' as const, error: error.message } as any,
                     },
                 };
                 onStateChange(currentAppState);
-                console.error(`Failed to generate image for ${idea}:`, err);
+                console.error(`Failed to generate image for ${idea}:`, error);
             }
         };
 
@@ -403,14 +408,15 @@ const MidAutumnCreator: React.FC<MidAutumnCreatorProps> = (props) => {
                 historicalImages: [...appState.historicalImages, { idea: `${idea}-edit`, url: urlWithMetadata }],
             });
             addImagesToGallery([urlWithMetadata]);
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+            addImagesToGallery([urlWithMetadata]);
+        } catch (err: any) {
+            const error = processApiError(err);
             onStateChange({
                 ...appState,
                 // FIX: Add 'as const' to prevent type widening of 'status' to string.
-                generatedImages: { ...appState.generatedImages, [idea]: { status: 'error' as const, error: errorMessage } } as any
+                generatedImages: { ...appState.generatedImages, [idea]: { status: 'error' as const, error: error.message } } as any
             });
-            console.error(`Failed to regenerate image for ${idea}:`, err);
+            console.error(`Failed to regenerate image for ${idea}:`, error);
         }
     };
 

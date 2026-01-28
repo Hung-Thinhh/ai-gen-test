@@ -92,11 +92,23 @@ export const ToolShowcase = () => {
             <div className="container mx-auto max-w-[1300px] pb-20">
                 {/* Card 1: Product Photography */}
                 <ToolCard
+                    reverse
                     title="ảnh mỹ phẩm"
                     big_title="Studio"
                     description="Thử nghiệm các ý tưởng thiết kế giúp chuyển đổi concept chỉ bằng một cú nhấp chuột."
                     image="/img/showcase1.webp"
                     onClick={() => router.push('/poster/cosmetic-poster')}
+                />
+
+                {/* Vertical Divider */}
+                <div className="w-px h-10 bg-gradient-to-b from-transparent via-white/10 to-transparent mx-auto my-2" />
+
+                <ToolCard
+                    title="ảnh trà sữa"
+                    big_title="Studio"
+                    description="Thử nghiệm các ý tưởng thiết kế giúp chuyển đổi concept chỉ bằng một cú nhấp chuột."
+                    image="/img/showcase7.webp"
+                    onClick={() => router.push('/poster/milk-tea-poster')}
                 />
 
                 {/* Vertical Divider */}

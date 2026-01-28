@@ -33,6 +33,7 @@ import {
 
     AddIcon,
 } from './icons';
+import { CommunityGallery } from './CommunityGallery';
 
 // Tool icon mapping - minimalist SVG icons matching menu style
 const TOOL_ICON_COMPONENTS: Record<string, React.FC<React.SVGProps<SVGSVGElement>>> = {
@@ -139,7 +140,7 @@ const Overview: React.FC = () => {
             try {
                 // Fetch Prompts & Categories
                 const [dbPrompts, dbCategories] = await Promise.all([
-                    getAllPrompts('usage'),
+                    getAllPrompts('created_at'),
                     getAllCategories()
                 ]);
 
@@ -454,10 +455,14 @@ const Overview: React.FC = () => {
                 )}
             </motion.section>
 
-
+            {/* Community Gallery */}
+            {/* <div className="w-full">
+                <CommunityGallery />
+            </div> */}
 
             {/* ===== COMMUNITY SECTION ===== */}
             <CommunitySection />
+
             {/* ===== PERSONAL GALLERY SECTION ===== */}
             <motion.section
                 className="gallery-section hidden"

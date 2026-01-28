@@ -19,6 +19,8 @@ import {
     embedJsonInPng,
     KhmerPhotoMergeState // We can reuse this state or define a new one if needed
 } from '../uiUtils';
+
+import { processApiError, GeminiErrorCodes, GeminiError } from '@/services/gemini/baseService';
 import { useRouter } from 'next/navigation';
 
 export interface Studio {
@@ -38,7 +40,7 @@ interface StudioGeneratorProps {
 
 const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
     const router = useRouter();
-    const { t, settings, checkCredits, modelVersion, handleModelVersionChange } = useAppControls();
+    const { t, settings, checkCredits, modelVersion, handleModelVersionChange, logGeneration, addImagesToGallery, refreshGallery } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
     const { generateVideo } = useVideoGeneration();
     const isMobile = useMediaQuery('(max-width: 768px)');
@@ -79,6 +81,11 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
     const [selectedStyleImages, setSelectedStyleImages] = useState<string[]>([]);
     const [generatedImages, setGeneratedImages] = useState<string[]>([]);
     const [pendingCount, setPendingCount] = useState(0);
+    const [generationErrors, setGenerationErrors] = useState<Record<number, string>>({});
+
+    // Refs to track accumulation during async generation
+    const generationResults = React.useRef<string[]>([]);
+    const generationErrorsRef = React.useRef<Record<number, string>>({});
 
     const [appState, setAppState] = useState<KhmerPhotoMergeState>({
         stage: 'idle',
@@ -112,6 +119,10 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
         setSelectedStyleImages([]);
         setGeneratedImages([]);
         setPendingCount(0);
+        setGenerationErrors({});
+        generationResults.current = [];
+        generationErrorsRef.current = {};
+
         setAppState(prev => ({
             ...prev,
             stage: 'idle',
@@ -123,14 +134,7 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
         }));
     };
 
-    const logGeneration = (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: any) => {
-        // Placeholder for logGeneration if not passed from parent. 
-        // In KhmerPhotoMerge it was passed from MainApp. 
-        // We might need to import the logging logic or ignore it for now if not strictly required, 
-        // OR we can implement a basic version here using storageService directly if needed.
-        // For now, let's log to console.
-        console.log("Logging generation:", appId, extraDetails);
-    };
+
 
 
     const handleImageSelectedForUploader = (imageDataUrl: string) => {
@@ -142,6 +146,8 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
             error: null,
         }));
     };
+
+
 
     const handleImageUpload = useCallback((e: ChangeEvent<HTMLInputElement>) => {
         handleFileUpload(e, handleImageSelectedForUploader);
@@ -207,23 +213,24 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
             return;
         }
 
+        // Initialize streaming state
+        generationResults.current = new Array(imageCount).fill('');
+        generationErrorsRef.current = {};
+        setGenerationErrors({});
+
         // Start generating
         setAppState(prev => ({ ...prev, stage: 'generating', error: null }));
-        setGeneratedImages([]);
+        setGeneratedImages(new Array(imageCount).fill('')); // Placeholders
         setPendingCount(imageCount);
 
 
-        const results: string[] = [];
-        let errorCount = 0;
-
         // Generate images in parallel
-        const generateSingle = async (styleUrl: string): Promise<{ url: string; prompt: string; error?: string } | null> => {
+        const processingPromises = selectedStyleImages.map(async (styleUrl, index) => {
             try {
                 const selectedTemplate = TEMPLATES.find((t: any) => t.image_url === styleUrl || t.url === styleUrl);
                 const templatePrompt = selectedTemplate ? (selectedTemplate.prompt || selectedTemplate.content) : "Portrait style";
 
                 // Reconstruct the full prompt just for logging purposes (approximation of service logic)
-                // This ensures the user sees what was actually sent (Scene + Style + Custom)
                 const fullPrompt = `Style: "${studio.name}"\nScene: "${templatePrompt}"\nRequirements: Photorealistic.${appState.options.customPrompt ? ' ' + appState.options.customPrompt : ''}`;
 
                 const resultUrl = await generateStudioImage(
@@ -242,40 +249,52 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                     state: { ...preGenState, stage: 'configuring', generatedImage: null, error: null },
                 };
                 const finalUrl = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-                return { url: finalUrl, prompt: fullPrompt };
+
+                // Synch gallery (Server already saved it to DB)
+                let displayUrl = finalUrl;
+                try {
+                    await refreshGallery();
+                } catch (e) {
+                    console.error("Failed to refresh gallery:", e);
+                }
+
+                // Update refs
+                generationResults.current[index] = displayUrl;
+
+                // Update UI immediately (streaming)
+                // We create a new array to trigger re-render, ensuring we keep preserve the whole array structure
+                setGeneratedImages([...generationResults.current]);
+
+                return { url: displayUrl, prompt: fullPrompt };
             } catch (err) {
                 console.error("Generation failed for style:", styleUrl, err);
                 const errorMessage = err instanceof Error ? err.message : String(err);
 
-                // Show toast for immediate feedback
-                toast.error(`Lỗi: ${errorMessage}`, {
-                    duration: 5000
-                });
+                // Show toast for immediate feedback if desired, or just rely on the card error
+                // toast.error(`Lỗi: ${errorMessage}`, { duration: 3000 });
 
-                errorCount++;
-                return { url: '', prompt: '', error: errorMessage };
+                generationErrorsRef.current[index] = errorMessage;
+                setGenerationErrors({ ...generationErrorsRef.current });
+
+                // Ensure placeholder remains empty or marked failed in data (optional)
+                generationResults.current[index] = '';
+                setGeneratedImages([...generationResults.current]);
+
+                return null;
             }
-        };
+        });
 
-        const promises = selectedStyleImages.map(styleUrl => generateSingle(styleUrl));
-        const allResults = await Promise.all(promises);
+        const allResults = await Promise.all(processingPromises);
 
-        // Filter successes (check for url presence and no error)
-        const successfulResults = allResults.filter((r): r is { url: string; prompt: string; error?: string } => r !== null && !!r.url && !r.error);
-        const successfulImages = successfulResults.map(r => r.url); // Extract URLs for display
+        // Finalize
+        const successfulResults = allResults.filter((r): r is { url: string; prompt: string } => r !== null);
+        const successfulImages = successfulResults.map(r => r.url);
 
         if (successfulResults.length > 0) {
-            setGeneratedImages(successfulImages);
-            // Use the prompt from the first successful generation
-            const loggedPrompt = successfulResults[0].prompt;
-
-            console.log('[StudioGenerator] Logging generation with prompt:', loggedPrompt);
-            logGeneration(studio.id, preGenState, successfulImages[0], {
-                generation_count: successfulImages.length,
-                credits_used: creditCostPerImage * successfulImages.length,
-                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
-                input_prompt: loggedPrompt
-            });
+            // Log for debugging
+            console.log('[StudioGenerator] Successfully generated images:', successfulImages.length);
+            // NOTE: History logging is now handled by the server API (/api/gemini/generate-image)
+            // No need to call logGeneration() here to avoid double entries.
         }
 
         setPendingCount(0);
@@ -284,18 +303,22 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
         let finalError = null;
         if (successfulImages.length === 0 && imageCount > 0) {
             // All failed
-            const firstErrorResult = allResults.find(r => r && r.error);
-            const firstError = firstErrorResult?.error || "Lỗi không xác định";
+            // Inspect the first error to determine a global user friendly error
+            // We need to re-process to get the code if we only stored the string. 
+            // Ideally we should have stored the error object.
+            // But since processApiError returns a GeminiError with a good message, we can just use that message?
+            // The user wants "tương tự với các chỗ hiện err ở các tool khác" -> blindly trust server message.
+            const firstErrorMsg = Object.values(generationErrorsRef.current)[0] || "Lỗi không xác định";
 
-            let userFriendlyError = firstError;
-            if (firstError.includes('hết Credit') || firstError.includes('Insufficient credits')) userFriendlyError = "Bạn đã hết Credit. Vui lòng nạp thêm.";
-            else if (firstError.includes('safety') || firstError.includes('block')) userFriendlyError = "Nội dung bị chặn bảo mật (NSFW/Safety). Thử ảnh khác.";
-            else if (firstError.includes('400')) userFriendlyError = "Không thể tạo ảnh với yêu cầu này (Lỗi 400).";
+            // Since we trust processApiError which now returns server messages directly,
+            // we typically don't need to wrap it anymore.
+            // But let's check for specific codes just in case we need special UI actions (like opening a modal).
+            // For now, we just display the message as is.
+            finalError = firstErrorMsg;
 
-            finalError = `Tất cả ảnh thất bại: ${userFriendlyError}`;
-        } else if (errorCount > 0) {
-            // Partial failure
-            finalError = `Đã tạo ${successfulImages.length}/${imageCount} ảnh. ${errorCount} ảnh thất bại.`;
+        } else if (Object.keys(generationErrorsRef.current).length > 0) {
+            // Partial failure - maybe show a small toast or just let the cards show it?
+            // finalError = `Đã tạo ${successfulImages.length}/${imageCount} ảnh.`;
         }
 
         setAppState(prev => ({
@@ -389,7 +412,7 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                         <div className="w-full max-w-4xl">
                             {/* Title */}
                             <div className="text-center mb-6">
-                                <h1 className="text-2xl md:text-3xl font-bold text-white">{studio.name}</h1>
+                                {/* <h1 className="text-2xl md:text-3xl font-bold text-white">{studio.name}</h1> */}
                                 <p className="text-neutral-400 mt-2">{studio.description || (isLoading ? "Đang tạo ảnh..." : "Đã tạo xong!")}</p>
                             </div>
 
@@ -425,42 +448,61 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                                     )}
                                 </div>
 
-                                {/* Output Section - Loading or Results */}
+                                {/* Output Section - Loading or Results - UNIFIED GRID */}
                                 <div className="themed-card backdrop-blur-md p-4 rounded-2xl flex flex-col items-center gap-4">
                                     <h3 className="text-lg font-bold text-orange-400">
-                                        {isLoading ? `Kết quả (${pendingCount} ảnh)` : `Kết quả (${generatedImages.length} ảnh)`}
+                                        {isLoading ? `Kết quả (${pendingCount} đang xử lý)` : `Kết quả (${generatedImages.filter(Boolean).length} ảnh)`}
+                                        {/* Use filter boolean to show actual success count? Or just length? length is fine. */}
                                     </h3>
 
-                                    {/* Show loading spinners */}
-                                    {isLoading && (
-                                        <div className={`grid gap-3 md:gap-4 w-full ${pendingCount > 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                                            {Array.from({ length: pendingCount }).map((_, idx) => (
+                                    {/* Action buttons (Top or Bottom? - Let's keep them at bottom as originally intended, but we can have a cancel button here if needed) */}
+
+                                    <div className="grid grid-cols-2 gap-3 md:gap-4 w-full">
+                                        {selectedStyleImages.map((styleUrl, idx) => {
+                                            const url = generatedImages[idx];
+                                            const error = generationErrors[idx];
+                                            const isDone = url && url.length > 0;
+
+                                            if (isDone) {
+                                                return (
+                                                    <div key={idx}>
+                                                        <ActionablePolaroidCard
+                                                            type="output"
+                                                            caption={`Kết quả ${idx + 1}`}
+                                                            status="done"
+                                                            mediaUrl={url}
+                                                            onClick={() => openLightbox(lightboxImages.indexOf(url))}
+                                                            isMobile={isMobile}
+                                                            onGenerateVideoFromPrompt={(prompt) => generateVideo(url, prompt)}
+                                                        />
+                                                    </div>
+                                                );
+                                            }
+
+                                            if (error) {
+                                                return (
+                                                    <div key={idx}>
+                                                        <ActionablePolaroidCard
+                                                            type="output"
+                                                            caption="Lỗi"
+                                                            status="error"
+                                                            error={error}
+                                                            isMobile={isMobile}
+                                                        />
+                                                    </div>
+                                                );
+                                            }
+
+                                            // Default: Pending
+                                            return (
                                                 <div key={idx} className="aspect-[3/4] bg-neutral-900/50 rounded-xl border border-neutral-700 flex flex-col items-center justify-center gap-2">
                                                     <div className="w-10 h-10 border-4 border-orange-400 border-t-transparent rounded-full animate-spin" />
-                                                    <p className="text-neutral-300 text-xs">Đang tạo...</p>
+                                                    <p className="text-neutral-300 text-xs text-center px-1">Đang tạo...</p>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    )}
+                                            );
+                                        })}
+                                    </div>
 
-                                    {/* Show generated images */}
-                                    {!isLoading && generatedImages.length > 0 && (
-                                        <div className="grid grid-cols-2 gap-3 md:gap-4 w-full">
-                                            {generatedImages.map((img, idx) => (
-                                                <div key={idx} className="">
-                                                    <ActionablePolaroidCard
-                                                        type="output"
-                                                        caption={`Kết quả ${idx + 1}`}
-                                                        status="done"
-                                                        mediaUrl={img}
-                                                        onClick={() => openLightbox(lightboxImages.indexOf(img))}
-                                                        isMobile={isMobile}
-                                                        onGenerateVideoFromPrompt={(prompt) => generateVideo(img, prompt)}
-                                                    />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
 
                                     {/* Action buttons */}
                                     {isLoading ? (
@@ -498,52 +540,10 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                         </div>
                     )}
 
-                    {/* 3. Old Results Section - REMOVE */}
-                    {false && !isLoading && appState.stage === 'results' && (
-                        <div className="w-full max-w-4xl mt-6">
-                            <div className="themed-card backdrop-blur-md rounded-2xl p-6 relative border-dashed! border-orange-600! px-0!">
-                                <h3 className="base-font font-bold text-xl text-orange-400 mb-4 text-center">Kết quả</h3>
-
-                                {appState.error && (
-                                    <div className="w-full p-4 mb-4 bg-red-500/20 border border-red-500/50 rounded-xl text-red-300 text-center">
-                                        {appState.error}
-                                    </div>
-                                )}
-
-                                {generatedImages.length > 0 && (
-                                    <div className="grid grid-cols-2 gap-4 mb-6">
-                                        {generatedImages.map((img, idx) => (
-                                            <div key={idx} className="w-full">
-                                                <ActionablePolaroidCard
-                                                    type="output"
-                                                    caption={`Kết quả ${idx + 1}`}
-                                                    status="done"
-                                                    mediaUrl={img}
-                                                    onClick={() => openLightbox(lightboxImages.indexOf(img))}
-                                                    isMobile={isMobile}
-                                                    onGenerateVideoFromPrompt={(prompt) => generateVideo(img, prompt)}
-                                                />
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-
-                                <div className="flex gap-4 justify-center">
-                                    <button
-                                        onClick={() => setAppState(prev => ({ ...prev, stage: 'configuring' }))}
-                                        className="px-6 py-2 bg-neutral-600 cursor-pointer text-white rounded-full hover:bg-neutral-500 transition-colors"
-                                    >
-                                        Sửa
-                                    </button>
-                                    <button onClick={handleReset} className="px-6 py-2 bg-gradient-to-r from-orange-400 to-orange-600 hover:from-orange-600 hover:to-orange-400 shadow-orange-500/20 text-white rounded-full cursor-pointer transition-colors">
-                                        Bắt đầu lại
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* 4. Template Grid & Options */}
+                    {/* 4. Template Grid & Options - Only show if NOT in results/loading stage - wait, original logic hid this in results. 
+                        My new logic unifies 'results' and 'loading' into the block above.
+                        So this block should only show if stage !== 'results' AND !isLoading.
+                    */}
                     {(!isLoading && appState.stage !== 'results') && (
                         <div className="w-full max-w-4xl space-y-6 mt-6">
                             {/* Gender Tabs */}

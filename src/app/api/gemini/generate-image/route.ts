@@ -4,6 +4,8 @@ import { GoogleGenAI } from '@google/genai';
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 
+export const maxDuration = 300; // 5 minutes for Pro plan/Local dev
+
 export async function POST(req: NextRequest) {
     const perfStart = Date.now();
     const perfLog = (step: string) => {
@@ -71,7 +73,7 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { parts, config, model } = body;
+        const { parts, config, model, input_prompt } = body;
 
         // 2. Get Credit Cost from Header (sent by client based on their globalConfig)
         const creditCostHeader = req.headers.get('x-credit-cost');
@@ -239,9 +241,11 @@ export async function POST(req: NextRequest) {
                 perfLog(`AI generation completed (Attempt ${attempt})`);
 
                 // Find ANY valid candidate with image data
-                // If asking for 2 images and 1 fails but 1 succeeds, we should take the successful one.
-                const validCandidate = response.candidates?.find((c: any) => c.content?.parts?.[0]?.inlineData);
-                const validPart = validCandidate?.content?.parts?.[0];
+                // Image might not be the first part if the model is chatty (e.g. returns "Here is your image" text first)
+                const validCandidate = response.candidates?.find((c: any) =>
+                    c.content?.parts?.some((p: any) => p.inlineData)
+                );
+                const validPart = validCandidate?.content?.parts?.find((p: any) => p.inlineData);
 
                 finishReason = response.candidates?.[0]?.finishReason || 'UNKNOWN';
 
@@ -258,8 +262,10 @@ export async function POST(req: NextRequest) {
 
                     const firstPart = response.candidates?.[0]?.content?.parts?.[0];
                     if (firstPart?.text) {
-                        const responseText = firstPart.text.substring(0, 200);
-                        console.warn(`[API DEBUG] Model returned TEXT instead of IMAGE: "${responseText}..."`);
+                        const responseText = firstPart.text;
+                        console.warn(`[API DEBUG] Model returned TEXT instead of IMAGE: "${responseText.substring(0, 200)}..."`);
+                        // Fail immediately on text response (likely refusal/chatty) and pass text to user
+                        throw new Error(`GEMINI_REFUSAL:${responseText}`);
                     }
                     if (response.candidates?.[0]?.safetyRatings && Array.isArray(response.candidates[0].safetyRatings) && response.candidates[0].safetyRatings.length > 0) {
                         console.warn('[API DEBUG] Safety ratings:', response.candidates[0].safetyRatings);
@@ -273,8 +279,13 @@ export async function POST(req: NextRequest) {
                     console.log(`[API DEBUG] Waiting before retry attempt ${attempt + 1}...`);
                 }
 
-            } catch (err) {
+            } catch (err: any) {
                 console.error(`[API DEBUG] ❌ Attempt ${attempt} error:`, err instanceof Error ? err.message : err);
+
+                // If it's a refusal, stop retrying and throw immediately
+                if (err.message?.startsWith('GEMINI_REFUSAL:')) {
+                    throw err;
+                }
 
                 // If this was last attempt, rethrow
                 if (attempt === maxAttempts) {
@@ -288,12 +299,12 @@ export async function POST(req: NextRequest) {
         perfLog('AI generation process completed');
 
         // Stop here if no image generated (prevent empty history/credit deduction)
-        if (!imageUrl) {
-            console.warn('[API] No image URL generated after retries, skipping DB update and history log.');
+        if (!imageUrl || !imageUrl.startsWith('http')) {
+            console.error('[API] Critical: Generated image URL is invalid or not an R2 URL (starts with http). URL preview:', imageUrl ? imageUrl.substring(0, 50) : 'NULL');
             return NextResponse.json({
-                error: 'Không thể tạo ảnh với nội dung này. Có thể do mô tả vi phạm chính sách hoặc quá phức tạp.',
-                details: finishReason
-            }, { status: 400 }); // Return 400 Bad Request instead of 503 for content issues
+                error: 'Lỗi hệ thống lưu trữ ảnh (R2 Upload Failed). Vui lòng thử lại.',
+                details: 'Image generation succeeded but storage failed.' // Do not return Base64 to client as "success"
+            }, { status: 500 });
         }
 
 
@@ -415,11 +426,12 @@ export async function POST(req: NextRequest) {
                     NULL,
                     NOW(),
                     ${toolKey},
-                    ${lastEnhancedPrompt}
+                    ${input_prompt || lastEnhancedPrompt || 'Image Generation'}
                 )
             `;
 
-            console.log('[API] ✅ History logged successfully with input_prompt');
+            console.log(`[API] ✅ History logged successfully. Saving Prompt: "${input_prompt || lastEnhancedPrompt || 'Image Generation'}"`);
+            console.log(`[API] Prompt Source: ${input_prompt ? 'EXPLICIT' : (lastEnhancedPrompt ? 'ENHANCED' : 'FALLBACK')}`);
         } catch (histErr: any) {
             console.error('[API] ⚠️ History logging failed (non-critical):', histErr.message);
         }
@@ -445,7 +457,11 @@ export async function POST(req: NextRequest) {
 
         const errorMessage = error.message || String(error);
 
-        if (errorMessage.includes('safety') || errorMessage.includes('blocked') || errorMessage.includes('IMAGE_SAFETY')) {
+        if (errorMessage.startsWith('GEMINI_REFUSAL:')) {
+            userMessage = errorMessage.replace('GEMINI_REFUSAL:', '').trim();
+            statusCode = 400;
+            errorCode = 'MODEL_REFUSAL';
+        } else if (errorMessage.includes('safety') || errorMessage.includes('blocked') || errorMessage.includes('IMAGE_SAFETY')) {
             userMessage = 'Nội dung bị chặn vì vi phạm chính sách an toàn. Vui lòng thử prompt khác.';
             statusCode = 400; // Bad Request (Content Policy)
             errorCode = 'SAFETY_VIOLATION';
@@ -453,9 +469,17 @@ export async function POST(req: NextRequest) {
             userMessage = 'Hệ thống đang quá tải. Vui lòng thử lại sau.';
             statusCode = 429; // Too Many Requests
             errorCode = 'QUOTA_EXCEEDED';
+        } else if (errorMessage.includes('IMAGE_OTHER') || errorMessage.includes('STOP')) {
+            userMessage = 'Mô hình gặp lỗi khi xử lý yêu cầu này. Vui lòng thử lại hoặc điều chỉnh prompt.';
+            statusCode = 500;
+            errorCode = 'GENERATION_FAILED';
         } else if (errorMessage.includes('400')) {
             statusCode = 400;
             errorCode = 'BAD_REQUEST';
+        } else if (errorMessage.includes('503') || errorMessage.includes('overloaded') || errorMessage.includes('UNAVAILABLE')) {
+            userMessage = 'Máy chủ AI đang bận (Overloaded). Vui lòng thử lại sau ít phút.';
+            statusCode = 503; // Service Unavailable
+            errorCode = 'SERVER_BUSY';
         }
 
         return NextResponse.json(

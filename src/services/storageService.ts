@@ -215,8 +215,16 @@ export const getUserCloudGallery = async (userId: string, useFreshClient: boolea
 
         // New format: Array of records with output_images (already filtered)
         if (Array.isArray(data) && data.length > 0) {
+            const validUrls = data.map((item: any) => {
+                if (typeof item === 'string') return item;
+                if (typeof item === 'object' && item?.url) return item.url;
+                if (typeof item === 'object' && item?.output_images && Array.isArray(item.output_images) && item.output_images.length > 0) {
+                    return item.output_images[0];
+                }
+                return null;
+            }).filter((url: any): url is string => typeof url === 'string');
 
-            return data;
+            return validUrls;
         }
 
         // Legacy format support
@@ -483,10 +491,18 @@ export const getGuestCloudGallery = async (guestId: string, useFreshClient: bool
 
         // New format: Array of records with output_images (already filtered)
         if (Array.isArray(data) && data.length > 0) {
-            console.log(`[storageService] getGuestCloudGallery: Loaded ${data.length} records from API`);
-            console.log('dataaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', data);
+            const validUrls = data.map((item: any) => {
+                if (typeof item === 'string') return item;
+                if (typeof item === 'object' && item?.url) return item.url;
+                // Handle API returning output_images array inside objects?
+                // If the API returns history entries directly
+                if (typeof item === 'object' && item?.output_images && Array.isArray(item.output_images) && item.output_images.length > 0) {
+                    return item.output_images[0];
+                }
+                return null;
+            }).filter((url: any): url is string => typeof url === 'string');
 
-            return data;
+            return validUrls;
         }
 
         return [];

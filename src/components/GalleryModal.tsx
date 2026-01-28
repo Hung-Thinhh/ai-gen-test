@@ -30,8 +30,8 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, images: in
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
     const [isCombining, setIsCombining] = useState(false);
-    const [galleryImages, setGalleryImages] = useState<string[]>([]);  // Load from API
-    const [prompts, setPrompts] = useState<(string | null)[]>([]);  // Store prompts from API
+    const [galleryImages, setGalleryImages] = useState<any[]>([]);  // Store LightboxItem[]
+    // const [prompts, setPrompts] = useState<(string | null)[]>([]); // Deprecated, prompts are in galleryImages
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -51,31 +51,36 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, images: in
             const response = await fetch('/api/gallery');
             if (response.ok) {
                 const data = await response.json();
-                const fetchedImages = (data.images || []).map((img: any) => img.url);
-                setGalleryImages(fetchedImages);
-                setPrompts(data.prompts || []);
-                console.log(`[Gallery] Loaded ${fetchedImages.length} images and ${data.prompts.filter((p: any) => p).length} prompts`);
+                const fetchedItems = (data.images || []).map((img: any, index: number) => ({
+                    src: img.url,
+                    type: (img.url.endsWith('.mp4') || img.url.endsWith('.webm')) ? 'video' : 'image',
+                    prompt: data.prompts?.[index] || undefined,
+                    createdAt: img.created_at,
+                    toolKey: img.tool_key,
+                    model: img.model
+                }));
+                setGalleryImages(fetchedItems);
             }
         } catch (error) {
             console.warn('Failed to fetch gallery with prompts:', error);
             // Fallback to initial images if API fails
-            setGalleryImages(initialImages);
+            setGalleryImages(initialImages.map(url => ({ src: url, type: 'image' })));
         }
     };
 
     const handleDownloadAll = () => {
-        const imagesToZip: ImageForZip[] = galleryImages.map((url, index) => ({
-            url,
+        const imagesToZip: ImageForZip[] = galleryImages.map((item, index) => ({
+            url: item.src,
             filename: `Duky-gallery-image-${index + 1}`,
             folder: 'gallery',
-            extension: url.startsWith('blob:') ? 'mp4' : undefined,
+            extension: item.src.startsWith('blob:') ? 'mp4' : undefined,
         }));
         downloadAllImagesAsZip(imagesToZip, 'Duky-gallery.zip');
     };
 
     const handleEditImage = (indexToEdit: number, e: React.MouseEvent) => {
         e.stopPropagation();
-        const urlToEdit = galleryImages[indexToEdit];
+        const urlToEdit = galleryImages[indexToEdit]?.src;
         if (!urlToEdit || urlToEdit.startsWith('blob:')) {
             alert(t('galleryModal_cannotEditVideo'));
             return;
@@ -129,7 +134,7 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, images: in
         setIsCombining(true);
         try {
             const itemsToCombine = selectedIndices.map(index => ({
-                url: galleryImages[index],
+                url: galleryImages[index].src,
                 label: '' // No labels are used when combining from the main gallery.
             }));
             const resultUrl = await combineImages(itemsToCombine, {
@@ -222,11 +227,11 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, images: in
                             {galleryImages.length > 0 ? (
                                 <div className="gallery-grid">
                                     <AnimatePresence>
-                                        {galleryImages.map((img, index) => (
+                                        {galleryImages.map((item, index) => (
                                             <ImageThumbnail
-                                                key={`${img.slice(-20)}-${index}`}
+                                                key={`${item.src.slice(-20)}-${index}`}
                                                 index={index}
-                                                imageUrl={img}
+                                                imageUrl={item.src}
                                                 isSelectionMode={isSelectionMode}
                                                 isSelected={selectedIndices.includes(index)}
                                                 onSelect={handleImageSelect}
@@ -259,7 +264,7 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, images: in
                 selectedIndex={selectedImageIndex}
                 onClose={closeLightbox}
                 onNavigate={navigateLightbox}
-                prompts={prompts}  // Pass prompts from gallery API
+            // prompts={prompts}  // No longer needed
             />
         </>
     );

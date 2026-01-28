@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { generateStyledImage } from '../services/gemini/advancedImageService';
 import ActionablePolaroidCard from './ActionablePolaroidCard';
 import { AppScreenHeader, handleFileUpload as utilHandleFileUpload, ResultsView, OptionsPanel, useAppControls } from './uiUtils';
+import { processApiError } from '@/services/gemini/baseService';
 
 interface ProductSceneState { stage: 'configuring' | 'generating' | 'results'; productImage: string | null; resultImage: string | null; options: { scene: string; lighting: string; angle: string }; error: string | null; }
 interface ProductSceneProps { mainTitle: string; subtitle: string; useSmartTitleWrapping: boolean; smartTitleWrapWords: number; uploaderCaption: string; uploaderDescription: string; addImagesToGallery: (images: string[]) => void; appState: ProductSceneState; onStateChange: (newState: ProductSceneState) => void; onReset: () => void; onGoBack: () => void; logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: { api_model_used?: string; credits_used?: number; generation_count?: number; }) => void; }
@@ -31,8 +32,9 @@ const ProductSceneGenerator: React.FC<ProductSceneProps> = (props) => {
                 generation_count: 1,
                 api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
             });
-        } catch (err) {
-            onStateChange({ ...appState, stage: 'results', error: err instanceof Error ? err.message : "Lỗi." });
+        } catch (err: any) {
+            const error = processApiError(err);
+            onStateChange({ ...appState, stage: 'results', error: error.message });
         }
     };
 

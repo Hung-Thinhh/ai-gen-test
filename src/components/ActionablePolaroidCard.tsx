@@ -13,6 +13,7 @@ import {
     GalleryPicker,
     WebcamCaptureModal,
 } from './uiUtils';
+import { toast } from 'react-hot-toast';
 
 // NEW: More descriptive card types to centralize logic
 type CardType =
@@ -43,6 +44,7 @@ interface ActionablePolaroidCardProps {
     onImageChange?: (imageDataUrl: string | null) => void;
     onRegenerate?: (prompt: string) => void;
     onGenerateVideoFromPrompt?: (prompt: string) => void;
+    onShare?: (prompt: string) => void;
 
     // Props for modals
     regenerationTitle?: string;
@@ -67,6 +69,7 @@ const ActionablePolaroidCard: React.FC<ActionablePolaroidCardProps> = ({
     onImageChange,
     onRegenerate,
     onGenerateVideoFromPrompt,
+    onShare,
     regenerationTitle,
     regenerationDescription,
     regenerationPlaceholder,
@@ -265,6 +268,40 @@ const ActionablePolaroidCard: React.FC<ActionablePolaroidCardProps> = ({
         setWebcamModalOpen(false);
     };
 
+    // NEW: Centralized Share Logic
+    const handleShareClick = useCallback(async (captionOrUrl: string) => {
+        if (!mediaUrl) return;
+
+        // If an external onShare is provided, use it (optional override)
+        if (onShare) {
+            onShare(mediaUrl);
+            return;
+        }
+
+        // Default internal share logic
+        try {
+            const toastId = toast.loading('Đang bật chia sẻ...');
+            const response = await fetch('/api/gallery/share', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageUrl: mediaUrl })
+            });
+            const data = await response.json();
+
+            if (!response.ok) throw new Error(data.error || 'Failed to share');
+
+            // Copy link to clipboard
+            await navigator.clipboard.writeText(mediaUrl);
+
+            toast.dismiss(toastId);
+            toast.success('Đã công khai & sao chép link ảnh!', { duration: 4000 });
+
+        } catch (error: any) {
+            console.error('Share failed:', error);
+            toast.error('Lỗi chia sẻ: ' + error.message);
+        }
+    }, [mediaUrl, onShare]);
+
     // Determine the primary click action for the card.
     // If it's an uploader, or has no media, its main job is to trigger the file input.
     // Otherwise, use the provided onClick handler (e.g., for opening a lightbox).
@@ -297,6 +334,8 @@ const ActionablePolaroidCard: React.FC<ActionablePolaroidCardProps> = ({
                 isMobile={isMobile}
                 onClick={effectiveOnClick}
                 onDownload={showButtons && isDownloadable ? handleDownloadClick : undefined}
+                // Show share for output cards, using the centralized handler
+                onShare={showButtons && type === 'output' ? () => handleShareClick(caption) : undefined}
                 onEdit={showButtons && isEditable ? handleEditClick : undefined}
                 onClear={isClearable ? handleClearClick : undefined}
                 onSwapImage={isSwappable ? handleSwapClick : undefined}

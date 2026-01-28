@@ -4,8 +4,10 @@
 */
 import React, { ChangeEvent, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { generateFreeImage, editImageWithPrompt, enhancePrompt } from '../services/geminiService';
+import { editImageWithPrompt, enhancePrompt } from '../services/geminiService';
 import ActionablePolaroidCard from './ActionablePolaroidCard';
+import { processApiError, GeminiErrorCodes, GeminiError } from '@/services/gemini/baseService';
+import { generateFreeImage } from '@/services/gemini/freeGenerationService';
 import Lightbox from './Lightbox';
 import {
     AppScreenHeader,
@@ -72,7 +74,7 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, settings, checkCredits, modelVersion, isLoggedIn, openLoginModal } = useAppControls();
+    const { t, settings, checkCredits, modelVersion, isLoggedIn, openLoginModal, refreshGallery } = useAppControls();
 
     const { videoTasks, generateVideo } = useVideoGeneration();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
@@ -80,6 +82,11 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
     const [localPrompt, setLocalPrompt] = useState(appState.options.prompt);
     const [isEnhancing, setIsEnhancing] = useState(false);
     const [shouldEnhancePrompt, setShouldEnhancePrompt] = useState(false);
+    const [generationErrors, setGenerationErrors] = useState<Record<number, string>>({});
+
+    // Refs to track accumulation during async generation
+    const generationResults = React.useRef<string[]>([]);
+    const generationErrorsRef = React.useRef<Record<number, string>>({});
 
     useEffect(() => {
         setLocalPrompt(appState.options.prompt);
@@ -158,8 +165,6 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
 
     const handleGenerate = async () => {
         // Strict login check removed to allow Guest access with credits
-        // Backend API will validate guest credits via Guest-ID header
-
         if (!localPrompt.trim()) {
             onStateChange({ ...appState, error: "Vui lòng nhập prompt để tạo ảnh." });
             return;
@@ -175,91 +180,147 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
             try {
                 const enhanced = await enhancePrompt(localPrompt);
                 finalPrompt = enhanced;
-                // Update local UI state to show the user the enhanced prompt that was used
                 setLocalPrompt(enhanced);
-                // No need to call onStateChange here, as it will be part of the main state update below
             } catch (err) {
                 toast.error(t('freeGeneration_enhanceError'));
-                // Proceed with the original prompt if enhancement fails
             } finally {
                 setIsEnhancing(false);
             }
         }
 
-        // Check credits FIRST before entering generating stage
+        // Check credits FIRST
         const creditCostPerImage = modelVersion === 'v3' ? 2 * appState.options.numberOfImages : 1 * appState.options.numberOfImages;
         if (!await checkCredits(creditCostPerImage)) {
-            // Don't change stage - stay in configuring
             return;
         }
 
-        // Only set generating stage AFTER credits are confirmed
-        onStateChange({ ...appState, stage: 'generating', error: null, generatedImages: [] });
+        // Initialize streaming state
+        const count = appState.options.numberOfImages;
+        const initialImages = new Array(count).fill(''); // Placeholders
+        generationResults.current = new Array(count).fill('');
+        generationErrorsRef.current = {};
+        setGenerationErrors({});
 
+        // Track async processing of each image (embedding metadata, updating UI)
+        const processingPromises: Promise<void>[] = [];
+
+        // Save pre-gen state for metadata
         const preGenState = { ...appState, options: { ...appState.options, prompt: finalPrompt } };
-        onStateChange({ ...preGenState, stage: 'generating', error: null, generatedImages: [] });
+
+        // Start "Generating" stage with empty/pending slots
+        onStateChange({ ...preGenState, stage: 'generating', error: null, generatedImages: initialImages });
 
         try {
-            const resultUrls = await generateFreeImage(
+            await generateFreeImage(
                 finalPrompt,
-                appState.options.numberOfImages,
+                count,
                 appState.options.aspectRatio,
                 appState.image1 || undefined,
                 appState.image2 || undefined,
                 appState.image3 || undefined,
                 appState.image4 || undefined,
                 appState.options.removeWatermark,
-                'free-generation'
+                'free-generation',
+                // onImageReady
+                (index, rawUrl) => {
+                    const processTask = async () => {
+                        try {
+                            const settingsToEmbed = {
+                                viewId: 'free-generation',
+                                state: { ...preGenState, stage: 'configuring', generatedImages: [], historicalImages: [], error: null },
+                            };
+
+                            const urlWithMetadata = await embedJsonInPng(rawUrl, settingsToEmbed, settings.enableImageMetadata);
+
+                            // Update refs
+                            generationResults.current[index] = urlWithMetadata;
+
+                            // Immediately update UI with this new image
+                            // Note: use functional update logic mechanism if needed, but here we construct new array from ref
+                            // We need to preserve OTHER images/placeholders in their current state
+                            const currentImagesSnapshot = [...generationResults.current].map(u => u || '');
+
+                            onStateChange({
+                                ...preGenState,
+                                stage: 'generating', // Keep generating until totally finished or handle "Result" stage mixed? 
+                                // Actually we switched rendering logic to handle Mixed states, so 'generating' is fine as long as `generatedImages` has data
+                                generatedImages: currentImagesSnapshot,
+                                // Keep history updated? No, update history at end to avoid flicker
+                            });
+
+                        } catch (e) {
+                            console.error("Error processing generated image metadata:", e);
+                            // Fallback to raw URL if embedding fails
+                            generationResults.current[index] = rawUrl;
+                            const currentImagesSnapshot = [...generationResults.current].map(u => u || '');
+                            onStateChange({ ...preGenState, stage: 'generating', generatedImages: currentImagesSnapshot });
+                        }
+                    };
+                    processingPromises.push(processTask());
+                },
+                // onImageError
+                (index, error) => {
+                    const errorMsg = error instanceof Error ? error.message : "Generation failed";
+                    generationErrorsRef.current[index] = errorMsg;
+                    setGenerationErrors({ ...generationErrorsRef.current });
+                }
             );
 
-            const settingsToEmbed = {
-                viewId: 'free-generation',
-                state: { ...preGenState, stage: 'configuring', generatedImages: [], historicalImages: [], error: null },
-            };
+            // Wait for all processing to complete (metadata embedding etc)
+            await Promise.all(processingPromises);
 
-            const urlsWithMetadata = await Promise.all(
-                resultUrls.map(url => embedJsonInPng(url, settingsToEmbed, settings.enableImageMetadata))
-            );
+            // Finalize
+            const validImages = generationResults.current.filter(url => url && url.length > 0);
 
-            if (urlsWithMetadata.length > 0) {
-                const creditCost = modelVersion === 'v3' ? 2 * urlsWithMetadata.length : 1 * urlsWithMetadata.length;
+            if (validImages.length > 0) {
+                const creditCost = modelVersion === 'v3' ? 2 * validImages.length : 1 * validImages.length;
 
-                // DEBUG: Verify we're passing R2 URLs
-                console.log('[FreeGen] Logging to history with R2 URLs:', resultUrls);
-
-                logGeneration('free-generation', preGenState, urlsWithMetadata[0], {
-                    credits_used: creditCost,
-                    api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
-                    generation_count: urlsWithMetadata.length,
-                    output_images: resultUrls, // Use R2 URLs instead of base64
-                    input_prompt: finalPrompt
+                onStateChange({
+                    ...preGenState,
+                    stage: 'results',
+                    generatedImages: [...generationResults.current].map(u => u || ''), // Ensure we keep empty strings for failed slots if we want to show errors there
+                    historicalImages: limitHistoricalImages(appState.historicalImages, validImages),
+                    error: null
                 });
+
+                refreshGallery();
+
+            } else {
+                // All failed?
+                // Check errors
+                const errorCount = Object.keys(generationErrorsRef.current).length;
+                if (errorCount > 0) {
+                    // Stay in 'results' stage (our UI logic handles errors per slot)
+                    // But we might want to set a global error text if needed, or just let slots show errors
+                    onStateChange({
+                        ...preGenState,
+                        stage: 'results',
+                        generatedImages: initialImages, // All failed
+                        error: null // Clear global error, let individual errors show
+                    });
+                } else {
+                    // No images, no errors? (Shouldn't happen)
+                    onStateChange({ ...preGenState, stage: 'results', error: "No images generated." });
+                }
             }
 
-            onStateChange({
-                ...preGenState,
-                stage: 'results',
-                generatedImages: urlsWithMetadata,
-                historicalImages: limitHistoricalImages(appState.historicalImages, urlsWithMetadata),
-            });
-            addImagesToGallery(resultUrls, false);
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+        } catch (err: any) {
+            let error = processApiError(err);
 
-            // If out of credits, reset to configuring stage (remove loading)
-            if (errorMessage.includes('hết Credit') || errorMessage.includes('Insufficient credits')) {
-                toast.error(errorMessage); // Show error notification to user
+            // Handle Insufficient Credits
+            if (error instanceof GeminiError && error.code === GeminiErrorCodes.INSUFFICIENT_CREDITS) {
+                toast.error(error.message);
                 onStateChange({
                     ...preGenState,
                     stage: 'configuring',
                     error: null
                 });
             } else {
-                // Other errors: show in results stage
+                // Global error (e.g. setup failed, safety, refusal)
                 onStateChange({
                     ...preGenState,
                     stage: 'results',
-                    error: errorMessage
+                    error: error.message
                 });
             }
         }
@@ -289,14 +350,6 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
             const creditCost = modelVersion === 'v3' ? 2 : 1;
-            logGeneration('free-generation', preGenState, urlWithMetadata, {
-                credits_used: creditCost,
-                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
-                generation_count: 1,
-                output_images: [resultUrl], // Use R2 URL instead of base64
-                input_prompt: prompt
-            });
-
             const newGeneratedImages = [...originalGeneratedImages];
             newGeneratedImages[index] = urlWithMetadata;
 
@@ -306,10 +359,18 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
                 generatedImages: newGeneratedImages,
                 historicalImages: limitHistoricalImages(appState.historicalImages, [urlWithMetadata]),
             });
-            addImagesToGallery([urlWithMetadata]);
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
-            onStateChange({ ...appState, stage: 'results', error: errorMessage, generatedImages: originalGeneratedImages });
+            refreshGallery();
+        } catch (err: any) {
+            let error = processApiError(err);
+
+            // Check if it's an insufficient credit error to handle gracefully (e.g. show toast)
+            // Otherwise set global error
+            if (error instanceof GeminiError && error.code === GeminiErrorCodes.INSUFFICIENT_CREDITS) {
+                toast.error(error.message);
+                onStateChange({ ...appState, stage: 'results', error: null, generatedImages: originalGeneratedImages });
+            } else {
+                onStateChange({ ...appState, stage: 'results', error: error.message, generatedImages: originalGeneratedImages });
+            }
         }
     };
 
@@ -335,7 +396,7 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
 
     const Uploader = ({ id, onImageChange, caption, description, currentImage, placeholderType }: any) => (
         <div className="flex flex-col items-center gap-4">
-            <div className="cursor-pointer group transform hover:scale-105 transition-transform duration-300">
+            <div className="cursor-pointer w-full group transform hover:scale-105 transition-transform duration-300">
                 <ActionablePolaroidCard
                     type={currentImage ? 'multi-input' : 'uploader'}
                     caption={caption}
@@ -520,108 +581,174 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
 
             {
                 (appState.stage === 'generating' || appState.stage === 'results') && (
-                    <ResultsView
-                        stage={appState.stage}
-                        inputImages={[
-                            appState.image1 ? { url: appState.image1, caption: t('freeGeneration_originalImage1Caption'), onClick: () => openLightbox(lightboxImages.indexOf(appState.image1!)) } : null,
-                            appState.image2 ? { url: appState.image2, caption: t('freeGeneration_originalImage2Caption'), onClick: () => openLightbox(lightboxImages.indexOf(appState.image2!)) } : null,
-                            appState.image3 ? { url: appState.image3, caption: t('freeGeneration_originalImage3Caption'), onClick: () => openLightbox(lightboxImages.indexOf(appState.image3!)) } : null,
-                            appState.image4 ? { url: appState.image4, caption: t('freeGeneration_originalImage4Caption'), onClick: () => openLightbox(lightboxImages.indexOf(appState.image4!)) } : null,
-                        ].filter((item): item is { url: string; caption: string; onClick: () => void; } => item !== null)}
-                        error={appState.error}
-                        isMobile={isMobile}
-                        actions={(
-                            <>
-                                {appState.historicalImages.length > 0 && !appState.error && (
-                                    <button onClick={handleDownloadAll} className="btn btn-secondary">{t('common_downloadAll')}</button>
-                                )}
-                                <button onClick={handleBackToOptions} className="btn btn-secondary">{t('common_edit')}</button>
-                                <button onClick={onReset} className="btn btn-secondary">{t('common_startOver')}</button>
-                            </>
-                        )}
-                    >
-                        {
-                            isLoading && !isEnhancing ?
-                                Array.from({ length: appState.options.numberOfImages }).map((_, index) => (
-                                    <motion.div
-                                        className="w-full md:w-auto flex-shrink-0"
-                                        key={`pending-${index}`}
-                                    // initial={{ opacity: 0, scale: 0.5, y: 100 }}
-                                    // animate={{ opacity: 1, scale: 1, y: 0 }}
-                                    // transition={{ type: 'spring', stiffness: 80, damping: 15, delay: 0.2 + index * 0.1 }}
-                                    >
-                                        <ActionablePolaroidCard type="output" caption={t('freeGeneration_resultCaption', index + 1)} status="pending" />
-                                    </motion.div>
-                                ))
-                                :
-                                appState.generatedImages.map((url, index) => (
-                                    <motion.div
-                                        className="w-full md:w-auto flex-shrink-0"
-                                        key={url}
-                                    // initial={{ opacity: 0, scale: 0.5, y: 100 }}
-                                    // animate={{ opacity: 1, scale: 1, y: 0 }}
-                                    // transition={{ type: 'spring', stiffness: 80, damping: 15, delay: 0.2 + index * 0.1 }}
-                                    // whileHover={{ scale: 1.05, zIndex: 10 }}
-                                    >
-                                        <ActionablePolaroidCard
-                                            type="output"
-                                            caption={t('freeGeneration_resultCaption', index + 1)}
-                                            status={'done'}
-                                            mediaUrl={url}
-                                            onGenerateVideoFromPrompt={(prompt) => generateVideo(url, prompt)}
-                                            onImageChange={handleSaveGeneratedImage(index)}
-                                            onRegenerate={(prompt) => handleRegeneration(index, prompt)}
-                                            regenerationTitle={t('freeGeneration_regenTitle')}
-                                            regenerationDescription={t('freeGeneration_regenDescription')}
-                                            regenerationPlaceholder={t('freeGeneration_regenPlaceholder')}
-                                            onClick={() => openLightbox(lightboxImages.indexOf(url))}
-                                            isMobile={isMobile}
-                                        />
-                                    </motion.div>
-                                ))
-                        }
-                        {appState.historicalImages.map(sourceUrl => {
-                            const videoTask = videoTasks[sourceUrl];
-                            if (!videoTask) return null;
-                            return (
-                                <motion.div
-                                    className="w-full md:w-auto flex-shrink-0"
-                                    key={`${sourceUrl}-video`}
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    transition={{ type: 'spring', stiffness: 100, damping: 20 }}
-                                >
-                                    <ActionablePolaroidCard
-                                        type="output"
-                                        caption={t('common_video')}
-                                        status={videoTask.status}
-                                        mediaUrl={videoTask.resultUrl}
-                                        error={videoTask.error}
-                                        onClick={videoTask.resultUrl ? () => openLightbox(lightboxImages.indexOf(videoTask.resultUrl!)) : undefined}
-                                        isMobile={isMobile}
-                                    />
-                                </motion.div>
-                            );
-                        })}
-                        {appState.error && !isLoading && (
-                            <motion.div
-                                className="w-full md:w-full flex-shrink-0"
-                                key="error-card"
-                                initial={{ opacity: 0, scale: 0.5, y: 100 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                transition={{ type: 'spring', stiffness: 80, damping: 15 }}
-                            >
-                                <ActionablePolaroidCard
-                                    type="output"
-                                    caption={t('common_error')}
-                                    status="error"
-                                    error={appState.error}
-                                    isMobile={isMobile}
-                                />
-                            </motion.div>
-                        )}
+                    <div className="w-full flex-1 flex flex-col items-center pt-12">
+                        {/* Title */}
+                        <div className="text-center mb-6">
+                            <h2 className="text-3xl font-bold text-white mb-2">Kết quả</h2>
+                            <p className="text-neutral-400">{isLoading ? "Đang tạo ảnh..." : "Đã tạo xong!"}</p>
+                        </div>
 
-                    </ResultsView>
+                        <div className="w-full max-w-6xl px-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* LEFT COLUMN: Inputs */}
+                                <div className="themed-card backdrop-blur-md p-4 rounded-2xl flex flex-col items-center gap-4 h-fit">
+                                    <h3 className="text-lg font-bold text-orange-400">Ảnh gốc</h3>
+                                    <div className="grid grid-cols-1 gap-4 w-full">
+                                        {[appState.image1, appState.image2, appState.image3, appState.image4].map((img, idx) => {
+                                            if (!img) return null;
+                                            return (
+                                                <div key={idx} className="w-full flex flex-col items-center">
+                                                    <div className="w-full max-w-xs">
+                                                        <ActionablePolaroidCard
+                                                            type="display"
+                                                            mediaUrl={img}
+                                                            caption={t(`freeGeneration_originalImage${idx + 1}Caption`)}
+                                                            status="done"
+                                                            onClick={() => openLightbox(lightboxImages.indexOf(img))}
+                                                            isMobile={isMobile}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                        {![appState.image1, appState.image2, appState.image3, appState.image4].some(Boolean) && (
+                                            <p className="text-neutral-500 text-center py-8">Không có ảnh gốc</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* RIGHT COLUMN: Results */}
+                                <div className="themed-card backdrop-blur-md p-4 rounded-2xl flex flex-col items-center gap-4 h-fit">
+                                    <h3 className="text-lg font-bold text-orange-400">
+                                        {isLoading ? `Kết quả (${appState.options.numberOfImages} đang xử lý)` : `Kết quả (${appState.generatedImages.filter(Boolean).length} ảnh)`}
+                                    </h3>
+
+                                    <div className="grid grid-cols-2 gap-3 md:gap-4 w-full">
+                                        {Array.from({ length: appState.options.numberOfImages }).map((_, index) => {
+                                            const url = appState.generatedImages[index];
+                                            const error = generationErrors[index];
+
+                                            // Case 1: Success
+                                            if (url && url.length > 0) {
+                                                return (
+                                                    <motion.div
+                                                        key={`result-${index}`}
+                                                        layout
+                                                        initial={{ opacity: 0, scale: 0.8 }}
+                                                        animate={{ opacity: 1, scale: 1 }}
+                                                        transition={{ duration: 0.5, delay: index * 0.1 }}
+                                                        className="w-full"
+                                                    >
+                                                        <ActionablePolaroidCard
+                                                            type="output"
+                                                            caption={t('freeGeneration_resultCaption', index + 1)}
+                                                            status={'done'}
+                                                            mediaUrl={url}
+                                                            onClick={() => openLightbox(lightboxImages.indexOf(url))}
+                                                            onRegenerate={(prompt) => handleRegeneration(index, prompt)}
+                                                            onGenerateVideoFromPrompt={(prompt) => generateVideo(url, prompt)}
+                                                            onImageChange={handleSaveGeneratedImage(index)}
+                                                            regenerationTitle={t('freeGeneration_regenTitle')}
+                                                            regenerationDescription={t('freeGeneration_regenDescription')}
+                                                            regenerationPlaceholder={t('freeGeneration_regenPlaceholder')}
+                                                            isMobile={isMobile}
+                                                        />
+                                                    </motion.div>
+                                                );
+                                            }
+
+                                            // Case 2: Error
+                                            if (error) {
+                                                return (
+                                                    <motion.div
+                                                        key={`error-${index}`}
+                                                        layout
+                                                        className="w-full"
+                                                    >
+                                                        <ActionablePolaroidCard
+                                                            type="output"
+                                                            caption={t('common_error')}
+                                                            status="error"
+                                                            error={error}
+                                                            isMobile={isMobile}
+                                                        />
+                                                    </motion.div>
+                                                );
+                                            }
+
+                                            // Case 3: Pending
+                                            if (isLoading || appState.stage === 'generating') {
+                                                const aspectRatioClass = (() => {
+                                                    switch (appState.options.aspectRatio) {
+                                                        case '16:9': return 'aspect-video';
+                                                        case '9:16': return 'aspect-[9/16]';
+                                                        case '4:3': return 'aspect-[4/3]';
+                                                        case '3:4': return 'aspect-[3/4]';
+                                                        case '1:1':
+                                                        default: return 'aspect-square';
+                                                    }
+                                                })();
+
+                                                return (
+                                                    <motion.div
+                                                        className="w-full"
+                                                        key={`pending-${index}`}
+                                                    >
+                                                        <div className={`${aspectRatioClass} w-full rounded-xl bg-neutral-900/50 border border-neutral-700 flex flex-col items-center justify-center gap-2 relative overflow-hidden shadow-lg`}>
+                                                            <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin relative z-10" />
+                                                            <p className="text-neutral-300 text-xs font-bold relative z-10">{t('common_creating')}</p>
+                                                            <p className="text-neutral-500 text-[10px] relative z-10">{t('freeGeneration_resultCaption', index + 1)}</p>
+                                                            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent animate-pulse" />
+                                                        </div>
+                                                    </motion.div>
+                                                );
+                                            }
+                                            return null;
+                                        })}
+                                    </div>
+
+                                    {/* Action Buttons */}
+                                    <div className="flex gap-2 mt-4 justify-center w-full border-t border-neutral-700/50 pt-4">
+                                        {isLoading ? (
+                                            <button
+                                                onClick={() => onStateChange({ ...appState, stage: 'configuring', error: null })}
+                                                className="px-6 py-2 bg-neutral-700 text-white rounded-full hover:bg-neutral-600 transition-colors text-sm"
+                                            >
+                                                Hủy
+                                            </button>
+                                        ) : (
+                                            <>
+                                                {appState.historicalImages.length > 0 && !appState.error && (
+                                                    <button onClick={handleDownloadAll} className="px-6 py-2 bg-blue-600/80 text-white rounded-full hover:bg-blue-500 transition-colors text-sm">{t('common_downloadAll')}</button>
+                                                )}
+                                                <button
+                                                    onClick={handleBackToOptions}
+                                                    className="px-6 py-2 bg-neutral-600 cursor-pointer text-white rounded-full hover:bg-neutral-500 transition-colors text-sm"
+                                                >
+                                                    {t('common_edit')}
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        onStateChange(getInitialStateForApp('free-generation') as FreeGenerationState);
+                                                        setGenerationErrors([]);
+                                                    }}
+                                                    className="px-6 py-2 bg-gradient-to-r from-orange-400 to-orange-600 hover:from-orange-600 hover:to-orange-400 text-white rounded-full cursor-pointer transition-colors text-sm"
+                                                >
+                                                    {t('common_startOver')}
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+                                    {/* Global Error fallback */}
+                                    {appState.error && !Object.keys(generationErrors).length && !isLoading && (
+                                        <div className="w-full text-center mt-2 p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-200 text-sm">
+                                            {appState.error}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 )
             }
 
