@@ -731,12 +731,12 @@ ${aspectRatioPrompt}
             if (generatedImages.length > 0) {
                 // await addImagesToGallery(generatedImages); // FIX: Duplicate save causing double images in gallery
 
-                logGeneration('milktea-poster-v2', appState, generatedImages[0], {
-                    api_model_used: modelVersion,
-                    credits_used: generatedImages.length,
-                    generation_count: generatedImages.length,
-                    input_prompt: prompt,
-                });
+                // logGeneration('milktea-poster-v2', appState, generatedImages[0], {
+                //     api_model_used: modelVersion,
+                //     credits_used: generatedImages.length,
+                //     generation_count: generatedImages.length,
+                //     input_prompt: prompt,
+                // });
 
                 toast.success(`✨ Tạo thành công ${generatedImages.length} poster!`);
 

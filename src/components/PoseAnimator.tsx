@@ -34,12 +34,12 @@ const PoseAnimator: React.FC<PoseAnimatorProps> = (props) => {
             const prompt = `Transfer the pose from the first image to match the person in the second image. ${appState.options.instructions}`;
             const result = await generateStyledImage(prompt, [appState.poseReferenceImage, appState.targetImage]);
             onStateChange({ ...appState, stage: 'results', resultImage: result });
-            addImagesToGallery([result]);
-            logGeneration('pose-animator', preGenState, result, {
-                credits_used: creditCostPerImage,
-                generation_count: 1,
-                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
-            });
+            // addImagesToGallery([result]);
+            // logGeneration('pose-animator', preGenState, result, {
+            //     credits_used: creditCostPerImage,
+            //     generation_count: 1,
+            //     api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
+            // });
         } catch (err) {
             onStateChange({ ...appState, stage: 'results', error: err instanceof Error ? err.message : "Lỗi." });
         }

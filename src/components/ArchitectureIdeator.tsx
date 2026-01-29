@@ -128,19 +128,19 @@ const ArchitectureIdeator: React.FC<ArchitectureIdeatorProps> = (props) => {
                 state: { ...appState, stage: 'configuring', generatedImage: null, historicalImages: [], error: null },
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            logGeneration('architecture-ideator', preGenState, urlWithMetadata, {
-                credits_used: creditCostPerImage,
-                generation_count: 1,
-                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
-                input_prompt: appState.options.notes
-            });
+            // logGeneration('architecture-ideator', preGenState, urlWithMetadata, {
+            //     credits_used: creditCostPerImage,
+            //     generation_count: 1,
+            //     api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
+            //     input_prompt: appState.options.notes
+            // });
             onStateChange({
                 ...appState,
                 stage: 'results',
                 generatedImage: urlWithMetadata,
                 historicalImages: [...appState.historicalImages, urlWithMetadata],
             });
-            addImagesToGallery([urlWithMetadata]);
+            // addImagesToGallery([urlWithMetadata]);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
             onStateChange({ ...appState, stage: 'results', error: errorMessage });
@@ -167,19 +167,19 @@ const ArchitectureIdeator: React.FC<ArchitectureIdeatorProps> = (props) => {
                 state: { ...appState, stage: 'configuring', generatedImage: null, historicalImages: [], error: null },
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            logGeneration('architecture-ideator', preGenState, urlWithMetadata, {
-                credits_used: creditCostPerImage,
-                generation_count: 1,
-                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
-                input_prompt: prompt
-            });
+            // logGeneration('architecture-ideator', preGenState, urlWithMetadata, {
+            //     credits_used: creditCostPerImage,
+            //     generation_count: 1,
+            //     api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
+            //     input_prompt: prompt
+            // });
             onStateChange({
                 ...appState,
                 stage: 'results',
                 generatedImage: urlWithMetadata,
                 historicalImages: [...appState.historicalImages, urlWithMetadata],
             });
-            addImagesToGallery([urlWithMetadata]);
+            // addImagesToGallery([urlWithMetadata]);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
             onStateChange({ ...appState, stage: 'results', error: errorMessage });

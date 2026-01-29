@@ -354,11 +354,11 @@ const KhmerPhotoMerge: React.FC<KhmerPhotoMergeProps> = (props) => {
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
 
 
-            logGeneration('khmer-photo-merge', preGenState, urlWithMetadata, {
-                generation_count: 1,
-                credits_used: creditCost,
-                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
-            });
+            // logGeneration('khmer-photo-merge', preGenState, urlWithMetadata, {
+            //     generation_count: 1,
+            //     credits_used: creditCost,
+            //     api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
+            // });
 
 
             onStateChange({
@@ -368,7 +368,7 @@ const KhmerPhotoMerge: React.FC<KhmerPhotoMergeProps> = (props) => {
                 historicalImages: [...appState.historicalImages, { style: appState.selectedStyleImage!, url: urlWithMetadata }],
             });
             console.log("Saving generated image to gallery:", urlWithMetadata);
-            addImagesToGallery([urlWithMetadata]);
+            // addImagesToGallery([urlWithMetadata]);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
             console.error("Generation failed:", err);

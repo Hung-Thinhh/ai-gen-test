@@ -183,12 +183,12 @@ const AvatarCreator: React.FC<AvatarCreatorProps> = (props) => {
                     state: { ...preGenState, stage: 'configuring', generatedImages: {}, historicalImages: [], error: null },
                 };
                 const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-                logGeneration('avatar-creator', preGenState, urlWithMetadata, {
-                    credits_used: creditCostPerImage,
-                    generation_count: 1,
-                    api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
-                    input_prompt: appState.options.additionalPrompt || "Style Reference"
-                });
+                // logGeneration('avatar-creator', preGenState, urlWithMetadata, {
+                //     credits_used: creditCostPerImage,
+                //     generation_count: 1,
+                //     api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
+                //     input_prompt: appState.options.additionalPrompt || "Style Reference"
+                // });
 
                 onStateChange({
                     ...generatingState,
@@ -196,8 +196,8 @@ const AvatarCreator: React.FC<AvatarCreatorProps> = (props) => {
                     generatedImages: { [idea]: { status: 'done' as const, url: urlWithMetadata } },
                     historicalImages: [...generatingState.historicalImages, { idea, url: urlWithMetadata }],
                 });
-                addImagesToGallery([urlWithMetadata]);
-                addImagesToGallery([urlWithMetadata]);
+                // addImagesToGallery([urlWithMetadata]);
+                // addImagesToGallery([urlWithMetadata]);
             } catch (err: any) {
                 const error = processApiError(err);
                 onStateChange({
@@ -311,15 +311,15 @@ const AvatarCreator: React.FC<AvatarCreatorProps> = (props) => {
                 );
                 const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
 
-                if (!hasLoggedGeneration.current) {
-                    logGeneration('avatar-creator', preGenState, urlWithMetadata, {
-                        generation_count: 1,
-                        credits_used: creditCostPerImage,
-                        api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
-                        input_prompt: idea
-                    });
-                    hasLoggedGeneration.current = true;
-                }
+                // if (!hasLoggedGeneration.current) {
+                //     logGeneration('avatar-creator', preGenState, urlWithMetadata, {
+                //         generation_count: 1,
+                //         credits_used: creditCostPerImage,
+                //         api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
+                //         input_prompt: idea
+                //     });
+                //     hasLoggedGeneration.current = true;
+                // }
 
                 currentAppState = {
                     ...currentAppState,
@@ -330,9 +330,9 @@ const AvatarCreator: React.FC<AvatarCreatorProps> = (props) => {
                     historicalImages: [...currentAppState.historicalImages, { idea, url: urlWithMetadata }],
                 };
                 onStateChange(currentAppState);
-                addImagesToGallery([urlWithMetadata]);
+                // addImagesToGallery([urlWithMetadata]);
 
-                addImagesToGallery([urlWithMetadata]);
+                // addImagesToGallery([urlWithMetadata]);
 
             } catch (err: any) {
                 const error = processApiError(err);
@@ -403,18 +403,18 @@ const AvatarCreator: React.FC<AvatarCreatorProps> = (props) => {
                 state: { ...appState, stage: 'configuring', generatedImages: {}, historicalImages: [], error: null },
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            logGeneration('avatar-creator', preGenState, urlWithMetadata, {
-                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
-                input_prompt: customPrompt
-            });
+            // logGeneration('avatar-creator', preGenState, urlWithMetadata, {
+            //     api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
+            //     input_prompt: customPrompt
+            // });
             onStateChange({
                 ...appState,
                 // FIX: Add 'as const' to prevent type widening of 'status' to string.
                 generatedImages: { ...appState.generatedImages, [idea]: { status: 'done' as const, url: urlWithMetadata } },
                 historicalImages: [...appState.historicalImages, { idea: `${idea}-edit`, url: urlWithMetadata }],
             });
-            addImagesToGallery([urlWithMetadata]);
-            addImagesToGallery([urlWithMetadata]);
+            // addImagesToGallery([urlWithMetadata]);
+            // addImagesToGallery([urlWithMetadata]);
         } catch (err: any) {
             const error = processApiError(err);
             onStateChange({

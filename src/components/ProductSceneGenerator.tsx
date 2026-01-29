@@ -26,12 +26,12 @@ const ProductSceneGenerator: React.FC<ProductSceneProps> = (props) => {
             const prompt = `Product scene: ${appState.options.scene || 'lifestyle'}. Lighting: ${appState.options.lighting || 'natural'}. Angle: ${appState.options.angle || 'front'}. Professional product photography.`;
             const result = await generateStyledImage(prompt, [appState.productImage], undefined, undefined, 'product-scene');
             onStateChange({ ...appState, stage: 'results', resultImage: result });
-            addImagesToGallery([result]);
-            logGeneration('product-scene', preGenState, result, {
-                credits_used: creditCostPerImage,
-                generation_count: 1,
-                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
-            });
+            // addImagesToGallery([result]);
+            // logGeneration('product-scene', preGenState, result, {
+            //     credits_used: creditCostPerImage,
+            //     generation_count: 1,
+            //     api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
+            // });
         } catch (err: any) {
             const error = processApiError(err);
             onStateChange({ ...appState, stage: 'results', error: error.message });

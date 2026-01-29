@@ -199,11 +199,11 @@ const ToyModelCreator: React.FC<ToyModelCreatorProps> = (props) => {
                 state: { ...appState, stage: 'configuring', generatedImage: null, historicalImages: [], error: null },
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            logGeneration('toy-model-creator', preGenState, urlWithMetadata, {
-                credits_used: creditCostPerImage,
-                generation_count: 1,
-                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
-            });
+            // logGeneration('toy-model-creator', preGenState, urlWithMetadata, {
+            //     credits_used: creditCostPerImage,
+            //     generation_count: 1,
+            //     api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
+            // });
             onStateChange({
                 ...appState,
                 stage: 'results',
@@ -211,8 +211,8 @@ const ToyModelCreator: React.FC<ToyModelCreatorProps> = (props) => {
                 // FIX: Correct typo from 'historical' to 'historicalImages'
                 historicalImages: [...appState.historicalImages, urlWithMetadata],
             });
-            addImagesToGallery([urlWithMetadata]);
-            addImagesToGallery([urlWithMetadata]);
+            // addImagesToGallery([urlWithMetadata]);
+            // addImagesToGallery([urlWithMetadata]);
         } catch (err: any) {
             const error = processApiError(err);
             onStateChange({ ...appState, stage: 'results', error: error.message });
@@ -239,19 +239,19 @@ const ToyModelCreator: React.FC<ToyModelCreatorProps> = (props) => {
                 state: { ...appState, stage: 'configuring', generatedImage: null, historicalImages: [], error: null },
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            logGeneration('toy-model-creator', preGenState, urlWithMetadata, {
-                credits_used: creditCostPerImage,
-                generation_count: 1,
-                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
-            });
+            // logGeneration('toy-model-creator', preGenState, urlWithMetadata, {
+            //     credits_used: creditCostPerImage,
+            //     generation_count: 1,
+            //     api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
+            // });
             onStateChange({
                 ...appState,
                 stage: 'results',
                 generatedImage: urlWithMetadata,
                 historicalImages: [...appState.historicalImages, urlWithMetadata],
             });
-            addImagesToGallery([urlWithMetadata]);
-            addImagesToGallery([urlWithMetadata]);
+            // addImagesToGallery([urlWithMetadata]);
+            // addImagesToGallery([urlWithMetadata]);
         } catch (err: any) {
             const error = processApiError(err);
             onStateChange({ ...appState, stage: 'results', error: error.message });

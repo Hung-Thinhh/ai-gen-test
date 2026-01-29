@@ -176,19 +176,19 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
                     state: { ...preGenState, stage: 'configuring', generatedImages: {}, historicalImages: [], error: null },
                 };
                 const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-                logGeneration('beauty-creator', preGenState, urlWithMetadata, {
-                    credits_used: creditCostPerImage,
-                    generation_count: 1,
-                    api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
-                });
+                // logGeneration('beauty-creator', preGenState, urlWithMetadata, {
+                //     credits_used: creditCostPerImage,
+                //     generation_count: 1,
+                //     api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
+                // });
                 onStateChange({
                     ...generatingState,
                     stage: 'results',
                     generatedImages: { [idea]: { status: 'done' as const, url: urlWithMetadata } },
                     historicalImages: [...generatingState.historicalImages, { idea, url: urlWithMetadata }],
                 });
-                addImagesToGallery([urlWithMetadata]);
-                addImagesToGallery([urlWithMetadata]);
+                // addImagesToGallery([urlWithMetadata]);
+                // addImagesToGallery([urlWithMetadata]);
             } catch (err: any) {
                 const error = processApiError(err);
                 onStateChange({
@@ -300,14 +300,14 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
                 const resultUrl = await generateBeautyImage(appState.uploadedImage!, idea, appState.options, null, 'beauty-creator');
                 const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
 
-                if (!hasLoggedGeneration.current) {
-                    logGeneration('beauty-creator', preGenState, urlWithMetadata, {
-                        generation_count: 1,
-                        credits_used: creditCostPerImage,
-                        api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
-                    });
-                    hasLoggedGeneration.current = true;
-                }
+                // if (!hasLoggedGeneration.current) {
+                //     logGeneration('beauty-creator', preGenState, urlWithMetadata, {
+                //         generation_count: 1,
+                //         credits_used: creditCostPerImage,
+                //         api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
+                //     });
+                //     hasLoggedGeneration.current = true;
+                // }
 
                 currentAppState = {
                     ...currentAppState,
@@ -316,9 +316,9 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
                     historicalImages: [...currentAppState.historicalImages, { idea, url: urlWithMetadata }],
                 };
                 onStateChange(currentAppState);
-                addImagesToGallery([urlWithMetadata]);
+                // addImagesToGallery([urlWithMetadata]);
 
-                addImagesToGallery([urlWithMetadata]);
+                // addImagesToGallery([urlWithMetadata]);
 
             } catch (err: any) {
                 const error = processApiError(err);
@@ -370,17 +370,17 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
                 state: { ...appState, stage: 'configuring', generatedImages: {}, historicalImages: [], error: null },
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            logGeneration('beauty-creator', preGenState, urlWithMetadata, {
-                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
-            });
+            // logGeneration('beauty-creator', preGenState, urlWithMetadata, {
+            //     api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
+            // });
             onStateChange({
                 ...appState,
                 // FIX: Add 'as const' to prevent type widening of 'status' to string.
                 generatedImages: { ...appState.generatedImages, [idea]: { status: 'done' as const, url: urlWithMetadata } },
                 historicalImages: [...appState.historicalImages, { idea: `${idea}-edit`, url: urlWithMetadata }],
             });
-            addImagesToGallery([urlWithMetadata]);
-            addImagesToGallery([urlWithMetadata]);
+            // addImagesToGallery([urlWithMetadata]);
+            // addImagesToGallery([urlWithMetadata]);
         } catch (err: any) {
             const error = processApiError(err);
             // FIX: Add 'as const' to prevent type widening of 'status' to string.

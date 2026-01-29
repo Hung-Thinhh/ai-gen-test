@@ -521,13 +521,13 @@ const PosterCreator: React.FC<PosterCreatorProps> = (props) => {
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
 
             // Log generation
-            const creditCost = modelVersion === 'v3' ? 2 : 1;
-            logGeneration('poster-creator', appState, urlWithMetadata, {
-                credits_used: creditCost,
-                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
-                generation_count: 1,
-                input_prompt: customPrompt
-            });
+            // const creditCost = modelVersion === 'v3' ? 2 : 1;
+            // logGeneration('poster-creator', appState, urlWithMetadata, {
+            //     credits_used: creditCost,
+            //     api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
+            //     generation_count: 1,
+            //     input_prompt: customPrompt
+            // });
 
             // Replace old image with new one, or add if not found
             setDisplayImages(prev => {
@@ -547,7 +547,7 @@ const PosterCreator: React.FC<PosterCreatorProps> = (props) => {
             });
 
             // Add to gallery
-            addImagesToGallery([urlWithMetadata]);
+            // addImagesToGallery([urlWithMetadata]);
 
             // Remove loading slot
             setPendingImageSlots(prev => Math.max(0, prev - 1));
@@ -1040,37 +1040,40 @@ ${aspectRatioPrompt}
                     let imageUrlForDisplay = '';
 
                     // Upload / Process Result
-                    try {
-                        // Use context method to ensure sync with Global Gallery State + DB + Cloudinary
-                        // This handles both User and Guest flows internally
-                        const savedUrls = await addImagesToGallery([resultBase64]);
+                    // try {
+                    //     // Use context method to ensure sync with Global Gallery State + DB + Cloudinary
+                    //     // This handles both User and Guest flows internally
+                    //     const savedUrls = await addImagesToGallery([resultBase64]);
 
-                        if (savedUrls && savedUrls.length > 0) {
-                            imageUrlForDisplay = savedUrls[0];
-                        } else {
-                            // Fallback if save returned nothing (shouldn't happen usually)
-                            const blob = await dataURLtoBlob(resultBase64);
-                            imageUrlForDisplay = URL.createObjectURL(blob);
-                            generatedBlobUrlsRef.current.push(imageUrlForDisplay);
-                        }
-                    } catch (uploadErr) {
-                        console.error("Cloud upload/save failed, falling back to local blob:", uploadErr);
-                        const blob = await dataURLtoBlob(resultBase64);
-                        imageUrlForDisplay = URL.createObjectURL(blob);
-                        generatedBlobUrlsRef.current.push(imageUrlForDisplay);
-                    }
+                    //     if (savedUrls && savedUrls.length > 0) {
+                    //         imageUrlForDisplay = savedUrls[0];
+                    //     } else {
+                    //         // Fallback if save returned nothing (shouldn't happen usually)
+                    //         const blob = await dataURLtoBlob(resultBase64);
+                    //         imageUrlForDisplay = URL.createObjectURL(blob);
+                    //         generatedBlobUrlsRef.current.push(imageUrlForDisplay);
+                    //     }
+                    // } catch (uploadErr) {
+                    //     console.error("Cloud upload/save failed, falling back to local blob:", uploadErr);
+                    //     const blob = await dataURLtoBlob(resultBase64);
+                    //     imageUrlForDisplay = URL.createObjectURL(blob);
+                    //     generatedBlobUrlsRef.current.push(imageUrlForDisplay);
+                    // }
+                    const blob = await dataURLtoBlob(resultBase64);
+                    imageUrlForDisplay = URL.createObjectURL(blob);
+                    generatedBlobUrlsRef.current.push(imageUrlForDisplay);
 
-                    try {
-                        const preGenState = { ...appState, selectedStyle };
-                        logGeneration('poster-creator', preGenState, imageUrlForDisplay, {
-                            credits_used: creditCostPerImage,
-                            generation_count: 1,
-                            api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
-                            input_prompt: prompt
-                        });
-                    } catch (e) {
-                        console.error("Failed to log generation", e);
-                    }
+                    // try {
+                    //     const preGenState = { ...appState, selectedStyle };
+                    //     logGeneration('poster-creator', preGenState, imageUrlForDisplay, {
+                    //         credits_used: creditCostPerImage,
+                    //         generation_count: 1,
+                    //         api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
+                    //         input_prompt: prompt
+                    //     });
+                    // } catch (e) {
+                    //     console.error("Failed to log generation", e);
+                    // }
 
                     // UPDATE STATE IMMEDIATELY upon completion of THIS image
                     setDisplayImages(prev => [...prev, imageUrlForDisplay]);
@@ -1547,20 +1550,22 @@ ${aspectRatioPrompt}
                                                         <label className="block text-neutral-200 font-bold mb-2">
                                                             {t('posterCreator_stylePreset') || 'Phong cách quảng cáo'}
                                                         </label>
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                                                            {(Object.entries(STYLE_PRESETS) as [StylePresetKey, StylePreset][]).map(([key, preset]) => (
-                                                                <button
-                                                                    key={key}
-                                                                    onClick={() => setSelectedStyle(key)}
-                                                                    className={`p-3 rounded-xl text-left border transition-all ${selectedStyle === key
-                                                                        ? 'bg-yellow-400/20 border-yellow-400 text-yellow-400'
-                                                                        : 'bg-neutral-800/50 border-neutral-700 text-neutral-300 hover:border-neutral-500'
-                                                                        }`}
-                                                                >
-                                                                    <div className="font-bold text-sm">{preset.name}</div>
-                                                                    <div className="text-xs opacity-75 mt-1">{preset.description}</div>
-                                                                </button>
-                                                            ))}
+                                                        <div className="max-h-[400px] overflow-y-auto pr-2 scrollbar-orange">
+                                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                                                                {(Object.entries(STYLE_PRESETS) as [StylePresetKey, StylePreset][]).map(([key, preset]) => (
+                                                                    <button
+                                                                        key={key}
+                                                                        onClick={() => setSelectedStyle(key)}
+                                                                        className={`p-3 rounded-xl text-left border transition-all ${selectedStyle === key
+                                                                            ? 'bg-yellow-400/20 border-yellow-400 text-yellow-400'
+                                                                            : 'bg-neutral-800/50 border-neutral-700 text-neutral-300 hover:border-neutral-500'
+                                                                            }`}
+                                                                    >
+                                                                        <div className="font-bold text-sm">{preset.name}</div>
+                                                                        <div className="text-xs opacity-75 mt-1">{preset.description}</div>
+                                                                    </button>
+                                                                ))}
+                                                            </div>
                                                         </div>
                                                     </div>
 

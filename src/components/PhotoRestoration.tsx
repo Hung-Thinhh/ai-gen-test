@@ -137,18 +137,18 @@ const PhotoRestoration: React.FC<PhotoRestorationProps> = (props) => {
                 state: { ...appState, stage: 'configuring', generatedImage: null, historicalImages: [], error: null },
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            logGeneration('photo-restoration', preGenState, urlWithMetadata, {
-                credits_used: creditCostPerImage,
-                generation_count: 1,
-                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
-            });
+            // logGeneration('photo-restoration', preGenState, urlWithMetadata, {
+            //     credits_used: creditCostPerImage,
+            //     generation_count: 1,
+            //     api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
+            // });
             onStateChange({
                 ...appState,
                 stage: 'results',
                 generatedImage: urlWithMetadata,
                 historicalImages: [...appState.historicalImages, urlWithMetadata],
             });
-            addImagesToGallery([urlWithMetadata]);
+            // addImagesToGallery([urlWithMetadata]);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
             onStateChange({ ...appState, stage: 'results', error: errorMessage });
@@ -175,18 +175,18 @@ const PhotoRestoration: React.FC<PhotoRestorationProps> = (props) => {
                 state: { ...appState, stage: 'configuring', generatedImage: null, historicalImages: [], error: null },
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            logGeneration('photo-restoration', preGenState, urlWithMetadata, {
-                credits_used: creditCostPerImage,
-                generation_count: 1,
-                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
-            });
+            // logGeneration('photo-restoration', preGenState, urlWithMetadata, {
+            //     credits_used: creditCostPerImage,
+            //     generation_count: 1,
+            //     api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
+            // });
             onStateChange({
                 ...appState,
                 stage: 'results',
                 generatedImage: urlWithMetadata,
                 historicalImages: [...appState.historicalImages, urlWithMetadata],
             });
-            addImagesToGallery([urlWithMetadata]);
+            // addImagesToGallery([urlWithMetadata]);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
             onStateChange({ ...appState, stage: 'results', error: errorMessage });

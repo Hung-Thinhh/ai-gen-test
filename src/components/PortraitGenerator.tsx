@@ -343,12 +343,12 @@ const PortraitGenerator: React.FC<PortraitGeneratorProps> = (props) => {
                 pendingCount: 0,
                 error: successfulImages.length < imageCount ? `Đã tạo ${successfulImages.length}/${imageCount} ảnh` : null
             });
-            addImagesToGallery(successfulImages);
-            logGeneration('portrait-generator', preGenState, successfulImages[0], {
-                credits_used: creditCostPerImage * successfulImages.length,
-                generation_count: successfulImages.length,
-                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
-            });
+            // addImagesToGallery(successfulImages);
+            // logGeneration('portrait-generator', preGenState, successfulImages[0], {
+            //     credits_used: creditCostPerImage * successfulImages.length,
+            //     generation_count: successfulImages.length,
+            //     api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
+            // });
         } else {
             onStateChange({
                 ...appState,

@@ -188,19 +188,19 @@ const MidAutumnCreator: React.FC<MidAutumnCreatorProps> = (props) => {
                     state: { ...preGenState, stage: 'configuring', generatedImages: {}, historicalImages: [], error: null },
                 };
                 const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-                logGeneration('mid-autumn-creator', preGenState, urlWithMetadata, {
-                    credits_used: creditCostPerImage,
-                    generation_count: 1,
-                    api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
-                });
+                // logGeneration('mid-autumn-creator', preGenState, urlWithMetadata, {
+                //     credits_used: creditCostPerImage,
+                //     generation_count: 1,
+                //     api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
+                // });
                 onStateChange({
                     ...generatingState,
                     stage: 'results',
                     generatedImages: { [idea]: { status: 'done' as const, url: urlWithMetadata } } as any,
                     historicalImages: [...generatingState.historicalImages, { idea, url: urlWithMetadata }],
                 });
-                addImagesToGallery([urlWithMetadata]);
-                addImagesToGallery([urlWithMetadata]);
+                // addImagesToGallery([urlWithMetadata]);
+                // addImagesToGallery([urlWithMetadata]);
             } catch (err: any) {
                 const error = processApiError(err);
                 onStateChange({
@@ -307,14 +307,14 @@ const MidAutumnCreator: React.FC<MidAutumnCreatorProps> = (props) => {
                 );
                 const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
 
-                if (!hasLoggedGeneration.current) {
-                    logGeneration('mid-autumn-creator', preGenState, urlWithMetadata, {
-                        generation_count: 1,
-                        credits_used: creditCostPerImage,
-                        api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
-                    });
-                    hasLoggedGeneration.current = true;
-                }
+                // if (!hasLoggedGeneration.current) {
+                //     logGeneration('mid-autumn-creator', preGenState, urlWithMetadata, {
+                //         generation_count: 1,
+                //         credits_used: creditCostPerImage,
+                //         api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
+                //     });
+                //     hasLoggedGeneration.current = true;
+                // }
 
                 currentAppState = {
                     ...currentAppState,
@@ -325,9 +325,9 @@ const MidAutumnCreator: React.FC<MidAutumnCreatorProps> = (props) => {
                     historicalImages: [...currentAppState.historicalImages, { idea, url: urlWithMetadata }],
                 };
                 onStateChange(currentAppState);
-                addImagesToGallery([urlWithMetadata]);
+                // addImagesToGallery([urlWithMetadata]);
 
-                addImagesToGallery([urlWithMetadata]);
+                // addImagesToGallery([urlWithMetadata]);
 
             } catch (err: any) {
                 const error = processApiError(err);
@@ -398,17 +398,17 @@ const MidAutumnCreator: React.FC<MidAutumnCreatorProps> = (props) => {
                 state: { ...appState, stage: 'configuring', generatedImages: {}, historicalImages: [], error: null },
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            logGeneration('mid-autumn-creator', preGenState, urlWithMetadata, {
-                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
-            });
+            // logGeneration('mid-autumn-creator', preGenState, urlWithMetadata, {
+            //     api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
+            // });
             onStateChange({
                 ...appState,
                 // FIX: Add 'as const' to prevent type widening of 'status' to string.
                 generatedImages: { ...appState.generatedImages, [idea]: { status: 'done' as const, url: urlWithMetadata } } as any,
                 historicalImages: [...appState.historicalImages, { idea: `${idea}-edit`, url: urlWithMetadata }],
             });
-            addImagesToGallery([urlWithMetadata]);
-            addImagesToGallery([urlWithMetadata]);
+            // addImagesToGallery([urlWithMetadata]);
+            // addImagesToGallery([urlWithMetadata]);
         } catch (err: any) {
             const error = processApiError(err);
             onStateChange({

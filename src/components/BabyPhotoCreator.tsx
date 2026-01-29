@@ -176,12 +176,12 @@ const BabyPhotoCreator: React.FC<BabyPhotoCreatorProps> = (props) => {
                     state: { ...preGenState, stage: 'configuring', generatedImages: {}, historicalImages: [], error: null },
                 };
                 const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-                logGeneration('baby-photo-creator', preGenState, urlWithMetadata, {
-                    credits_used: creditCostPerImage,
-                    generation_count: 1,
-                    api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
-                    input_prompt: appState.options.additionalPrompt || "Style Reference"
-                });
+                // logGeneration('baby-photo-creator', preGenState, urlWithMetadata, {
+                //     credits_used: creditCostPerImage,
+                //     generation_count: 1,
+                //     api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
+                //     input_prompt: appState.options.additionalPrompt || "Style Reference"
+                // });
                 // FIX: Pass a state object instead of a function to `onStateChange`.
                 onStateChange({
                     ...generatingState,
@@ -189,7 +189,7 @@ const BabyPhotoCreator: React.FC<BabyPhotoCreatorProps> = (props) => {
                     generatedImages: { [idea]: { status: 'done' as const, url: urlWithMetadata } },
                     historicalImages: [...generatingState.historicalImages, { idea, url: urlWithMetadata }],
                 });
-                addImagesToGallery([urlWithMetadata]);
+                // addImagesToGallery([urlWithMetadata]);
             } catch (err: any) {
                 const error = processApiError(err);
                 // FIX: Pass a state object instead of a function to `onStateChange`.
@@ -294,15 +294,15 @@ const BabyPhotoCreator: React.FC<BabyPhotoCreatorProps> = (props) => {
                 };
                 const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
 
-                if (!hasLoggedGeneration.current) {
-                    logGeneration('baby-photo-creator', preGenState, urlWithMetadata, {
-                        generation_count: 1,
-                        credits_used: creditCostPerImage,
-                        api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
-                        input_prompt: idea
-                    });
-                    hasLoggedGeneration.current = true;
-                }
+                // if (!hasLoggedGeneration.current) {
+                //     logGeneration('baby-photo-creator', preGenState, urlWithMetadata, {
+                //         generation_count: 1,
+                //         credits_used: creditCostPerImage,
+                //         api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
+                //         input_prompt: idea
+                //     });
+                //     hasLoggedGeneration.current = true;
+                // }
 
                 currentAppState = {
                     ...currentAppState,
@@ -314,7 +314,7 @@ const BabyPhotoCreator: React.FC<BabyPhotoCreatorProps> = (props) => {
                     historicalImages: [...currentAppState.historicalImages, { idea, url: urlWithMetadata }],
                 };
                 onStateChange(currentAppState);
-                addImagesToGallery([urlWithMetadata]);
+                // addImagesToGallery([urlWithMetadata]);
 
             } catch (err: any) {
                 const error = processApiError(err);
@@ -386,17 +386,17 @@ const BabyPhotoCreator: React.FC<BabyPhotoCreatorProps> = (props) => {
                 state: { ...appState, stage: 'configuring', generatedImages: {}, historicalImages: [], error: null },
             };
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            logGeneration('baby-photo-creator', preGenState, urlWithMetadata, {
-                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
-                input_prompt: customPrompt
-            });
+            // logGeneration('baby-photo-creator', preGenState, urlWithMetadata, {
+            //     api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
+            //     input_prompt: customPrompt
+            // });
             onStateChange({
                 ...appState,
                 // FIX: Add 'as const' to prevent type widening of 'status' to string.
                 generatedImages: { ...appState.generatedImages, [idea]: { status: 'done' as const, url: urlWithMetadata } },
                 historicalImages: [...appState.historicalImages, { idea: `${idea}-edit`, url: urlWithMetadata }],
             });
-            addImagesToGallery([urlWithMetadata]);
+            // addImagesToGallery([urlWithMetadata]);
         } catch (err: any) {
             const error = processApiError(err);
             onStateChange({

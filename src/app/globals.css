@@ -32,6 +32,31 @@
     background: #FF8533;
 }
 
+/* General Orange Scrollbar (Direction agnostic) */
+.scrollbar-orange {
+    scrollbar-color: #FF6600 rgba(255, 255, 255, 0.05);
+    scrollbar-width: thin;
+}
+
+.scrollbar-orange::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+}
+
+.scrollbar-orange::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 100vh;
+}
+
+.scrollbar-orange::-webkit-scrollbar-thumb {
+    background: #FF6600;
+    border-radius: 100vh;
+}
+
+.scrollbar-orange::-webkit-scrollbar-thumb:hover {
+    background: #FF8533;
+}
+
 
 @layer base {
     :root {

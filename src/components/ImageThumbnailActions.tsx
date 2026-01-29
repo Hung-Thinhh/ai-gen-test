@@ -1,9 +1,5 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
-*/
 import React from 'react';
-import { VisibleIcon, EditorIcon, DeleteIcon } from './icons';
+import { VisibleIcon, EditorIcon, DeleteIcon, ShareIcon } from './icons';
 
 interface ImageThumbnailActionsProps {
     isSelectionMode: boolean;
@@ -11,6 +7,7 @@ interface ImageThumbnailActionsProps {
     onEdit?: (e: React.MouseEvent) => void;
     onDelete: (e: React.MouseEvent) => void;
     onQuickView?: (e: React.MouseEvent) => void;
+    onShare?: (e: React.MouseEvent) => void;
 }
 
 export const ImageThumbnailActions: React.FC<ImageThumbnailActionsProps> = ({
@@ -19,6 +16,7 @@ export const ImageThumbnailActions: React.FC<ImageThumbnailActionsProps> = ({
     onEdit,
     onDelete,
     onQuickView,
+    onShare,
 }) => {
     if (isSelectionMode) {
         return null;
@@ -26,11 +24,20 @@ export const ImageThumbnailActions: React.FC<ImageThumbnailActionsProps> = ({
 
     return (
         <div className="thumbnail-actions">
-            {onQuickView && (
+            {/* Quick View removed as per request */}
+            {/* {onQuickView && (
                 <button onClick={onQuickView} className="thumbnail-action-btn flex items-center justify-center" aria-label="Xem nhanh" title="Xem nhanh">
                     <VisibleIcon className="h-4 w-4" strokeWidth={2} />
                 </button>
+            )} */}
+
+            {/* Share Button added */}
+            {onShare && (
+                <button onClick={onShare} className="thumbnail-action-btn flex items-center justify-center bg-blue-500/20 hover:bg-blue-500/40 text-blue-300" aria-label="Chia sẻ" title="Chia sẻ cộng đồng">
+                    <ShareIcon className="h-4 w-4" />
+                </button>
             )}
+
             {!isVideo && onEdit && (
                 <button onClick={onEdit} className="thumbnail-action-btn flex items-center justify-center" aria-label="Sửa ảnh" title="Sửa ảnh">
                     <EditorIcon className="h-4 w-4" />

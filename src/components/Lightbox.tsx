@@ -159,7 +159,7 @@ const Lightbox: React.FC<LightboxProps> = ({ images, selectedIndex, onClose, onN
             <img
                 src={currentItem.src}
                 alt="Generated content"
-                className="max-w-full max-h-full object-contain shadow-2xl rounded-sm"
+                className="h-[88vh] object-contain shadow-2xl rounded-sm"
                 style={{ transform: `scale(${scale})`, transition: 'transform 0.2s ease-out' }}
             />
         );
@@ -174,7 +174,7 @@ const Lightbox: React.FC<LightboxProps> = ({ images, selectedIndex, onClose, onN
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                 >
-                    <div className="w-full h-full flex flex-col md:flex-row overflow-hidden relative">
+                    <div className="w-full h-[88vh] mt-20 flex flex-col md:flex-row overflow-hidden relative">
 
                         {/* Close Button - Global (Desktop Only) */}
                         <button

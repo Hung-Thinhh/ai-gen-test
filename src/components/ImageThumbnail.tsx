@@ -6,6 +6,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
 import { ImageThumbnailActions } from './ImageThumbnailActions';
+import toast from 'react-hot-toast';
 
 interface ImageThumbnailProps {
     index: number;
@@ -31,6 +32,29 @@ export const ImageThumbnail: React.FC<ImageThumbnailProps> = ({
     onQuickView,
 }) => {
     const isVideo = imageUrl.startsWith('blob:');
+
+    const handleShare = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!imageUrl) return;
+
+        try {
+            const response = await fetch('/api/gallery/share', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageUrl: imageUrl })
+            });
+
+            if (response.ok) {
+                await navigator.clipboard.writeText(imageUrl);
+                toast.success('Đã công khai & sao chép link ảnh!');
+            } else {
+                throw new Error('Share failed');
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error('Lỗi chia sẻ ảnh.');
+        }
+    };
 
     return (
         <motion.div
@@ -86,6 +110,7 @@ export const ImageThumbnail: React.FC<ImageThumbnailProps> = ({
                     isSelectionMode={isSelectionMode}
                     isVideo={isVideo}
                     onQuickView={onQuickView ? (e) => onQuickView(index, e) : undefined}
+                    onShare={handleShare}
                     onEdit={onEdit ? (e) => onEdit(index, e) : undefined}
                     onDelete={(e) => onDelete(index, e)}
                 />

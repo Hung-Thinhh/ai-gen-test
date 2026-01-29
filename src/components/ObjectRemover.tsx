@@ -54,12 +54,12 @@ const ObjectRemover: React.FC<ObjectRemoverProps> = (props) => {
         try {
             const result = await removeObjectFromImage(appState.uploadedImage, appState.objectDescription || '', 'object-remover');
             onStateChange({ ...appState, stage: 'results', resultImage: result });
-            addImagesToGallery([result]);
-            logGeneration('object-remover', preGenState, result, {
-                credits_used: creditCostPerImage,
-                generation_count: 1,
-                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
-            });
+            // addImagesToGallery([result]);
+            // logGeneration('object-remover', preGenState, result, {
+            //     credits_used: creditCostPerImage,
+            //     generation_count: 1,
+            //     api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
+            // });
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "Đã xảy ra lỗi.";
             onStateChange({ ...appState, stage: 'results', error: errorMessage });

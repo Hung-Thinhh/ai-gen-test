@@ -369,13 +369,13 @@ const PosterCreator: React.FC<PosterCreatorProps> = (props) => {
             const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
 
             // Log generation
-            const creditCost = modelVersion === 'v3' ? 2 : 1;
-            logGeneration('poster-creator', appState, urlWithMetadata, {
-                credits_used: creditCost,
-                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
-                generation_count: 1,
-                input_prompt: customPrompt
-            });
+            // const creditCost = modelVersion === 'v3' ? 2 : 1;
+            // logGeneration('poster-creator', appState, urlWithMetadata, {
+            //     credits_used: creditCost,
+            //     api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
+            //     generation_count: 1,
+            //     input_prompt: customPrompt
+            // });
 
             // Add to display images
             setDisplayImages(prev => {
@@ -385,7 +385,7 @@ const PosterCreator: React.FC<PosterCreatorProps> = (props) => {
             });
 
             // Add to gallery
-            addImagesToGallery([urlWithMetadata]);
+            // addImagesToGallery([urlWithMetadata]);
 
             // Remove loading slot
             setPendingImageSlots(prev => Math.max(0, prev - 1));
@@ -907,10 +907,10 @@ ${aspectRatioPrompt}
                     try {
                         // Use context method to ensure sync with Global Gallery State + DB + Cloudinary
                         // This handles both User and Guest flows internally
-                        const savedUrls = await addImagesToGallery([resultBase64]);
+                        // const savedUrls = await addImagesToGallery([resultBase64]);
 
-                        if (savedUrls && savedUrls.length > 0) {
-                            imageUrlForDisplay = savedUrls[0];
+                        if (/* savedUrls && savedUrls.length > 0 */ false) {
+                            // imageUrlForDisplay = savedUrls[0];
                         } else {
                             // Fallback if save returned nothing (shouldn't happen usually)
                             const blob = await dataURLtoBlob(resultBase64);
@@ -925,13 +925,13 @@ ${aspectRatioPrompt}
                     }
 
                     try {
-                        const preGenState = { ...appState, selectedStyle };
-                        logGeneration('poster-creator', preGenState, imageUrlForDisplay, {
-                            credits_used: creditCostPerImage,
-                            generation_count: 1,
-                            api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
-                            input_prompt: prompt
-                        });
+                        // const preGenState = { ...appState, selectedStyle };
+                        // logGeneration('poster-creator', preGenState, imageUrlForDisplay, {
+                        //     credits_used: creditCostPerImage,
+                        //     generation_count: 1,
+                        //     api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image',
+                        //     input_prompt: prompt
+                        // });
                     } catch (e) {
                         console.error("Failed to log generation", e);
                     }

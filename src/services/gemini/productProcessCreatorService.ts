@@ -63,27 +63,88 @@ export async function analyzeProductImage(
 }
 
 /**
+ * Analyzes the product image to identify the subject and fills it into a provided Prompt Template.
+ */
+export async function analyzeAndFillTemplate(
+    imageDataUrl: string,
+    template: string
+): Promise<string> {
+    const { mimeType, data } = parseDataUrl(imageDataUrl);
+
+    const prompt = `
+    You are an AI Assistant helping to generate Image Prompts.
+    
+    TASK:
+    1. Analyze the provided image to identify the MAIN SUBJECT (Dish Name, Drink Name, Ingredient Name, or Product Name).
+    2. Replace the placeholder [TÊN ĐỐI TƯỢNG], [TÊN ĐỒ UỐNG], [TÊN MÓN ĂN], [Subject], or [TÊN SẢN PHẨM] in the template below with the identified name (usually in Vietnamese if the template is Vietnamese).
+    3. Return ONLY the fully filled template string. Do not add any explanations.
+
+    TEMPLATE:
+    """
+    ${template}
+    """
+    `;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: getTextModel(),
+            contents: {
+                parts: [
+                    { inlineData: { mimeType, data } },
+                    { text: prompt }
+                ]
+            }
+        });
+
+        const text = response.text;
+        if (!text) throw new Error("Không thể phân tích ảnh sản phẩm.");
+        return text.trim();
+    } catch (error) {
+        console.error("Error filling template:", error);
+        throw error;
+    }
+}
+
+/**
  * Orchestrates the full process: Image -> Analyze -> Prompt -> Generate.
  */
 export async function generateProductProcessImage(
     productImage: string, // Base64
     style: string,
     notes: string = '',
-    aspectRatio: string = '16:9'
+    aspectRatio: string = '16:9',
+    promptTemplate?: string // NEW: Optional template for Analysis Mode
 ): Promise<string> {
     try {
         console.log("Step 1: Analyzing product image...");
-        const generatedPrompt = await analyzeProductImage(productImage, style, notes);
+
+        let generatedPrompt = '';
+
+        if (promptTemplate) {
+            // ANALYSIS MODE: Fill the template
+            console.log("Mode: Analysis (Template-based)");
+            generatedPrompt = await analyzeAndFillTemplate(productImage, promptTemplate);
+
+            // Append user notes if any to the end of prompt
+            if (notes) {
+                generatedPrompt += `\n\nAdditional User Request: ${notes}`;
+            }
+        } else {
+            // PROCESS CREATION MODE: Generate description from scratch
+            console.log("Mode: Process Creation");
+            generatedPrompt = await analyzeProductImage(productImage, style, notes);
+        }
+
         console.log("Generated Prompt:", generatedPrompt);
 
-        console.log("Step 2: Generating visual process...");
+        console.log("Step 2: Generating visual...");
         console.log("Aspect Ratio:", aspectRatio);
 
         // We pass the productImage as a reference for the final step of the process/style matching
         const resultImage = await generateStyledImage(
             generatedPrompt,
             [productImage],
-            "Make sure the final product on the far right looks exactly like the reference image provided.",
+            "Make sure the final product matches the reference image provided.",
             aspectRatio
         );
 
