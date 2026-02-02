@@ -123,7 +123,7 @@ export default function GalleryPage() {
 
             {/* Server-side Pagination Controls */}
             {pagination && pagination.totalPages > 1 && (
-                <div className="absolute bottom-0 left-0 right-0 bg-neutral-900/95 border-t border-white/10 flex items-center justify-center px-4 py-4">
+                <div className="absolute bottom-18 md:bottom-0 left-0 right-0 bg-neutral-900/95 border-t border-white/10 flex items-center justify-center px-4 py-4">
                     <div className="flex flex-col items-center gap-2">
                         <span className="text-neutral-400 text-sm">
                             Trang {pagination.page} / {pagination.totalPages} ({pagination.totalImages} ảnh)

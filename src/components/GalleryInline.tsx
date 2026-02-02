@@ -7,7 +7,7 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Masonry from 'react-masonry-css';
 import toast from 'react-hot-toast';
-import { downloadAllImagesAsZip, ImageForZip, useLightbox, useAppControls, useImageEditor, combineImages } from './uiUtils';
+import { downloadAllImagesAsZip, downloadImage, ImageForZip, useLightbox, useAppControls, useImageEditor, combineImages } from './uiUtils';
 import Lightbox from './Lightbox';
 import { ImageThumbnail } from './ImageThumbnail';
 import { GalleryToolbar } from './GalleryToolbar';
@@ -102,15 +102,25 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images: r
             ? selectedIndices.map(index => images[index]).filter(Boolean)
             : images;
 
-        const imagesToZip: ImageForZip[] = imagesToDownload
-            .filter(item => item?.output_images?.[0])  // Filter out invalid items
-            .map((item, index) => ({
-                url: item.output_images![0],
-                filename: `Duky-gallery-image-${index + 1}`,
-                folder: 'gallery',
-                extension: item.output_images![0].startsWith('blob:') ? 'mp4' : undefined,
-            }));
-        downloadAllImagesAsZip(imagesToZip, 'Duky-gallery.zip');
+        // Download each image individually
+        const toastId = toast.loading(`Đang tải ${imagesToDownload.length} ảnh...`);
+
+        let successCount = 0;
+        for (let i = 0; i < imagesToDownload.length; i++) {
+            const item = imagesToDownload[i];
+            if (!item?.output_images?.[0]) continue;
+
+            try {
+                await downloadImage(item.output_images[0], `Duky-gallery-${i + 1}`);
+                successCount++;
+                // Small delay between downloads
+                await new Promise(resolve => setTimeout(resolve, 300));
+            } catch (error) {
+                console.error('Failed to download image:', error);
+            }
+        }
+
+        toast.success(`Đã tải ${successCount} ảnh!`, { id: toastId });
     };
 
     const handleEditImage = (indexToEdit: number, e: React.MouseEvent) => {
@@ -360,7 +370,7 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images: r
 
 
     return (
-        <div className="w-full h-[86vh] flex flex-col themed-bg" onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
+        <div className="w-full h-[75vh] md:h-[86vh] flex flex-col themed-bg" onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
             <input
                 type="file"
                 ref={fileInputRef}
