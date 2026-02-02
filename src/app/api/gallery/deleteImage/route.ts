@@ -42,12 +42,16 @@ export async function POST(request: NextRequest) {
         // For now, we just remove the reference from the database// 5. Delete from Neon database
         const { sql } = await import('@/lib/postgres/client');
 
-        // Find and update generation_history records containing this image
+        // Find records containing this image URL
+        // Use jsonb function to check if array contains the URL
         const histories = await sql`
             SELECT history_id, output_images
             FROM generation_history
             WHERE user_id = ${userId}
+            AND output_images::jsonb ? ${imageUrl}
         `;
+
+        console.log(`[deleteImage] Found ${histories.length} records containing image`);
 
         let deletedCount = 0;
         let updatedCount = 0;
@@ -55,26 +59,25 @@ export async function POST(request: NextRequest) {
         for (const history of histories) {
             const outputImages = history.output_images;
 
-            if (Array.isArray(outputImages) && outputImages.includes(imageUrl)) {
-                // Remove the image URL from the array
-                const updatedImages = outputImages.filter((url: string) => url !== imageUrl);
+            // Remove the image URL from the array
+            const updatedImages = outputImages.filter((url: string) => url !== imageUrl);
 
-                if (updatedImages.length === 0) {
-                    // If no images left, delete the entire record
-                    await sql`
-                        DELETE FROM generation_history
-                        WHERE history_id = ${history.history_id}
-                    `;
-                    deletedCount++;
-                } else {
-                    // Update the record with remaining images
-                    await sql`
-                        UPDATE generation_history
-                        SET output_images = ${updatedImages}
-                        WHERE history_id = ${history.history_id}
-                    `;
-                    updatedCount++;
-                }
+            if (updatedImages.length === 0) {
+                // If no images left, delete the entire record
+                await sql`
+                    DELETE FROM generation_history
+                    WHERE history_id = ${history.history_id}
+                `;
+                deletedCount++;
+            } else {
+                // Update the record with remaining images
+                // Convert array to JSON for PostgreSQL
+                await sql`
+                    UPDATE generation_history
+                    SET output_images = ${JSON.stringify(updatedImages)}::jsonb
+                    WHERE history_id = ${history.history_id}
+                `;
+                updatedCount++;
             }
         }
 

@@ -387,6 +387,7 @@ export async function POST(req: NextRequest) {
         perfLog('DB update completed');
 
         // AUTO-LOG TO HISTORY (Server-side)
+        let historyId: string | null = null;
         try {
             console.log('[API] Auto-logging to generation_history...');
 
@@ -411,7 +412,7 @@ export async function POST(req: NextRequest) {
                 }
             }
 
-            await sql`
+            const historyResult = await sql`
                 INSERT INTO generation_history 
                 (user_id, guest_id, tool_id, output_images, generation_count, credits_used, api_model_used, generation_time_ms, error_message, created_at, tool_key, input_prompt)
                 VALUES (
@@ -428,9 +429,14 @@ export async function POST(req: NextRequest) {
                     ${toolKey},
                     ${input_prompt || lastEnhancedPrompt || 'Image Generation'}
                 )
+                RETURNING history_id
             `;
 
-            console.log(`[API] ✅ History logged successfully. Saving Prompt: "${input_prompt || lastEnhancedPrompt || 'Image Generation'}"`);
+            if (historyResult && historyResult.length > 0) {
+                historyId = historyResult[0].history_id;
+                console.log(`[API] ✅ History logged successfully with ID: ${historyId}. Saving Prompt: "${input_prompt || lastEnhancedPrompt || 'Image Generation'}"`);
+            }
+
             console.log(`[API] Prompt Source: ${input_prompt ? 'EXPLICIT' : (lastEnhancedPrompt ? 'ENHANCED' : 'FALLBACK')}`);
         } catch (histErr: any) {
             console.error('[API] ⚠️ History logging failed (non-critical):', histErr.message);
@@ -444,7 +450,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
             candidates: [], // Strip Base64 if R2 URL exists
             newCredits,
-            imageUrl // Return the persistent URL
+            imageUrl, // Return the persistent URL
+            historyId // Return history_id so frontend can share immediately
         });
 
     } catch (error: any) {

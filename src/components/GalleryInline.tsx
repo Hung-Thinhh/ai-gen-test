@@ -40,9 +40,10 @@ interface GalleryInlineProps {
     onClose: () => void;
     images: GalleryItem[] | string[];
     onShareToggle?: (index: number, newState: boolean) => void;
+    onImagesChanged?: (deletedIndices: number[]) => void; // Callback với deleted indices
 }
 
-export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images: rawImages, onShareToggle }) => {
+export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images: rawImages, onShareToggle, onImagesChanged }) => {
     // Normalize images to GalleryItem[] to support legacy string[] input
     const images: GalleryItem[] = React.useMemo(() => {
         if (!rawImages || rawImages.length === 0) return [];
@@ -90,48 +91,18 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images: r
         });
     }, [refreshGallery]);
 
-    // Pagination state (simpler than infinite scroll)
-    const initialPage = searchParams ? Number(searchParams.get('page')) : 1;
-    const [currentPage, setCurrentPage] = useState(initialPage > 0 ? initialPage : 1);
+    // Pagination is now handled by parent component (page.tsx) via API
+    // GalleryInline just displays whatever images it receives
+    const displayedImages = images;
 
-    const ITEMS_PER_PAGE = 15;
-    const totalPages = Math.ceil(images.length / ITEMS_PER_PAGE);
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-    const displayedImages = images.slice(startIndex, endIndex);
 
-    // Update URL when page changes
-    const handlePageChange = (newPage: number) => {
-        setCurrentPage(newPage);
-        const params = new URLSearchParams(searchParams as any);
-        params.set('page', newPage.toString());
-        router.push(`${pathname}?${params.toString()}`);
-        scrollContainerRef.current?.scrollTo(0, 0);
-    };
+    const handleDownloadAll = async () => {
+        // If in selection mode, download only selected images, otherwise all images
+        const imagesToDownload = isSelectionMode
+            ? selectedIndices.map(index => images[index]).filter(Boolean)
+            : images;
 
-    // Reset to page 1 when images change IF not already on valid page
-    // Or simpler: just ensure current page is valid. 
-    useEffect(() => {
-        if (currentPage > totalPages && totalPages > 0) {
-            handlePageChange(totalPages);
-        }
-        console.log(images);
-    }, [images.length, totalPages]);
-
-    const handleNextPage = () => {
-        if (currentPage < totalPages) {
-            handlePageChange(currentPage + 1);
-        }
-    };
-
-    const handlePrevPage = () => {
-        if (currentPage > 1) {
-            handlePageChange(currentPage - 1);
-        }
-    };
-
-    const handleDownloadAll = () => {
-        const imagesToZip: ImageForZip[] = images
+        const imagesToZip: ImageForZip[] = imagesToDownload
             .filter(item => item?.output_images?.[0])  // Filter out invalid items
             .map((item, index) => ({
                 url: item.output_images![0],
@@ -195,6 +166,11 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images: r
 
             // Show success toast
             toast.success('Đã xóa ảnh thành công!', { id: toastId });
+
+            // Notify parent with deleted index for optimistic update
+            if (onImagesChanged) {
+                onImagesChanged([indexToDelete]);
+            }
         } catch (error: any) {
             console.error('Delete failed:', error);
             toast.error(`Lỗi xóa ảnh: ${error.message}`, { id: toastId });
@@ -221,16 +197,56 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images: r
         }
     };
 
-    const handleDeleteSelected = () => {
+    const handleDeleteSelected = async () => {
         if (selectedIndices.length === 0) return;
 
-        const sortedIndices = [...selectedIndices].sort((a, b) => b - a);
-        sortedIndices.forEach(index => {
-            removeImageFromGallery(index);
-        });
+        // Show confirmation dialog
+        const confirmed = window.confirm(
+            `Bạn có chắc muốn xóa ${selectedIndices.length} ảnh vĩnh viễn?\n\nẢnh sẽ bị xóa khỏi database và Cloudinary storage, không thể khôi phục.`
+        );
 
-        setSelectedIndices([]);
-        setIsSelectionMode(false);
+        if (!confirmed) return;
+
+        const toastId = toast.loading(`Đang xóa ${selectedIndices.length} ảnh...`);
+
+        try {
+            // Delete all selected images via API
+            const deletePromises = selectedIndices.map(async (index) => {
+                const imageUrl = images[index]?.output_images?.[0];
+                if (!imageUrl) return;
+
+                const response = await fetch('/api/gallery/deleteImage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imageUrl }),
+                });
+
+                const data = await response.json();
+                if (!data.success) {
+                    throw new Error(data.message || 'Xóa ảnh thất bại');
+                }
+            });
+
+            await Promise.all(deletePromises);
+
+            // Remove from local state (sort descending to avoid index shift)
+            const sortedIndices = [...selectedIndices].sort((a, b) => b - a);
+            sortedIndices.forEach(index => {
+                removeImageFromGallery(index);
+            });
+
+            setSelectedIndices([]);
+            setIsSelectionMode(false);
+            toast.success(`Đã xóa ${selectedIndices.length} ảnh thành công!`, { id: toastId });
+
+            // Notify parent with deleted indices for optimistic update
+            if (onImagesChanged) {
+                onImagesChanged(selectedIndices);
+            }
+        } catch (error: any) {
+            console.error('Bulk delete failed:', error);
+            toast.error(`Lỗi xóa ảnh: ${error.message}`, { id: toastId });
+        }
     };
 
     const handleCombine = async (direction: 'horizontal' | 'vertical') => {
@@ -344,7 +360,7 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images: r
 
 
     return (
-        <div className="w-full h-full flex flex-col themed-bg" onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
+        <div className="w-full h-[86vh] flex flex-col themed-bg" onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
             <input
                 type="file"
                 ref={fileInputRef}
@@ -376,7 +392,8 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images: r
                             columnClassName="gallery-masonry-column"
                         >
                             {displayedImages.map((img, index) => {
-                                const actualIndex = startIndex + index;
+                                // No pagination in GalleryInline anymore, so index is the actual index
+                                const actualIndex = index;
                                 // Safety check: ensure output_images exists and has at least one element
                                 const imageUrl = img?.output_images?.[0];
                                 if (!imageUrl) {
@@ -413,73 +430,7 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images: r
                             })}
                         </Masonry>
                     </div>
-                    {/* Pagination Controls */}
-                    {totalPages > 1 && (
-                        <div className="flex items-center justify-center px-4 py-4 border-t border-neutral-700 themed-bg">
-                            <div className="flex flex-col items-center gap-2">
-                                <span className="text-neutral-400 text-sm">
-                                    {startIndex + 1}-{Math.min(endIndex, images.length)} của {images.length} ảnh
-                                </span>
-                                <div className="flex gap-1">
-                                    {/* Previous button */}
-                                    <button
-                                        onClick={handlePrevPage}
-                                        disabled={currentPage === 1}
-                                        className="cur w-10 h-10 flex items-center justify-center bg-neutral-800 text-neutral-300 rounded-full hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-                                    >
-                                        ←
-                                    </button>
-
-                                    {/* Page numbers */}
-                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => {
-                                        // Show first page, last page, current page, and pages around current
-                                        const showPage =
-                                            pageNum === 1 ||
-                                            pageNum === totalPages ||
-                                            Math.abs(pageNum - currentPage) <= 1;
-
-                                        // Show ellipsis
-                                        const showEllipsisBefore = pageNum === currentPage - 2 && currentPage > 3;
-                                        const showEllipsisAfter = pageNum === currentPage + 2 && currentPage < totalPages - 2;
-
-                                        if (!showPage && !showEllipsisBefore && !showEllipsisAfter) {
-                                            return null;
-                                        }
-
-                                        if (showEllipsisBefore || showEllipsisAfter) {
-                                            return (
-                                                <span key={`ellipsis-${pageNum}`} className="px-2 text-neutral-500">
-                                                    ...
-                                                </span>
-                                            );
-                                        }
-
-                                        return (
-                                            <button
-                                                key={pageNum}
-                                                onClick={() => handlePageChange(pageNum)}
-                                                className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors text-sm ${currentPage === pageNum
-                                                    ? 'bg-orange-500 text-white font-semibold'
-                                                    : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
-                                                    }`}
-                                            >
-                                                {pageNum}
-                                            </button>
-                                        );
-                                    })}
-
-                                    {/* Next button */}
-                                    <button
-                                        onClick={handleNextPage}
-                                        disabled={currentPage === totalPages}
-                                        className="w-10 h-10 flex items-center justify-center bg-neutral-800 text-neutral-300 rounded-full hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-                                    >
-                                        →
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    {/* Pagination is now handled by parent component (gallery/page.tsx) */}
                 </>
             ) : isLoading ? (
                 <div className="flex-1 overflow-y-auto p-4">

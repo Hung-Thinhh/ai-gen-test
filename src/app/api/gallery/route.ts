@@ -4,7 +4,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 /**
- * GET /api/gallery - Get user's gallery images from generation_history
+ * GET /api/gallery - Get user's gallery images from generation_history with pagination
+ * Query params: ?page=1&limit=30
  */
 export async function GET(req: NextRequest) {
     try {
@@ -20,7 +21,32 @@ export async function GET(req: NextRequest) {
         }
         const userId = userCheck[0].user_id;
 
-        // Get gallery images from generation_history with prompts
+        // Parse pagination params
+        const { searchParams } = new URL(req.url);
+        const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+        const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '30'))); // Max 100, default 30
+        const offset = (page - 1) * limit;
+
+        console.log(`[API] GET /api/gallery: page=${page}, limit=${limit}, offset=${offset}`);
+
+        // Get total count of IMAGES (not records) for accurate pagination
+        // Count all images across all records by summing array lengths
+        const countResult = await sql`
+            SELECT COALESCE(SUM(
+                CASE 
+                    WHEN output_images IS NOT NULL 
+                    THEN jsonb_array_length(output_images)
+                    ELSE 0
+                END
+            ), 0) as total_images
+            FROM generation_history
+            WHERE user_id = ${userId}
+        `;
+        const totalImages = parseInt(countResult[0]?.total_images || '0');
+        console.log(`[API] Total images in gallery: ${totalImages}`);
+
+        // Simple approach: Fetch ALL records, flatten all images, then slice
+        // This ensures pagination is always accurate
         const data = await sql`
             SELECT 
                 history_id,
@@ -33,14 +59,13 @@ export async function GET(req: NextRequest) {
             FROM generation_history 
             WHERE user_id = ${userId}
             ORDER BY created_at DESC
-            LIMIT 500
         `;
 
         // Transform to frontend format with extracted images and their prompts
-        const imagesList = [];
-        const promptsList = [];
+        // Build a COMPLETE flat list of all images first
+        const allImagesList = [];
+        const allPromptsList = [];
         let baseCount = 0;
-        let urlCount = 0;
 
         for (const record of data) {
             if (record.output_images && Array.isArray(record.output_images)) {
@@ -57,8 +82,7 @@ export async function GET(req: NextRequest) {
                         continue;
                     }
 
-                    urlCount++;
-                    imagesList.push({
+                    allImagesList.push({
                         id: `${record.history_id}_${i}`,
                         history_id: record.history_id,
                         url: img,
@@ -68,27 +92,42 @@ export async function GET(req: NextRequest) {
                         share: record.share || false
                     });
                     // Map each image with its prompt
-                    promptsList.push(record.input_prompt || null);
+                    allPromptsList.push(record.input_prompt || null);
                 }
             }
         }
 
-        console.log(`[API] GET /api/gallery: Found ${imagesList.length} URL images (skipped ${baseCount} base64 images)`);
+        // Now slice to get exactly the requested page
+        const imagesList = allImagesList.slice(offset, offset + limit);
+        const promptsList = allPromptsList.slice(offset, offset + limit);
+
+        console.log(`[API] GET /api/gallery: Found ${imagesList.length} URL images on page ${page} (offset ${offset}, total fetched: ${allImagesList.length}, skipped ${baseCount} base64)`);
         console.log('[API] Sample images:', imagesList.slice(0, 2).map(img => ({
             url: img.url.substring(0, 60) + '...',
             tool: img.tool_key
         })));
         console.log('[API] Sample prompts:', promptsList.slice(0, 2).map(p => p?.substring(0, 50) + '...' || 'null'));
 
+        // Calculate pagination metadata based on total images count
+        const totalPages = Math.ceil(totalImages / limit);
+
         const response = {
             images: imagesList,
             prompts: promptsList,
-            total: imagesList.length
+            pagination: {
+                page,
+                limit,
+                totalImages,
+                totalPages,
+                hasMore: page < totalPages
+            }
         };
 
         console.log('[API] Response summary:', {
-            total: response.total,
-            prompts_count: promptsList.filter(p => p).length,
+            page,
+            imagesOnPage: imagesList.length,
+            totalImages,
+            totalPages,
             skipped_base64: baseCount,
             format: 'R2 URLs with prompts'
         });

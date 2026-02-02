@@ -3,45 +3,50 @@ import { sql } from '@/lib/postgres/client';
 
 export async function POST(req: NextRequest) {
     try {
-        const { imageUrl, share = true } = await req.json(); // Default to true if not provided
+        const { historyId, imageUrl, share = true } = await req.json();
 
-        if (!imageUrl) {
-            return NextResponse.json({ error: 'Missing imageUrl' }, { status: 400 });
+        if (!historyId && !imageUrl) {
+            return NextResponse.json({ error: 'Missing historyId or imageUrl' }, { status: 400 });
         }
 
-        // We search for the row where output_images contains the imageUrl.
-        // output_images is a JSONB array of strings.
-        // We use the JSONB contains operator @> to check if the array contains the string.
-        // However, '["url"]' syntax is needed.
-
-        // Alternatively, since we might store just the URL string or an array depending on legacy data,
-        // using a text-based search or specific JSON path existence check is safer if schema varies.
-        // But assuming standard schema:
-
-        const result = await sql`
-            UPDATE generation_history
-            SET share = ${share}, updated_at = NOW()
-            WHERE output_images @> ${JSON.stringify([imageUrl])}::jsonb
-            RETURNING history_id as id
-        `;
-
-        if (result.length === 0) {
-            // Fallback: Try searching as text if it wasn't a proper JSON array match
-            // This helps if data is legacy or structured differently
-            const fallbackResult = await sql`
+        // Prefer historyId for precise single-record update
+        if (historyId) {
+            const result = await sql`
                 UPDATE generation_history
                 SET share = ${share}, updated_at = NOW()
-                WHERE output_images::text LIKE ${'%' + imageUrl + '%'}
+                WHERE history_id = ${historyId}::uuid
                 RETURNING history_id as id
             `;
 
-            if (fallbackResult.length === 0) {
-                return NextResponse.json({ message: 'Image not found in history', updated: false }, { status: 404 });
+            if (result.length === 0) {
+                return NextResponse.json({ message: 'Record not found', updated: false }, { status: 404 });
             }
-            return NextResponse.json({ success: true, updatedId: fallbackResult[0].id });
+
+            return NextResponse.json({ success: true, updatedId: result[0].id });
         }
 
-        return NextResponse.json({ success: true, updatedId: result[0].id });
+        // Fallback to imageUrl (legacy support) - this will update ONLY the FIRST matching record
+        if (imageUrl) {
+            const result = await sql`
+                UPDATE generation_history
+                SET share = ${share}, updated_at = NOW()
+                WHERE history_id = (
+                    SELECT history_id 
+                    FROM generation_history 
+                    WHERE output_images @&gt; ${JSON.stringify([imageUrl])}::jsonb
+                    LIMIT 1
+                )
+                RETURNING history_id as id
+            `;
+
+            if (result.length === 0) {
+                return NextResponse.json({ message: 'Image not found', updated: false }, { status: 404 });
+            }
+
+            return NextResponse.json({ success: true, updatedId: result[0].id });
+        }
+
+        return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     } catch (error: any) {
         console.error('[API] Error sharing image:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });

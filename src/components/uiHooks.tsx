@@ -166,7 +166,7 @@ export const useVideoGeneration = () => {
                     if (updatedOp.done) {
                         if (updatedOp.response?.generatedVideos?.[0]?.video?.uri) {
                             const downloadLink = updatedOp.response.generatedVideos[0].video.uri;
-                            const response = await fetch(`${downloadLink}&key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`);
+                            const response = await fetch(`${downloadLink}&key=${process.env.GEMINI_API_KEY}`);
                             if (!response.ok) throw new Error(`Failed to fetch video: ${response.statusText}`);
                             const blob = await response.blob();
                             const blobUrl = URL.createObjectURL(blob);

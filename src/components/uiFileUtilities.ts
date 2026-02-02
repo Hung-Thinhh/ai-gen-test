@@ -281,7 +281,29 @@ export const downloadAllImagesAsZip = async (images: ImageForZip[], zipFilename:
         for (const img of images) {
             if (!img.url) continue;
 
-            const blob = await dataURLtoBlob(img.url);
+            let blob: Blob;
+
+            // Handle different URL types
+            if (img.url.startsWith('data:')) {
+                // Data URL - use dataURLtoBlob
+                blob = await dataURLtoBlob(img.url);
+            } else {
+                // HTTPS/R2 URL - fetch via proxy to avoid CORS
+                try {
+                    // Try direct fetch first
+                    const response = await fetch(img.url, { mode: 'cors' });
+                    if (!response.ok) throw new Error('Direct fetch failed');
+                    blob = await response.blob();
+                } catch (fetchError) {
+                    // If CORS fails, use proxy
+                    console.log('[downloadAllImagesAsZip] CORS error, using proxy');
+                    const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(img.url)}`;
+                    const proxyResponse = await fetch(proxyUrl);
+                    if (!proxyResponse.ok) throw new Error(`Proxy failed: ${proxyResponse.statusText}`);
+                    blob = await proxyResponse.blob();
+                }
+            }
+
             let targetFolder = zip;
             if (img.folder) {
                 targetFolder = zip.folder(img.folder) || zip;

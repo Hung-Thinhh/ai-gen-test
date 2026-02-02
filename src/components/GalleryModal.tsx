@@ -58,7 +58,8 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, images: in
                     createdAt: img.created_at,
                     toolKey: img.tool_key,
                     model: img.model,
-                    share: img.share
+                    share: img.share,
+                    historyId: img.history_id
                 }));
                 setGalleryImages(fetchedItems);
             }

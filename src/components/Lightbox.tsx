@@ -17,6 +17,7 @@ export interface LightboxItem {
     toolKey?: string;
     model?: string;
     share?: boolean;
+    historyId?: string; // For precise record identification
 }
 
 interface LightboxProps {
@@ -64,9 +65,9 @@ const Lightbox: React.FC<LightboxProps> = ({ images, selectedIndex, onClose, onN
         }
         return {
             ...item,
-            prompt: item.prompt || prompts?.[selectedIndex] || undefined,
-            type: item.type || ((item.src.endsWith('.mp4') || item.src.endsWith('.webm')) ? 'video' : 'image'),
-            share: item.share
+            prompt: item?.prompt || prompts?.[selectedIndex] || undefined,
+            type: item?.type || ((item?.src?.endsWith('.mp4') || item?.src?.endsWith('.webm')) ? 'video' : 'image'),
+            share: item?.share
         } as LightboxItem;
     }, [images, selectedIndex, prompts]);
 
@@ -107,10 +108,15 @@ const Lightbox: React.FC<LightboxProps> = ({ images, selectedIndex, onClose, onN
         const newShareState = !isShared;
 
         try {
+            // Use historyId if available for precise record update, fallback to imageUrl for legacy data
+            const requestBody = currentItem.historyId
+                ? { historyId: currentItem.historyId, share: newShareState }
+                : { imageUrl: currentItem.src, share: newShareState };
+
             const response = await fetch('/api/gallery/share', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageUrl: currentItem.src, share: newShareState })
+                body: JSON.stringify(requestBody)
             });
 
             if (response.ok) {
