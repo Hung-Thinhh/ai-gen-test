@@ -57,7 +57,7 @@ export async function GET(
                 data = await sql`SELECT * FROM packages ORDER BY sort_order ASC`;
                 break;
             case 'studio':
-                data = await sql`SELECT * FROM studio ORDER BY sort_order ASC`;
+                data = await sql`SELECT * FROM studio WHERE is_active = true ORDER BY sort_order ASC`;
                 break;
             case 'prompts':
                 data = await sql`SELECT * FROM prompts ORDER BY created_at DESC`;

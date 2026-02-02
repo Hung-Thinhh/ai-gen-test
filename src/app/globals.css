@@ -3991,7 +3991,7 @@ input:checked+.switch-slider:before {
     background: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(10px);
     border-radius: 16px;
-    margin-bottom: 16px;
+    z-index: 9999;
 }
 
 .home-header-left {

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Be_Vietnam_Pro, Inter } from "next/font/google";
 import { Providers } from "@/components/Providers";
+import InAppBrowserDetector from "@/components/InAppBrowserDetector";
 import "./globals.css";
 
 const beVietnamPro = Be_Vietnam_Pro({
@@ -40,6 +41,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${beVietnamPro.className} ${inter.variable}`} suppressHydrationWarning>
         <Providers>
+          <InAppBrowserDetector />
           {IS_MAINTENANCE_MODE && <MaintenanceOverlay />}
           {children}
         </Providers>

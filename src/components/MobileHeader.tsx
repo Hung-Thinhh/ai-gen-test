@@ -73,7 +73,7 @@ export const MobileHomeHeader: React.FC<PageHeaderProps> = ({
     };
 
     return (
-        <header className="mobile-home-header relative">
+        <header className="mobile-home-header relative w-[100vw] p-[12px] left-[-12px]">
             <div className="home-header-left">
                 {!isSearching && (
                     <>

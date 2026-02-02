@@ -95,7 +95,7 @@ export const LeonardoHeader = () => {
         <header
             className={cn(
                 "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
-                "bg-black/90 backdrop-blur-xl border-b flex",
+                "bg-black/90 backdrop-blur-xl border-b hidden md:flex",
                 scrolled
                     ? "border-orange-500/20 shadow-2xl shadow-orange-500/10"
                     : "border-white/5"

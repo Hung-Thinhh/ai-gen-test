@@ -332,7 +332,7 @@ const Overview: React.FC = () => {
 
 
             {/* ===== FEATURED PROMPTS ===== */}
-            <motion.section
+            {/*<motion.section
                 className="featured-prompts-section px-4 pb-20 mt-20 max-w-[1300px] mx-auto"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -345,10 +345,8 @@ const Overview: React.FC = () => {
                         <h2 className="!text-4xl leading-[1.5] md:text-6xl text-start font-magesta bg-gradient-to-r from-[#eb5a01] to-[#eb5a00] text-transparent bg-clip-text">
                             Thư viện Prompt
                         </h2>
-                        {/* <Link href="/prompt-library" className="see-all-link">See All</Link> */}
                     </div>
 
-                    {/* Category Filter Tabs */}
                     <div className="flex items-center justify-between gap-4 mb-6">
                         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                             <button
@@ -400,7 +398,6 @@ const Overview: React.FC = () => {
                                     whileHover={{ y: -5 }}
                                     onClick={() => handleCopyPrompt(prompt)}
                                 >
-                                    {/* Copy Button */}
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
@@ -414,7 +411,6 @@ const Overview: React.FC = () => {
                                         </svg>
                                     </button>
 
-                                    {/* Copied Overlay */}
                                     {copiedId === prompt.id && (
                                         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
                                             <div className="bg-orange-500 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow-lg flex items-center gap-2">
@@ -423,7 +419,6 @@ const Overview: React.FC = () => {
                                         </div>
                                     )}
 
-                                    {/* Image Container */}
                                     <div className="relative overflow-hidden bg-neutral-800 aspect-[9/16]">
                                         <img
                                             src={prompt.image}
@@ -434,10 +429,8 @@ const Overview: React.FC = () => {
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
                                     </div>
 
-                                    {/* Card Body */}
                                     <div className="p-3">
                                         <h3 className="text-white font-semibold text-sm truncate mb-1" title={prompt.title}>{prompt.title}</h3>
-                                        {/* <p className="text-neutral-400 text-xs truncate mb-3">{prompt.description || prompt.title}</p> */}
 
                                         <button
                                             onClick={(e) => handleUsePrompt(e, prompt)}
@@ -454,8 +447,8 @@ const Overview: React.FC = () => {
                     </div>
                 )}
             </motion.section>
+            */}
 
-            {/* Community Gallery */}
             {/* <div className="w-full">
                 <CommunityGallery />
             </div> */}

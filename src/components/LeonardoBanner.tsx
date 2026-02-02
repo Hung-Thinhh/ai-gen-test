@@ -87,7 +87,7 @@ export const LeonardoBanner = () => {
                     className="w-32 h-40 md:w-48 md:h-60 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20"
                 >
                     <img
-                        src="https://pub-15159732d3b14718981f4ec71d2578eb.r2.dev/1768468422339-m212a.png"
+                        src="https://pub-15159732d3b14718981f4ec71d2578eb.r2.dev/1769744496071-eiolbl.png"
                         alt="AI Generated Portrait"
                         className="w-full h-full object-cover rounded-xl"
                     />
@@ -105,7 +105,7 @@ export const LeonardoBanner = () => {
                     className="w-20 h-24 md:w-52 md:h-64 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20"
                 >
                     <img
-                        src="https://res.cloudinary.com/dmxmzannb/image/upload/f_auto,q_auto/v1768216136/mmtmjsb4lpgpf4jtap0j.webp"
+                        src="https://res.cloudinary.com/dmxmzannb/image/upload/v1768560690/fcgaoihbxxoe4hbofdso.png"
                         alt="AI Generated Art"
                         className="w-full h-full object-cover rounded-xl"
                     />
@@ -123,7 +123,7 @@ export const LeonardoBanner = () => {
                     className="w-20 h-38 md:w-56 md:h-72 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20"
                 >
                     <img
-                        src="https://res.cloudinary.com/dmxmzannb/image/upload/f_auto,q_auto/v1768297111/h3iqw2os6titioiulq8l.webp"
+                        src="https://res.cloudinary.com/dmxmzannb/image/upload/v1768562068/v0ybv26fss1eglne6zfu.png"
                         alt="AI Portrait"
                         className="w-full h-full object-cover"
                     />

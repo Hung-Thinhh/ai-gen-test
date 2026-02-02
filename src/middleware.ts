@@ -4,16 +4,30 @@ import type { NextRequest } from 'next/server';
 export async function middleware(request: NextRequest) {
     const url = request.nextUrl;
     const pathname = url.pathname;
+    const userAgent = request.headers.get('user-agent') || '';
+
+    // Detect Zalo or Messenger in-app browser
+    const isZalo = userAgent.toLowerCase().includes('zalo');
+    const isMessenger = userAgent.toLowerCase().includes('messenger') || userAgent.toLowerCase().includes('fban') || userAgent.toLowerCase().includes('fbav');
+    const isInAppBrowser = isZalo || isMessenger;
 
     // Skip logging for static assets to reduce noise
     const isStaticAsset = pathname.match(/\.(woff2?|ttf|otf|eot|css|js|map|ico|svg|png|jpg|jpeg|gif|webp)$/);
     if (!isStaticAsset) {
-        console.log('[Middleware] 🚀 Request:', pathname);
+        console.log('[Middleware] 🚀 Request:', pathname, isInAppBrowser ? `(In-app: ${isZalo ? 'Zalo' : 'Messenger'})` : '');
     }
 
-    // Let Next.js handle routing naturally
-    // Invalid routes will automatically show 404 page
-    return NextResponse.next();
+    // Create response with modified headers for in-app browsers
+    const response = NextResponse.next();
+
+    if (isInAppBrowser) {
+        // Allow cookies in third-party context
+        response.headers.set('Set-Cookie', 'SameSite=None; Secure');
+        // Relaxed security for in-app browsers
+        response.headers.delete('X-Frame-Options');
+    }
+
+    return response;
 }
 
 export const config = {
