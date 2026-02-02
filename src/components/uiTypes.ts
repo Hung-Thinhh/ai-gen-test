@@ -447,8 +447,8 @@ export interface StudioPhotoshootState {
 export interface ProductSceneState {
     stage: 'configuring' | 'generating' | 'results';
     productImage: string | null;
-    resultImage: string | null;
-    options: { scene: string; lighting: string; angle: string };
+    resultImages: { preset: string; url: string }[];
+    options: { scene: string; lighting: string; camera: { presets: string[] } };
     error: string | null;
 }
 
@@ -767,7 +767,7 @@ export const getInitialStateForApp = (viewId: string): AnyAppState => {
         case 'studio-photoshoot':
             return { stage: 'configuring', subjectImage: null, resultImage: null, options: { style: 'commercial', setup: 'clean backdrop', mood: 'professional', notes: '' }, error: null } as StudioPhotoshootState;
         case 'product-scene':
-            return { stage: 'configuring', productImage: null, resultImage: null, options: { scene: 'lifestyle', lighting: 'natural', angle: 'front' }, error: null } as ProductSceneState;
+            return { stage: 'configuring', productImage: null, resultImages: [], options: { scene: 'lifestyle', lighting: 'natural', camera: { presets: ['front'] } }, error: null } as ProductSceneState;
         case 'pose-animator':
             return { stage: 'configuring', poseReferenceImage: null, targetImage: null, resultImage: null, options: { instructions: '' }, error: null } as PoseAnimatorState;
         case 'poster-creator':

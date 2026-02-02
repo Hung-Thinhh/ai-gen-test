@@ -27,9 +27,9 @@ export async function GET(req: NextRequest) {
                 output_images,
                 input_prompt,
                 created_at,
-                created_at,
                 tool_key,
-                api_model_used
+                api_model_used,
+                share
             FROM generation_history 
             WHERE user_id = ${userId}
             ORDER BY created_at DESC
@@ -64,7 +64,8 @@ export async function GET(req: NextRequest) {
                         url: img,
                         created_at: record.created_at,
                         tool_key: record.tool_key,
-                        model: record.api_model_used
+                        model: record.api_model_used,
+                        share: record.share || false
                     });
                     // Map each image with its prompt
                     promptsList.push(record.input_prompt || null);

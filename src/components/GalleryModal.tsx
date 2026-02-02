@@ -57,7 +57,8 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, images: in
                     prompt: data.prompts?.[index] || undefined,
                     createdAt: img.created_at,
                     toolKey: img.tool_key,
-                    model: img.model
+                    model: img.model,
+                    share: img.share
                 }));
                 setGalleryImages(fetchedItems);
             }
@@ -196,6 +197,16 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, images: in
         e.target.value = '';
     };
 
+    const handleShareToggle = (index: number, newState: boolean) => {
+        setGalleryImages(prev => {
+            const newImages = [...prev];
+            if (newImages[index]) {
+                newImages[index] = { ...newImages[index], share: newState };
+            }
+            return newImages;
+        });
+    };
+
     return (
         <>
             <AnimatePresence>
@@ -238,6 +249,8 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, images: in
                                                 onEdit={handleEditImage}
                                                 onDelete={handleDeleteImage}
                                                 onQuickView={handleQuickView}
+                                                isShared={item.share}
+                                                onShareToggle={handleShareToggle}
                                             />
                                         ))}
                                     </AnimatePresence>
@@ -264,6 +277,7 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, images: in
                 selectedIndex={selectedImageIndex}
                 onClose={closeLightbox}
                 onNavigate={navigateLightbox}
+                onShareToggle={handleShareToggle}
             // prompts={prompts}  // No longer needed
             />
         </>

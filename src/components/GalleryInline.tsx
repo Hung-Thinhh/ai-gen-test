@@ -14,6 +14,7 @@ import { GalleryToolbar } from './GalleryToolbar';
 import { CloudUploadIcon } from './icons';
 import { useIsMobile } from '../utils/mobileUtils';
 
+
 // Masonry breakpoints: { screenWidth: columns }
 const masonryBreakpoints = {
     default: 5,  // 5 columns by default (large screens)
@@ -31,15 +32,17 @@ interface GalleryItem {
     created_at?: string;
     tool_key?: string;
     model?: string;
+    share?: boolean;
     [key: string]: any; // Allow other properties
 }
 
 interface GalleryInlineProps {
     onClose: () => void;
     images: GalleryItem[] | string[];
+    onShareToggle?: (index: number, newState: boolean) => void;
 }
 
-export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images: rawImages }) => {
+export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images: rawImages, onShareToggle }) => {
     // Normalize images to GalleryItem[] to support legacy string[] input
     const images: GalleryItem[] = React.useMemo(() => {
         if (!rawImages || rawImages.length === 0) return [];
@@ -50,6 +53,7 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images: r
                 history_id: `legacy-${index}-${typeof url === 'string' ? url.substring(url.length - 10) : index}`,
                 output_images: [url],
                 input_prompt: '',
+                share: false
             }));
         }
         return rawImages as GalleryItem[];
@@ -111,6 +115,7 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images: r
         if (currentPage > totalPages && totalPages > 0) {
             handlePageChange(totalPages);
         }
+        console.log(images);
     }, [images.length, totalPages]);
 
     const handleNextPage = () => {
@@ -296,6 +301,48 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images: r
         e.target.value = '';
     };
 
+    // Note: GalleryInline receives images as prop, but also processes them into GalleryItems.
+    // However, since 'images' prop comes from parent (page.tsx), we can't easily update it directly if it's just passed down.
+    // BUT, wait. 'images' in GalleryInline is a memoized value derived from rawImages.
+    // If rawImages change, 'images' changes.
+    // But page.tsx manages the state.
+    // We ideally need an onUpdate prop to notify parent, OR we implement local state overriding.
+
+    // For now, since GalleryInline is used as a full page component often, 
+    // and 'page.tsx' fetches data once, relying on parent re-fetch on every toggle is expensive.
+
+    // Actually, GalleryInline seems to be effectively a controlled component via 'images' prop.
+    // But 'refreshGallery' in useEffect (line 83) suggests it might be fetching context data too?
+    // No, line 81 runs refreshGallery() which updates context, but GalleryInline uses 'images' prop passed from parent (page.tsx).
+
+    // Let's check page.tsx again. It manages 'galleryItems'.
+    // We need to notify page.tsx to update its state.
+    // However, page.tsx doesn't pass a setter.
+
+    // Actually, GalleryInline converts rawImages to 'images' via useMemo.
+    // We can't mutate 'images' as it's a computed constant.
+
+    // Wait, let's look at GalleryModal again. It uses local state 'galleryImages'.
+    // GalleryInline is used by 'page.tsx' which has 'galleryItems' state.
+    // So if we want to update the UI instantly, likely we need to accept an 'onUpdate' callback prop from parent,
+    // OR change GalleryInline to maintain its own state initialized from props?
+
+    // Easier fix: Modify page.tsx to pass a setGalleryItems or similar? 
+    // OR better: GalleryInline is generic. 
+    // Let's make GalleryInline maintain a local version of images if needed, or better, 
+    // assume 'images' prop will be updated if we call a callback.
+
+    // But wait, GalleryModal has local state 'galleryImages'. 
+    // GalleryInline receives props.
+
+    // Let's modify GalleryInline to accept `onShareToggle` prop which bubbles up.
+    // Or if GalleryInline is the end-user component, it should stick to the pattern.
+
+    // Actually, simply passing onShareToggle to props is cleaner.
+    // Let's add onShareToggle to GalleryInlineProps.
+
+
+
     return (
         <div className="w-full h-full flex flex-col themed-bg" onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
             <input
@@ -348,6 +395,19 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images: r
                                         onEdit={handleEditImage}
                                         onDelete={handleDeleteImage}
                                         onQuickView={handleQuickView}
+                                        isShared={img.share}
+                                        onShareToggle={(index, newState) => {
+                                            // onShareToggle from prop requires index in original array
+                                            // The index passed here is 'actualIndex' (startIndex + index) which relates to 'images' array in GalleryInline
+                                            // which IS the original array (or at least the full filtered one if we ignore pagination for a sec)
+
+                                            // Wait, 'images' in GalleryInline IS the list. 
+                                            // 'actualIndex' is the index in that list.
+                                            // So we just pass it up.
+                                            if (onShareToggle) {
+                                                onShareToggle(actualIndex, newState);
+                                            }
+                                        }}
                                     />
                                 );
                             })}
@@ -454,11 +514,25 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images: r
                     prompt: item.input_prompt,
                     createdAt: item.created_at,
                     toolKey: item.tool_key,
-                    model: item.model
+                    model: item.model,
+                    share: item.share
                 }))}
                 selectedIndex={selectedImageIndex}
                 onClose={closeLightbox}
                 onNavigate={navigateLightbox}
+                onShareToggle={(index, newState) => {
+                    // We need to find the correct index in the original 'images' array.
+                    // The lightbox receives filtered images.
+                    const validItems = images.filter(item => item?.output_images?.[0]);
+                    const targetItem = validItems[index]; // The item in lightbox
+                    if (targetItem && onShareToggle) {
+                        // Find index in original 'images'
+                        const originalIndex = images.indexOf(targetItem);
+                        if (originalIndex !== -1) {
+                            onShareToggle(originalIndex, newState);
+                        }
+                    }
+                }}
             />
         </div>
     );

@@ -3,7 +3,7 @@ import { sql } from '@/lib/postgres/client';
 
 export async function POST(req: NextRequest) {
     try {
-        const { imageUrl } = await req.json();
+        const { imageUrl, share = true } = await req.json(); // Default to true if not provided
 
         if (!imageUrl) {
             return NextResponse.json({ error: 'Missing imageUrl' }, { status: 400 });
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
 
         const result = await sql`
             UPDATE generation_history
-            SET share = true
+            SET share = ${share}, updated_at = NOW()
             WHERE output_images @> ${JSON.stringify([imageUrl])}::jsonb
             RETURNING history_id as id
         `;
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
             // This helps if data is legacy or structured differently
             const fallbackResult = await sql`
                 UPDATE generation_history
-                SET share = true
+                SET share = ${share}, updated_at = NOW()
                 WHERE output_images::text LIKE ${'%' + imageUrl + '%'}
                 RETURNING history_id as id
             `;

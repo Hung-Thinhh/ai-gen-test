@@ -809,7 +809,7 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
         // System views
         // System views
-        const systemViews = ['overview', 'home', 'generators', 'gallery', 'prompt-library', 'storyboarding', 'profile', 'settings', 'studio', 'pricing'];
+        const systemViews = ['overview', 'home', 'generators', 'gallery', 'community-gallery', 'prompt-library', 'storyboarding', 'profile', 'settings', 'studio', 'pricing'];
         if (systemViews.includes(targetView)) {
             navigateTo(targetView);
             return;

@@ -8,7 +8,9 @@ interface ImageThumbnailActionsProps {
     onDelete: (e: React.MouseEvent) => void;
     onQuickView?: (e: React.MouseEvent) => void;
     onShare?: (e: React.MouseEvent) => void;
+    isShared?: boolean;
 }
+
 
 export const ImageThumbnailActions: React.FC<ImageThumbnailActionsProps> = ({
     isSelectionMode,
@@ -17,6 +19,7 @@ export const ImageThumbnailActions: React.FC<ImageThumbnailActionsProps> = ({
     onDelete,
     onQuickView,
     onShare,
+    isShared,
 }) => {
     if (isSelectionMode) {
         return null;
@@ -33,7 +36,12 @@ export const ImageThumbnailActions: React.FC<ImageThumbnailActionsProps> = ({
 
             {/* Share Button added */}
             {onShare && (
-                <button onClick={onShare} className="thumbnail-action-btn flex items-center justify-center bg-blue-500/20 hover:bg-blue-500/40 text-blue-300" aria-label="Chia sẻ" title="Chia sẻ cộng đồng">
+                <button
+                    onClick={onShare}
+                    className={`thumbnail-action-btn flex items-center justify-center ${isShared ? '!bg-orange-500 text-white hover:!bg-orange-600' : 'bg-blue-500/20 hover:!bg-blue-500/40 text-blue-300'}`}
+                    aria-label={isShared ? "Huỷ chia sẻ" : "Chia sẻ"}
+                    title={isShared ? "Huỷ chia sẻ" : "Chia sẻ cộng đồng"}
+                >
                     <ShareIcon className="h-4 w-4" />
                 </button>
             )}

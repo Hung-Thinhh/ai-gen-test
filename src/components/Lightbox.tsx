@@ -16,6 +16,7 @@ export interface LightboxItem {
     createdAt?: string; // ISO string
     toolKey?: string;
     model?: string;
+    share?: boolean;
 }
 
 interface LightboxProps {
@@ -24,17 +25,32 @@ interface LightboxProps {
     onClose: () => void;
     onNavigate: (newIndex: number) => void;
     prompts?: (string | null)[]; // Legacy support
+    onShareToggle?: (index: number, newState: boolean) => void;
 }
 
-const Lightbox: React.FC<LightboxProps> = ({ images, selectedIndex, onClose, onNavigate, prompts }) => {
+
+const Lightbox: React.FC<LightboxProps> = ({ images, selectedIndex, onClose, onNavigate, prompts, onShareToggle }) => {
+
     const { settings, t } = useAppControls();
     const [scale, setScale] = React.useState(1);
     const [copied, setCopied] = React.useState(false);
+    const [isShared, setIsShared] = React.useState(false);
 
     // Reset zoom when image changes
     useEffect(() => {
         setScale(1);
     }, [selectedIndex]);
+
+    // Update isShared based on current item
+    useEffect(() => {
+        if (!images || selectedIndex === null) return;
+        const item = images[selectedIndex];
+        if (typeof item !== 'string' && item.share !== undefined) {
+            setIsShared(item.share);
+        } else {
+            setIsShared(false);
+        }
+    }, [selectedIndex, images]);
 
     const currentItem = useMemo(() => {
         if (selectedIndex === null) return null;
@@ -49,7 +65,8 @@ const Lightbox: React.FC<LightboxProps> = ({ images, selectedIndex, onClose, onN
         return {
             ...item,
             prompt: item.prompt || prompts?.[selectedIndex] || undefined,
-            type: item.type || ((item.src.endsWith('.mp4') || item.src.endsWith('.webm')) ? 'video' : 'image')
+            type: item.type || ((item.src.endsWith('.mp4') || item.src.endsWith('.webm')) ? 'video' : 'image'),
+            share: item.share
         } as LightboxItem;
     }, [images, selectedIndex, prompts]);
 
@@ -87,22 +104,32 @@ const Lightbox: React.FC<LightboxProps> = ({ images, selectedIndex, onClose, onN
         e.stopPropagation();
         if (!currentItem?.src) return;
 
+        const newShareState = !isShared;
+
         try {
             const response = await fetch('/api/gallery/share', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageUrl: currentItem.src })
+                body: JSON.stringify({ imageUrl: currentItem.src, share: newShareState })
             });
 
             if (response.ok) {
-                await navigator.clipboard.writeText(currentItem.src);
-                toast.success('Đã công khai & sao chép link ảnh!');
+                setIsShared(newShareState);
+                if (onShareToggle && selectedIndex !== null) {
+                    onShareToggle(selectedIndex, newShareState);
+                }
+                if (newShareState) {
+                    await navigator.clipboard.writeText(currentItem.src);
+                    toast.success('Đã công khai & sao chép link ảnh!');
+                } else {
+                    toast.success('Đã huỷ chia sẻ thành công!');
+                }
             } else {
                 throw new Error('Share failed');
             }
         } catch (err) {
             console.error(err);
-            toast.error('Lỗi chia sẻ ảnh.');
+            toast.error('Lỗi cập nhật chia sẻ.');
         }
     };
 
@@ -248,7 +275,11 @@ const Lightbox: React.FC<LightboxProps> = ({ images, selectedIndex, onClose, onN
 
                             {/* Toolbar Overlay (Top Right) - Desktop */}
                             <div className="hidden md:flex absolute top-4 right-4 z-[70] items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                                <button className="p-2.5 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md border border-white/10 transition-all" onClick={handleShare} title="Chia sẻ">
+                                <button
+                                    className={`p-2.5 rounded-full backdrop-blur-md border transition-all ${isShared ? 'bg-orange-500/80 border-orange-500 text-white hover:bg-orange-600' : 'bg-black/40 hover:bg-black/70 text-white border-white/10'}`}
+                                    onClick={handleShare}
+                                    title={isShared ? "Huỷ chia sẻ" : "Chia sẻ"}
+                                >
                                     <ShareIcon className="w-5 h-5" />
                                 </button>
                                 <button className="p-2.5 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md border border-white/10 transition-all" onClick={handleZoomOut} title="Thu nhỏ">
@@ -279,7 +310,10 @@ const Lightbox: React.FC<LightboxProps> = ({ images, selectedIndex, onClose, onN
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <button className="p-2 rounded-full bg-black/30 text-white/80 hover:text-white" onClick={handleShare}>
+                                        <button
+                                            className={`p-2 rounded-full hover:text-white ${isShared ? 'bg-orange-500 text-white' : 'bg-black/30 text-white/80'}`}
+                                            onClick={handleShare}
+                                        >
                                             <ShareIcon className="w-5 h-5" />
                                         </button>
                                         <button className="p-2 rounded-full bg-black/30 text-white/50 hover:text-white" onClick={onClose}>

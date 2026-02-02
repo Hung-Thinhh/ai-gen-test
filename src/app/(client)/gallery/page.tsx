@@ -32,7 +32,8 @@ export default function GalleryPage() {
                             input_prompt: data.prompts[index] || '',
                             created_at: img.created_at,
                             tool_key: img.tool_key,
-                            model: img.model
+                            model: img.model,
+                            share: img.share
                         }));
                         setGalleryItems(items);
                     }
@@ -52,5 +53,15 @@ export default function GalleryPage() {
     // However, GalleryInline handles string[] fallback too.
     const displayImages = galleryItems.length > 0 ? galleryItems : (imageGallery || []);
 
-    return <GalleryInline images={displayImages} onClose={() => router.push('/')} />;
+    const handleShareToggle = (index: number, newState: boolean) => {
+        setGalleryItems(prev => {
+            const newItems = [...prev];
+            if (newItems[index]) {
+                newItems[index] = { ...newItems[index], share: newState };
+            }
+            return newItems;
+        });
+    };
+
+    return <GalleryInline images={displayImages} onClose={() => router.push('/')} onShareToggle={handleShareToggle} />;
 }

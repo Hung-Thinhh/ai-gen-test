@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { X, Clock, Aperture } from 'lucide-react';
+import Masonry from 'react-masonry-css';
 
 interface GalleryItem {
     id: string;
@@ -16,6 +19,7 @@ interface GalleryItem {
 }
 
 export const CommunityGallery = () => {
+    const router = useRouter();
     const [images, setImages] = useState<GalleryItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedImage, setSelectedImage] = useState<GalleryItem | null>(null);
@@ -23,7 +27,7 @@ export const CommunityGallery = () => {
     useEffect(() => {
         const fetchGallery = async () => {
             try {
-                const res = await fetch('/api/community/gallery');
+                const res = await fetch('/api/community/gallery?limit=15');
                 const data = await res.json();
                 if (data.success) {
                     setImages(data.data);
@@ -68,34 +72,70 @@ export const CommunityGallery = () => {
                     <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
                 </div>
             ) : (
-                <div className="columns-2 md:columns-4 lg:columns-5 gap-1 space-y-1">
-                    {images.map((img, index) => (
-                        <motion.div
-                            key={`${img.id}-${index}`}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            whileInView={{ opacity: 1, scale: 1 }}
-                            viewport={{ once: true }}
-                            transition={{ duration: 0.5 }}
-                            className="break-inside-avoid relative group cursor-pointer overflow-hidden"
-                            onClick={() => setSelectedImage(img)}
-                        >
-                            <img
-                                src={img.url}
-                                alt={img.prompt || "AI Generated Image"}
-                                className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-110"
-                                loading="lazy"
-                            />
-                            {/* Hover Overlay */}
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-6 h-6 rounded-full overflow-hidden border border-white/50">
-                                        <img src={img.user.avatar} alt={img.user.name} className="w-full h-full object-cover" />
+                <div className="flex flex-col gap-6">
+                    <Masonry
+                        breakpointCols={{
+                            default: 5,
+                            1280: 4,
+                            1024: 3,
+                            768: 2
+                        }}
+                        className="flex -ml-4 w-auto" // Row container
+                        columnClassName="pl-4 bg-clip-padding" // Column spacing
+                    >
+                        {images.map((img, index) => (
+                            <div className="mb-4" key={`${img.id}-${index}`}>
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    whileInView={{ opacity: 1, scale: 1 }}
+                                    viewport={{ once: true }}
+                                    transition={{ duration: 0.5 }}
+                                    className="relative group cursor-pointer overflow-hidden rounded-lg"
+                                    onClick={() => setSelectedImage(img)}
+                                >
+                                    <img
+                                        src={img.url}
+                                        alt={img.prompt || "AI Generated Image"}
+                                        className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-110"
+                                        loading="lazy"
+                                    />
+                                    {/* Hover Overlay */}
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-6 h-6 rounded-full overflow-hidden border border-white/50">
+                                                <img src={img.user.avatar} alt={img.user.name} className="w-full h-full object-cover" />
+                                            </div>
+                                            <span className="text-white text-xs font-medium truncate max-w-[100px]">{img.user.name}</span>
+                                        </div>
                                     </div>
-                                    <span className="text-white text-xs font-medium truncate max-w-[100px]">{img.user.name}</span>
-                                </div>
+                                </motion.div>
                             </div>
-                        </motion.div>
-                    ))}
+                        ))}
+                    </Masonry>
+
+                    {/* Fake Skeleton Row & View More Button */}
+                    <div className="relative">
+                        {/* Gradient Fade */}
+                        <div className="absolute inset-0 -top-20 z-10 bg-gradient-to-b from-transparent to-[#1a1a1a] pointer-events-none" />
+
+                        {/* Fake Skeleton Row */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 opacity-30">
+                            {[...Array(5)].map((_, i) => (
+                                <div key={i} className="aspect-square bg-gray-700/50 rounded-lg animate-pulse" style={{ height: [150, 200, 180, 220, 160][i] + 'px' }} />
+                            ))}
+                        </div>
+
+                        {/* View More Button */}
+                        <div className="absolute inset-0 flex items-center justify-center z-20 top-10">
+                            <Link
+                                href="/community-gallery"
+                                className="px-8 py-3 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-full shadow-lg shadow-orange-600/30 transition-all flex items-center gap-2 transform hover:scale-105"
+                            >
+                                <Aperture size={20} />
+                                Xem toàn bộ thư viện
+                            </Link>
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -157,10 +197,6 @@ export const CommunityGallery = () => {
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             navigator.clipboard.writeText(selectedImage.prompt);
-                                            // Ideally show toast here, but simple alert for now if toast not imported
-                                            // checking imports... no toast imported.
-                                            // Let's rely on visual feedback or add toast import in next step if needed.
-                                            // For now just action.
                                         }}
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
@@ -174,7 +210,7 @@ export const CommunityGallery = () => {
                                         e.stopPropagation();
                                         const toolId = selectedImage.tool || 'free-generation';
                                         const url = toolId === 'studio' ? '/studio' : `/tool/${toolId}`;
-                                        window.location.href = url; // Force navigation or use router
+                                        router.push(url);
                                     }}
                                     className="flex items-center gap-2 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 hover:bg-orange-500/20 hover:border-orange-500/50 transition-all cursor-pointer"
                                 >

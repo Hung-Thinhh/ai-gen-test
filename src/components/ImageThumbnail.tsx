@@ -18,6 +18,8 @@ interface ImageThumbnailProps {
     onEdit?: (index: number, e: React.MouseEvent) => void;
     onDelete: (index: number, e: React.MouseEvent) => void;
     onQuickView?: (index: number, e: React.MouseEvent) => void;
+    isShared?: boolean;
+    onShareToggle?: (index: number, newState: boolean) => void;
 }
 
 export const ImageThumbnail: React.FC<ImageThumbnailProps> = ({
@@ -30,6 +32,8 @@ export const ImageThumbnail: React.FC<ImageThumbnailProps> = ({
     onEdit,
     onDelete,
     onQuickView,
+    isShared,
+    onShareToggle,
 }) => {
     const isVideo = imageUrl.startsWith('blob:');
 
@@ -37,22 +41,32 @@ export const ImageThumbnail: React.FC<ImageThumbnailProps> = ({
         e.stopPropagation();
         if (!imageUrl) return;
 
+        const newState = !isShared;
+
         try {
             const response = await fetch('/api/gallery/share', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageUrl: imageUrl })
+                body: JSON.stringify({ imageUrl: imageUrl, share: newState })
             });
 
             if (response.ok) {
-                await navigator.clipboard.writeText(imageUrl);
-                toast.success('Đã công khai & sao chép link ảnh!');
+                if (newState) {
+                    await navigator.clipboard.writeText(imageUrl);
+                    toast.success('Đã công khai & sao chép link ảnh!');
+                } else {
+                    toast.success('Đã huỷ chia sẻ thành công!');
+                }
+
+                if (onShareToggle) {
+                    onShareToggle(index, newState);
+                }
             } else {
                 throw new Error('Share failed');
             }
         } catch (err) {
             console.error(err);
-            toast.error('Lỗi chia sẻ ảnh.');
+            toast.error('Lỗi cập nhật chia sẻ.');
         }
     };
 
@@ -113,6 +127,7 @@ export const ImageThumbnail: React.FC<ImageThumbnailProps> = ({
                     onShare={handleShare}
                     onEdit={onEdit ? (e) => onEdit(index, e) : undefined}
                     onDelete={(e) => onDelete(index, e)}
+                    isShared={isShared}
                 />
             )}
         </motion.div>
