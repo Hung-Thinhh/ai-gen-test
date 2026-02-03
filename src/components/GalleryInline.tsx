@@ -78,18 +78,8 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images: r
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
     const [isCombining, setIsCombining] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-    // Initial Fetch (Strictly from DB)
-    useEffect(() => {
-        setIsLoading(true);
-        refreshGallery().finally(() => {
-            // Add small delay for better UX
-            setTimeout(() => setIsLoading(false), 300);
-        });
-    }, [refreshGallery]);
 
     // Pagination is now handled by parent component (page.tsx) via API
     // GalleryInline just displays whatever images it receives
@@ -442,20 +432,6 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images: r
                     </div>
                     {/* Pagination is now handled by parent component (gallery/page.tsx) */}
                 </>
-            ) : isLoading ? (
-                <div className="flex-1 overflow-y-auto p-4">
-                    <Masonry
-                        breakpointCols={masonryBreakpoints}
-                        className="gallery-masonry"
-                        columnClassName="gallery-masonry-column"
-                    >
-                        {Array.from({ length: 15 }).map((_, i) => (
-                            <div key={i} className="relative overflow-hidden bg-neutral-800 rounded-lg mb-4" style={{ aspectRatio: '1' }}>
-                                <div className="absolute inset-0 bg-gradient-to-r from-neutral-800 via-neutral-700 to-neutral-800 animate-shimmer bg-[length:200%_100%]" />
-                            </div>
-                        ))}
-                    </Masonry>
-                </div>
             ) : (
                 <div className="text-center text-neutral-400 py-8 flex-1 flex items-center justify-center">
                     <p>{t('galleryModal_empty')}<br />{t('galleryModal_empty_dragDrop')}</p>

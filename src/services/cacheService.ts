@@ -74,6 +74,13 @@ class CacheService {
     remove(key: string): void {
         localStorage.removeItem(this.prefix + key);
         console.log(`[Cache] Removed: "${key}"`);
+
+        // Broadcast event để notify các component khác
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('cache-invalidated', {
+                detail: { key }
+            }));
+        }
     }
 
     /**

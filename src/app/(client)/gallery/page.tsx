@@ -27,6 +27,10 @@ export default function GalleryPage() {
             const response = await fetch(`/api/gallery?page=${currentPage}&limit=30`);
             if (response.ok) {
                 const data = await response.json();
+                console.log('[Gallery Page] Full API response:', data);
+                console.log('[Gallery Page] data.images:', data.images);
+                console.log('[Gallery Page] data.prompts:', data.prompts);
+
                 // Transform API response format to GalleryItem format
                 if (data.images && data.prompts) {
                     const items = data.images.map((img: any, index: number) => ({
@@ -42,6 +46,10 @@ export default function GalleryPage() {
                     setPagination(data.pagination);
                     console.log('[Gallery Page] Pagination data:', data.pagination);
                     console.log('[Gallery Page] Loaded images:', items.length);
+                } else {
+                    console.warn('[Gallery Page] Missing data.images or data.prompts');
+                    setGalleryItems([]);
+                    setPagination(data.pagination || null);
                 }
             }
         } catch (error) {
@@ -55,8 +63,8 @@ export default function GalleryPage() {
         fetchGallery();
     }, [currentPage]); // Only refetch when page changes
 
-    // Fallback to context if API fails, checking if context has content
-    const displayImages = galleryItems.length > 0 ? galleryItems : (imageGallery || []);
+    // Use only gallery items from API (no fallback to context)
+    const displayImages = galleryItems;
 
     // Optimistic update: remove deleted images from local state immediately
     const handleImagesDeleted = (deletedIndices: number[]) => {
@@ -138,37 +146,75 @@ export default function GalleryPage() {
                                 ←
                             </button>
 
-                            {/* Page numbers */}
-                            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(pageNum => {
-                                const showPage =
-                                    pageNum === 1 ||
-                                    pageNum === pagination.totalPages ||
-                                    Math.abs(pageNum - currentPage) <= 1;
+                            {/* Page numbers with smart pagination */}
+                            {(() => {
+                                const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+                                const maxVisible = isMobile ? 4 : 10; // Mobile: 2 middle, Desktop: 10
+                                const pages: (number | 'ellipsis')[] = [];
 
-                                if (!showPage && pageNum !== currentPage - 2 && pageNum !== currentPage + 2) {
-                                    return null;
+                                const total = pagination.totalPages;
+
+                                if (total <= maxVisible + 2) {
+                                    // Show all pages if total is small
+                                    for (let i = 1; i <= total; i++) {
+                                        pages.push(i);
+                                    }
+                                } else {
+                                    // Always show first page
+                                    pages.push(1);
+
+                                    const halfVisible = Math.floor((maxVisible - 2) / 2);
+                                    let start = Math.max(2, currentPage - halfVisible);
+                                    let end = Math.min(total - 1, currentPage + halfVisible);
+
+                                    // Adjust if at the beginning
+                                    if (currentPage <= halfVisible + 2) {
+                                        end = Math.min(total - 1, maxVisible);
+                                    }
+
+                                    // Adjust if at the end
+                                    if (currentPage >= total - halfVisible - 1) {
+                                        start = Math.max(2, total - maxVisible + 1);
+                                    }
+
+                                    // Add ellipsis before start if needed
+                                    if (start > 2) {
+                                        pages.push('ellipsis');
+                                    }
+
+                                    // Add middle pages
+                                    for (let i = start; i <= end; i++) {
+                                        pages.push(i);
+                                    }
+
+                                    // Add ellipsis before last if needed (keep 1 space before last)
+                                    if (end < total - 1) {
+                                        pages.push('ellipsis');
+                                    }
+
+                                    // Always show last page
+                                    pages.push(total);
                                 }
 
-                                if ((pageNum === currentPage - 2 && currentPage > 3) ||
-                                    (pageNum === currentPage + 2 && currentPage < pagination.totalPages - 2)) {
-                                    return <span key={`ellipsis-${pageNum}`} className="px-2 text-neutral-500">...</span>;
-                                }
+                                return pages.map((page, idx) => {
+                                    if (page === 'ellipsis') {
+                                        return <span key={`ellipsis-${idx}`} className="px-2 text-neutral-500">...</span>;
+                                    }
 
-                                if (!showPage) return null;
-
-                                return (
-                                    <button
-                                        key={pageNum}
-                                        onClick={() => router.push(`/gallery?page=${pageNum}`)}
-                                        className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors ${currentPage === pageNum
-                                            ? 'bg-orange-500 text-white font-semibold'
-                                            : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
-                                            }`}
-                                    >
-                                        {pageNum}
-                                    </button>
-                                );
-                            })}
+                                    return (
+                                        <button
+                                            key={page}
+                                            onClick={() => router.push(`/gallery?page=${page}`)}
+                                            className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors ${currentPage === page
+                                                ? 'bg-orange-500 text-white font-semibold'
+                                                : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+                                                }`}
+                                        >
+                                            {page}
+                                        </button>
+                                    );
+                                });
+                            })()}
 
                             {/* Next */}
                             <button

@@ -80,7 +80,7 @@ const Home: React.FC<HomeProps> = ({ onSelectApp, title, subtitle, apps: initial
           ...t
         }));
 
-        const activeTools = mappedTools.filter((t: any) => t.status == 'active');
+        const activeTools = mappedTools.filter((t: any) => t.is_active === true);
 
         // Sort by sort_order: 1, 2, 3... first, then 0s (or null) at the end
         activeTools.sort((a: any, b: any) => {
@@ -111,8 +111,7 @@ const Home: React.FC<HomeProps> = ({ onSelectApp, title, subtitle, apps: initial
   const apps = (loadingTools || dbTools.length > 0) ? dbTools : initialApps;
 
   // Get page from URL or default to 1
-  const pageFromUrl = parseInt(searchParams.get('page') || '1', 10);
-  const [currentPage, setCurrentPage] = useState(pageFromUrl);
+  const [currentPage, setCurrentPage] = useState(1);
   const [showAll, setShowAll] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -120,42 +119,25 @@ const Home: React.FC<HomeProps> = ({ onSelectApp, title, subtitle, apps: initial
   const APPS_PER_PAGE = 12;
   const totalPages = Math.ceil(apps.length / APPS_PER_PAGE);
 
-  // Sync current page with URL on mount and when URL changes
+  // Reset về page 1 nếu currentPage vượt quá totalPages
   useEffect(() => {
-    const urlPage = parseInt(searchParams.get('page') || '1', 10);
-    // Adjust logic to reset to 1 if urlPage > totalPages (e.g. data changed)
-    const effectiveTotalPages = Math.ceil(apps.length / APPS_PER_PAGE) || 1;
-
-    if (urlPage !== currentPage) {
-      if (urlPage >= 1 && urlPage <= effectiveTotalPages) {
-        setCurrentPage(urlPage);
-      } else if (urlPage > effectiveTotalPages) {
-        setCurrentPage(1);
-      }
+    if (currentPage > totalPages && totalPages > 0) {
+      console.log(`[Home] Reset page: currentPage=${currentPage} > totalPages=${totalPages}`);
+      setCurrentPage(1);
     }
-  }, [searchParams, apps.length]); // Add apps.length dependency
-
-  // Update URL when page changes
-  const updatePageUrl = (newPage: number) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (newPage === 1) {
-      params.delete('page'); // Clean URL for first page
-    } else {
-      params.set('page', newPage.toString());
-    }
-    const queryString = params.toString();
-    router.push(`/tool${queryString ? `?${queryString}` : ''}`, { scroll: false });
-  };
+  }, [apps.length, currentPage, totalPages]);
 
   const displayedApps = showAll
     ? apps
     : apps.slice((currentPage - 1) * APPS_PER_PAGE, currentPage * APPS_PER_PAGE);
 
+  // Debug log
+  console.log(`[Home] Pagination: currentPage=${currentPage}, totalPages=${totalPages}, apps.length=${apps.length}, displayedApps.length=${displayedApps.length}`);
+
   const handleToggleShowAll = () => {
     setShowAll((prev) => !prev);
     if (showAll) {
       setCurrentPage(1);
-      updatePageUrl(1);
     }
   };
 
@@ -304,7 +286,8 @@ const Home: React.FC<HomeProps> = ({ onSelectApp, title, subtitle, apps: initial
             page={currentPage}
             onChange={(e, page) => {
               setCurrentPage(page);
-              updatePageUrl(page);
+              // Scroll to top khi đổi trang
+              window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             color="primary"
           />

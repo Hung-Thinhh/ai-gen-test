@@ -25,7 +25,12 @@ import {
     DialogContent,
     DialogActions,
     Checkbox,
-    CircularProgress
+    CircularProgress,
+    Select,
+    MenuItem,
+    FormControl,
+    InputLabel,
+    FormControlLabel
 } from '@mui/material';
 import {
     Add as AddIcon,
@@ -83,16 +88,18 @@ export default function ToolManagement() {
                 else if (usageNum >= 500) usageLabel = 'High';
                 else if (usageNum >= 100) usageLabel = 'Medium';
 
+                console.log(`Tool ${t.tool_id}: is_active from DB =`, t.is_active, typeof t.is_active);
+
                 return {
                     id: t.tool_id || t.id,
                     name: getLocString(t.name),
                     description: getLocString(t.description),
                     status: t.status || 'active',
                     usage: usageLabel,
-                    is_active: t.is_active !== false, // Default to true if undefined
+                    is_active: t.is_active === true, // Chỉ true khi giá trị là true
                     version: t.version || '1.0',
                     avatar: t.preview_image_url || t.avatar || '',
-                    tool_key: t.tool_key, // Keep original key for reference
+                    tool_key: t.tool_key,
                     sort_order: t.sort_order || 0
                 };
             });
@@ -105,24 +112,22 @@ export default function ToolManagement() {
         }
     };
 
-    const toggleStatus = async (id: string, currentMaintenanceState: boolean) => {
-        const newMaintenanceState = !currentMaintenanceState;
-        const newStatusLabel = newMaintenanceState ? 'maintenance' : 'active';
+    const toggleStatus = async (id: string, currentIsActive: boolean) => {
+        const newIsActive = !currentIsActive;
 
-        // Optimistic update
+        // Optimistic update - chỉ thay đổi is_active, giữ nguyên status
         setTools(tools.map(t =>
-            t.id === id ? { ...t, is_active: newMaintenanceState, status: newStatusLabel } : t
+            t.id === id ? { ...t, is_active: newIsActive } : t
         ));
 
         // DB Update
         try {
             const success = await updateTool(id, {
-                is_active: newMaintenanceState,
-                status: newStatusLabel
+                is_active: newIsActive
             });
 
             if (success) {
-                toast.success('Đã cập nhật trạng thái công cụ');
+                toast.success(newIsActive ? 'Đã bật công cụ' : 'Đã tắt công cụ');
             } else {
                 // Revert if failed
                 fetchTools();
@@ -180,12 +185,14 @@ export default function ToolManagement() {
             }
 
             const updates = {
-                name: currentTool.name,      // Send both to be safe or check schema
+                name: currentTool.name,
                 description: currentTool.description,
                 preview_image_url: finalAvatarUrl,
                 sort_order: parseInt(currentTool.sort_order) || 0,
                 version: currentTool.version,
-                tool_key: currentTool.tool_key // Important for creation
+                tool_key: currentTool.tool_key,
+                status: currentTool.status || 'active',
+                is_active: currentTool.is_active !== false
             };
 
             let success = false;
@@ -196,10 +203,29 @@ export default function ToolManagement() {
             }
 
             if (success) {
+                // Optimistic update - cập nhật UI ngay lập tức
+                if (currentTool.id) {
+                    setTools(tools.map(t =>
+                        t.id === currentTool.id
+                            ? {
+                                ...t,
+                                name: updates.name,
+                                description: updates.description,
+                                avatar: finalAvatarUrl,
+                                sort_order: updates.sort_order,
+                                version: updates.version,
+                                status: updates.status,
+                                is_active: updates.is_active
+                            }
+                            : t
+                    ));
+                }
+
                 toast.success(currentTool.id ? 'Đã cập nhật thông tin công cụ' : 'Đã tạo công cụ mới');
-                // Reload tools to get fresh list
-                fetchTools();
                 handleCloseEdit();
+
+                // Fetch lại để đảm bảo data chính xác
+                fetchTools();
             } else {
                 toast.error('Lỗi khi lưu vào cơ sở dữ liệu');
             }
@@ -292,10 +318,10 @@ export default function ToolManagement() {
                         <TableRow>
                             <TableCell padding="checkbox"><Checkbox /></TableCell>
                             <TableCell sx={{ color: '#6B7280', fontWeight: 600, border: 'none', fontSize: '0.875rem' }}>Công cụ</TableCell>
+                            <TableCell sx={{ color: '#6B7280', fontWeight: 600, border: 'none', fontSize: '0.875rem' }}>Tool key</TableCell>
                             <TableCell sx={{ color: '#6B7280', fontWeight: 600, border: 'none', fontSize: '0.875rem', width: '25%' }}>Mô tả</TableCell>
-                            <TableCell sx={{ color: '#6B7280', fontWeight: 600, border: 'none', fontSize: '0.875rem' }}>Phiên bản</TableCell>
                             <TableCell sx={{ color: '#6B7280', fontWeight: 600, border: 'none', fontSize: '0.875rem' }}>Trạng thái</TableCell>
-                            <TableCell sx={{ color: '#6B7280', fontWeight: 600, border: 'none', fontSize: '0.875rem' }}>Mức sử dụng</TableCell>
+                            {/* <TableCell sx={{ color: '#6B7280', fontWeight: 600, border: 'none', fontSize: '0.875rem' }}>Mức sử dụng</TableCell> */}
                             <TableCell sx={{ color: '#6B7280', fontWeight: 600, border: 'none', fontSize: '0.875rem' }}>Kích hoạt</TableCell>
                             <TableCell sx={{ border: 'none' }}>Hành động</TableCell>
                         </TableRow>
@@ -336,34 +362,48 @@ export default function ToolManagement() {
                                         WebkitBoxOrient: 'vertical',
                                         overflow: 'hidden'
                                     }}>
+                                        {tool.tool_key}
+                                    </Typography>
+                                </TableCell>
+                                <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
+                                    <Typography variant="body2" color="#4B5563" sx={{
+                                        display: '-webkit-box',
+                                        WebkitLineClamp: 2,
+                                        WebkitBoxOrient: 'vertical',
+                                        overflow: 'hidden'
+                                    }}>
                                         {tool.description}
                                     </Typography>
                                 </TableCell>
                                 <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
-                                    <Typography variant="body2" color="#374151" fontWeight={500}>v{tool.version}</Typography>
-                                </TableCell>
-                                <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
                                     <Chip
-                                        label={tool.status === 'active' ? 'Hoạt động' : tool.status === 'is_active' ? 'Bảo trì' : 'Beta'}
+                                        label={
+                                            tool.status === 'active' ? 'Hoạt động' :
+                                                tool.status === 'maintenance' ? 'Bảo trì' :
+                                                    tool.status === 'error' ? 'Lỗi' :
+                                                        'Beta'
+                                        }
                                         size="small"
                                         sx={{
                                             fontWeight: 600,
-                                            bgcolor: tool.status === 'active' ? '#DEF7EC' : tool.status === 'is_active' ? '#FDF6B2' : '#E1EFFE',
-                                            color: tool.status === 'active' ? '#03543F' : tool.status === 'is_active' ? '#723B13' : '#1E429F',
+                                            bgcolor:
+                                                tool.status === 'active' ? '#DEF7EC' :
+                                                    tool.status === 'maintenance' ? '#FDF6B2' :
+                                                        tool.status === 'error' ? '#FEE2E2' :
+                                                            '#E1EFFE',
+                                            color:
+                                                tool.status === 'active' ? '#03543F' :
+                                                    tool.status === 'maintenance' ? '#723B13' :
+                                                        tool.status === 'error' ? '#991B1B' :
+                                                            '#1E429F',
                                             borderRadius: 1
                                         }}
                                     />
                                 </TableCell>
-                                <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
-                                    <Typography variant="body2" fontWeight={600} color={
-                                        tool.usage === 'Very High' ? '#DC2626' : tool.usage === 'High' ? '#EA580C' : '#374151'
-                                    }>
-                                        {tool.usage === 'Very High' ? 'Rất cao' : tool.usage === 'High' ? 'Cao' : tool.usage === 'Medium' ? 'Trung bình' : 'Thấp'}
-                                    </Typography>
-                                </TableCell>
+
                                 <TableCell sx={{ borderBottom: '1px solid #F3F4F6', py: 2 }}>
                                     <Switch
-                                        checked={!tool.is_active}
+                                        checked={tool.is_active}
                                         onChange={() => toggleStatus(tool.id, tool.is_active)}
                                         color="success"
                                         size="small"
@@ -380,10 +420,25 @@ export default function ToolManagement() {
                                         >
                                             <EditIcon fontSize="small" />
                                         </Button>
-                                        <IconButton size="small" sx={{ color: '#6B7280' }} title="Logs">
-                                            <VisibilityIcon fontSize="small" />
-                                        </IconButton>
-                                        <IconButton size="small" sx={{ color: '#EF4444' }} title="Báo lỗi">
+
+                                        <IconButton
+                                            size="small"
+                                            sx={{ color: '#EF4444' }}
+                                            title="Báo lỗi"
+                                            onClick={async () => {
+                                                try {
+                                                    const success = await updateTool(tool.id, { status: 'error' });
+                                                    if (success) {
+                                                        toast.success('Đã đánh dấu công cụ lỗi');
+                                                        fetchTools();
+                                                    } else {
+                                                        toast.error('Cập nhật thất bại');
+                                                    }
+                                                } catch (error) {
+                                                    toast.error('Lỗi kết nối');
+                                                }
+                                            }}
+                                        >
                                             <BugReportIcon fontSize="small" />
                                         </IconButton>
                                     </Stack>
@@ -467,29 +522,30 @@ export default function ToolManagement() {
                                 helperText="Nhập 1, 2, 3... để đưa lên đầu (1 là cao nhất). Nhập 0 để xếp xuống cuối cùng."
                             />
 
-                            <Stack direction="row" spacing={2}>
-                                <TextField
-                                    label="Phiên bản"
-                                    fullWidth
-                                    value={currentTool.version}
-                                    onChange={(e) => setCurrentTool({ ...currentTool, version: e.target.value })}
-                                />
-                                <TextField
-                                    label="ID (Read-only)"
-                                    fullWidth
-                                    value={currentTool.id}
-                                    disabled
-                                    InputProps={{ readOnly: true }}
-                                />
-                            </Stack>
+                            <FormControl fullWidth>
+                                <InputLabel id="status-label">Trạng thái</InputLabel>
+                                <Select
+                                    labelId="status-label"
+                                    value={currentTool.status || 'active'}
+                                    label="Trạng thái"
+                                    onChange={(e) => setCurrentTool({ ...currentTool, status: e.target.value })}
+                                >
+                                    <MenuItem value="active">Hoạt động</MenuItem>
+                                    <MenuItem value="maintenance">Bảo trì</MenuItem>
+                                    <MenuItem value="error">Lỗi</MenuItem>
+                                    <MenuItem value="beta">Beta</MenuItem>
+                                </Select>
+                            </FormControl>
 
-                            <TextField
-                                label="Tool Key (Mã định danh)"
-                                fullWidth
-                                value={currentTool.tool_key || ''}
-                                onChange={(e) => setCurrentTool({ ...currentTool, tool_key: e.target.value })}
-                                disabled={!!currentTool.id} // Only editable on creation
-                                helperText="Mã duy nhất dùng để gọi API (vd: text-to-image)"
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        checked={currentTool.is_active !== false}
+                                        onChange={(e) => setCurrentTool({ ...currentTool, is_active: e.target.checked })}
+                                        color="success"
+                                    />
+                                }
+                                label="Kích hoạt công cụ"
                             />
                         </Box>
                     )}

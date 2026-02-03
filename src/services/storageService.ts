@@ -626,6 +626,10 @@ export const createTool = async (tool: any, token?: string) => {
             return false;
         }
 
+        // Invalidate cache to ensure fresh data
+        cacheService.remove(CACHE_KEYS.TOOLS);
+        console.log("[Storage] Tool cache invalidated after create");
+
         return true;
     } catch (error) {
         console.error("Error creating tool:", error);
@@ -700,6 +704,10 @@ export const updateTool = async (toolId: string | number, updates: any, token?: 
             console.error("Error updating tool:", result.error);
             return false;
         }
+
+        // Invalidate cache to ensure fresh data
+        cacheService.remove(CACHE_KEYS.TOOLS);
+        console.log("[Storage] Tool cache invalidated after update");
 
         return true;
     } catch (error) {
