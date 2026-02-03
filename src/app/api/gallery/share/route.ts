@@ -30,12 +30,7 @@ export async function POST(req: NextRequest) {
             const result = await sql`
                 UPDATE generation_history
                 SET share = ${share}, updated_at = NOW()
-                WHERE history_id = (
-                    SELECT history_id 
-                    FROM generation_history 
-                    WHERE output_images @&gt; ${JSON.stringify([imageUrl])}::jsonb
-                    LIMIT 1
-                )
+                WHERE output_images @> ${JSON.stringify([imageUrl])}::jsonb
                 RETURNING history_id as id
             `;
 
