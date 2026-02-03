@@ -498,7 +498,7 @@ interface OptionsPanelProps {
 }
 
 export const OptionsPanel: React.FC<OptionsPanelProps> = ({ children, className }) => (
-    <div className={cn("w-full max-w-3xl bg-black/20 p-6 rounded-lg border border-white/10 space-y-4", className)}>
+    <div className={cn("w-full max-w-4xl bg-black/20 p-6 rounded-lg border border-white/10 space-y-4", className)}>
         {children}
     </div>
 );
@@ -892,7 +892,7 @@ export const Switch: React.FC<{
         onClick={() => !disabled && onChange(!checked)}
         disabled={disabled}
         className={cn(
-            "relative inline-flex h-4 w-16 flex-shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 focus:ring-offset-neutral-800",
+            "relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors duration-200 ease-in-out",
             "disabled:cursor-not-allowed disabled:opacity-50",
             checked ? "bg-orange-600" : "bg-neutral-600",
             className
@@ -901,7 +901,7 @@ export const Switch: React.FC<{
         <span
             aria-hidden="true"
             className={cn(
-                "pointer-events-none inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                "pointer-events-none inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition duration-200 ease-in-out",
                 checked ? "translate-x-[10px]" : "-translate-x-[10px]"
             )}
         />

@@ -15,7 +15,7 @@ import {
     Stack,
     Button
 } from '@mui/material';
-import { getAllStudios, getAllCategories } from '../../services/storageService';
+import { getActiveStudios, getAllCategories } from '../../services/storageService';
 import { useRouter } from 'next/navigation';
 
 interface Studio {
@@ -47,7 +47,7 @@ export default function StudioList() {
             setLoading(true);
             try {
                 const [studiosData, catsData] = await Promise.all([
-                    getAllStudios(),
+                    getActiveStudios(),
                     getAllCategories()
                 ]);
                 setStudios(studiosData || []);

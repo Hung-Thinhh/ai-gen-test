@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import { Type } from "@google/genai";
-import ai from './client'; // Import the shared client instance
 import {
     processApiError,
     parseDataUrl,
@@ -36,10 +35,14 @@ export async function analyzeImagePairForPrompt(sourceImageDataUrl: string): Pro
 
     try {
         console.log("Attempting to analyze single image for prompt (QUICK)...");
-        const response = await ai.models.generateContent({
-            model: getTextModel(),
-            contents: { parts: [textPart, imagePart] },
-            config: {
+
+        // Use callGeminiTextWithRetry (server-side API)
+        const { callGeminiGenericWithRetry } = await import('./baseService');
+
+        const response = await callGeminiGenericWithRetry(
+            getTextModel(),
+            [{ parts: [textPart, imagePart] }],
+            {
                 responseMimeType: "application/json",
                 responseSchema: {
                     type: Type.OBJECT,
@@ -54,7 +57,7 @@ export async function analyzeImagePairForPrompt(sourceImageDataUrl: string): Pro
                     required: ["mainPrompt", "suggestions"],
                 }
             }
-        });
+        );
 
         const text = response.text;
         if (!text) {
@@ -113,10 +116,14 @@ export async function analyzeImagePairForPromptExpert(sourceImageDataUrl: string
 
     try {
         console.log("Attempting to analyze single image for prompt (EXPERT)...");
-        const response = await ai.models.generateContent({
-            model: getTextModel(),
-            contents: { parts: [textPart, imagePart] },
-            config: {
+
+        // Use server-side API
+        const { callGeminiGenericWithRetry } = await import('./baseService');
+
+        const response = await callGeminiGenericWithRetry(
+            getTextModel(),
+            [{ parts: [textPart, imagePart] }],
+            {
                 responseMimeType: "application/json",
                 responseSchema: {
                     type: Type.OBJECT,
@@ -131,7 +138,7 @@ export async function analyzeImagePairForPromptExpert(sourceImageDataUrl: string
                     required: ["mainPrompt", "suggestions"],
                 }
             }
-        });
+        );
 
         const text = response.text;
         if (!text) {
@@ -191,17 +198,13 @@ export async function interpolatePrompts(basePrompt: string, userNotes: string):
 
     try {
         console.log("Attempting to interpolate prompts with prioritization...");
-        const response = await ai.models.generateContent({
-            model: getTextModel(),
-            contents: prompt,
-        });
+        const { callGeminiTextWithRetry } = await import('./baseService');
+        const text = await callGeminiTextWithRetry(prompt, getTextModel());
 
-        const text = response.text;
         if (text) {
             return text.trim();
         }
 
-        console.error("API did not return text for prompt interpolation. Response:", response);
         throw new Error("The AI model did not return a valid text prompt for interpolation.");
 
     } catch (error) {
@@ -226,10 +229,12 @@ export async function adaptPromptToContext(imageDataUrl: string, basePrompt: str
 
     try {
         console.log("Attempting to adapt prompt to image context...");
-        const response = await ai.models.generateContent({
-            model: getTextModel(),
-            contents: { parts: [imagePart, textPart] },
-        });
+        const { callGeminiGenericWithRetry } = await import('./baseService');
+        const response = await callGeminiGenericWithRetry(
+            getTextModel(),
+            [{ parts: [imagePart, textPart] }],
+            {}
+        );
 
         const text = response.text;
         if (text) {

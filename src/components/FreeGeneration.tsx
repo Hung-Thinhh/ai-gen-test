@@ -137,9 +137,10 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
             historicalImages: [],
             error: null
         });
-        if (newUrl) {
-            addImagesToGallery([newUrl]);
-        }
+        // REMOVED: Don't save input images to gallery automatically
+        // if (newUrl) {
+        //     addImagesToGallery([newUrl]);
+        // }
     };
 
     const handleSaveGeneratedImage = (index: number) => (newUrl: string | null) => {
@@ -539,7 +540,7 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
                             </div>
                         </div>
 
-                        <div className="flex flex-col sm:flex-row gap-4 pt-2">
+                        {/* <div className="flex flex-col sm:flex-row gap-4 pt-2">
                             <div className="flex items-center">
                                 <input
                                     type="checkbox"
@@ -565,7 +566,7 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
                                     {t('freeGeneration_enhancePrompt')}
                                 </label>
                             </div>
-                        </div>
+                        </div> */}
 
                         <div className="flex items-center justify-end gap-4 pt-4">
                             {anyImageUploaded && <button onClick={() => { onStateChange({ ...appState, image1: null, image2: null, image3: null, image4: null }) }} className="btn btn-secondary">

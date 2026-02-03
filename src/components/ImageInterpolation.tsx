@@ -60,6 +60,7 @@ const ImageInterpolation: React.FC<ImageInterpolationProps> = (props) => {
     const { t, settings, checkCredits, modelVersion } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
     const { videoTasks, generateVideo } = useVideoGeneration();
+    const isGeneratingRef = useRef(false);
     const [localGeneratedPrompt, setLocalGeneratedPrompt] = useState(appState.generatedPrompt);
     const [localAdditionalNotes, setLocalAdditionalNotes] = useState(appState.additionalNotes);
     const lightboxImages = [appState.sourceImage, appState.referenceImage, ...appState.historicalImages.map(h => h.url)].filter((img): img is string => !!img);
@@ -93,7 +94,6 @@ const ImageInterpolation: React.FC<ImageInterpolationProps> = (props) => {
             error: null,
             stage: 'idle',
         });
-        addImagesToGallery([url]);
     };
 
     // Removed handleOutputImageChange - no longer needed
@@ -101,14 +101,13 @@ const ImageInterpolation: React.FC<ImageInterpolationProps> = (props) => {
     const handleReferenceImageChange = (url: string | null) => {
         if (!url) return;
         onStateChange({ ...appState, referenceImage: url });
-        addImagesToGallery([url]);
     };
 
     const handleGeneratedImageChange = (newUrl: string | null) => {
         if (!newUrl) return;
         const newHistorical = [...appState.historicalImages, { url: newUrl, prompt: appState.finalPrompt || '' }];
         onStateChange({ ...appState, stage: 'results', generatedImage: newUrl, historicalImages: newHistorical });
-        addImagesToGallery([newUrl]);
+        // Note: Image saving is handled in handleGenerate (on creation) or via manual gallery add if edited
     };
 
     const handleOptionChange = (field: keyof ImageInterpolationState['options'], value: string | boolean) => {
@@ -141,126 +140,141 @@ const ImageInterpolation: React.FC<ImageInterpolationProps> = (props) => {
     };
 
     const handleGenerate = async () => {
+        if (isGeneratingRef.current) return;
+
         const referenceImageToUse = appState.referenceImage || appState.sourceImage;
         if (!referenceImageToUse || !appState.generatedPrompt) return;
 
-        // Check credits FIRST
-        const preGenState = { ...appState };
-        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
-        if (!await checkCredits(creditCostPerImage)) {
-            return; // Stay in configuring
-        }
-
-        // Set generating stage AFTER credits confirmed
-        onStateChange({ ...appState, stage: 'generating', error: null, finalPrompt: null });
-
-        const skipAdaptation = !appState.referenceImage && !appState.additionalNotes.trim();
-        let finalPromptText = '';
+        isGeneratingRef.current = true;
 
         try {
-            if (skipAdaptation) {
-                finalPromptText = appState.generatedPrompt;
-            } else {
-                let intermediatePrompt = appState.generatedPrompt;
-                if (appState.additionalNotes.trim()) {
-                    intermediatePrompt = await interpolatePrompts(appState.generatedPrompt, appState.additionalNotes);
-                }
-                finalPromptText = await adaptPromptToContext(referenceImageToUse, intermediatePrompt);
+            // Check credits FIRST
+            const preGenState = { ...appState };
+            const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
+            if (!await checkCredits(creditCostPerImage)) {
+                return; // Stay in configuring
             }
 
-            const resultUrl = await editImageWithPrompt(
-                referenceImageToUse,
-                finalPromptText,
-                appState.options.aspectRatio,
-                appState.options.removeWatermark,
-                'image-interpolation'
-            );
+            // Set generating stage AFTER credits confirmed
+            onStateChange({ ...appState, stage: 'generating', error: null, finalPrompt: null });
 
-            const settingsToEmbed = {
-                viewId: 'image-interpolation',
-                state: { ...appState, stage: 'configuring', finalPrompt: null, generatedImage: null, historicalImages: [], error: null },
-            };
-            const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            logGeneration('image-interpolation', preGenState, urlWithMetadata, {
-                credits_used: creditCostPerImage,
-                generation_count: 1,
-                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
-            });
+            // Only adapt prompt if user adds additional notes
+            // If user just wants to use the analyzed prompt as-is, skip API calls
+            const skipAdaptation = !appState.additionalNotes.trim();
+            console.log('[ImageInterpolation] additionalNotes:', appState.additionalNotes);
+            console.log('[ImageInterpolation] skipAdaptation:', skipAdaptation);
+            let finalPromptText = '';
 
-            const newHistory = [...appState.historicalImages, { url: urlWithMetadata, prompt: finalPromptText }];
+            try {
+                if (skipAdaptation) {
+                    // Use the prompt directly without any API calls
+                    console.log('[ImageInterpolation] Using prompt directly, no API calls');
+                    finalPromptText = appState.generatedPrompt;
+                } else {
+                    // User added notes, so adapt the prompt accordingly
+                    console.log('[ImageInterpolation] Calling interpolatePrompts API');
+                    finalPromptText = await interpolatePrompts(appState.generatedPrompt, appState.additionalNotes);
+                }
 
-            onStateChange({
-                ...appState,
-                stage: 'results',
-                generatedImage: urlWithMetadata,
-                historicalImages: newHistory,
-                finalPrompt: finalPromptText,
-            });
-            addImagesToGallery([urlWithMetadata]);
+                const resultUrl = await editImageWithPrompt(
+                    referenceImageToUse,
+                    finalPromptText,
+                    appState.options.aspectRatio,
+                    appState.options.removeWatermark,
+                    'image-interpolation'
+                );
 
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
-            onStateChange({
-                ...appState,
-                stage: 'results',
-                error: errorMessage,
-                finalPrompt: finalPromptText,
-            });
+                const settingsToEmbed = {
+                    viewId: 'image-interpolation',
+                    state: { ...appState, stage: 'configuring', finalPrompt: null, generatedImage: null, historicalImages: [], error: null },
+                };
+                const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
+                logGeneration('image-interpolation', preGenState, urlWithMetadata, {
+                    credits_used: creditCostPerImage,
+                    generation_count: 1,
+                    api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
+                });
+
+                const newHistory = [...appState.historicalImages, { url: urlWithMetadata, prompt: finalPromptText }];
+
+                onStateChange({
+                    ...appState,
+                    stage: 'results',
+                    generatedImage: urlWithMetadata,
+                    historicalImages: newHistory,
+                    finalPrompt: finalPromptText,
+                });
+
+            } catch (err) {
+                const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+                onStateChange({
+                    ...appState,
+                    stage: 'results',
+                    error: errorMessage,
+                    finalPrompt: finalPromptText,
+                });
+            }
+        } finally {
+            isGeneratingRef.current = false;
         }
     };
 
     const handleRegeneration = async (prompt: string) => {
-        if (!appState.generatedImage) return;
-
-        // Check credits FIRST
-        const preGenState = { ...appState };
-        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
-        if (!await checkCredits(creditCostPerImage)) {
-            return; // Stay in results
-        }
-
-        // Set generating stage AFTER credits confirmed
-        onStateChange({ ...appState, stage: 'generating', error: null });
+        if (!appState.generatedImage || isGeneratingRef.current) return;
+        isGeneratingRef.current = true;
 
         try {
-            const resultUrl = await editImageWithPrompt(
-                appState.generatedImage,
-                prompt,
-                appState.options.aspectRatio,
-                appState.options.removeWatermark,
-                'image-interpolation'
-            );
+            // Check credits FIRST
+            const preGenState = { ...appState };
+            const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
+            if (!await checkCredits(creditCostPerImage)) {
+                return; // Stay in results
+            }
 
-            const settingsToEmbed = {
-                viewId: 'image-interpolation',
-                state: { ...appState, stage: 'configuring', finalPrompt: null, generatedImage: null, historicalImages: [], error: null },
-            };
-            const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            logGeneration('image-interpolation', preGenState, urlWithMetadata, {
-                credits_used: creditCostPerImage,
-                generation_count: 1,
-                api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
-            });
+            // Set generating stage AFTER credits confirmed
+            onStateChange({ ...appState, stage: 'generating', error: null });
 
-            const newHistory = [...appState.historicalImages, { url: urlWithMetadata, prompt: prompt }];
+            try {
+                const resultUrl = await editImageWithPrompt(
+                    appState.generatedImage,
+                    prompt,
+                    appState.options.aspectRatio,
+                    appState.options.removeWatermark,
+                    'image-interpolation'
+                );
 
-            onStateChange({
-                ...appState,
-                stage: 'results',
-                generatedImage: urlWithMetadata,
-                historicalImages: newHistory,
-                finalPrompt: prompt,
-            });
-            addImagesToGallery([urlWithMetadata]);
+                const settingsToEmbed = {
+                    viewId: 'image-interpolation',
+                    state: { ...appState, stage: 'configuring', finalPrompt: null, generatedImage: null, historicalImages: [], error: null },
+                };
+                const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
+                logGeneration('image-interpolation', preGenState, urlWithMetadata, {
+                    credits_used: creditCostPerImage,
+                    generation_count: 1,
+                    api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
+                });
 
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
-            onStateChange({
-                ...appState,
-                stage: 'results',
-                error: errorMessage,
-                finalPrompt: prompt,
-            });
+                const newHistory = [...appState.historicalImages, { url: urlWithMetadata, prompt: prompt }];
+
+                onStateChange({
+                    ...appState,
+                    stage: 'results',
+                    generatedImage: urlWithMetadata,
+                    historicalImages: newHistory,
+                    finalPrompt: prompt,
+                });
+
+            } catch (err) {
+                const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+                onStateChange({
+                    ...appState,
+                    stage: 'results',
+                    error: errorMessage,
+                    finalPrompt: prompt,
+                });
+            }
+        } finally {
+            isGeneratingRef.current = false;
         }
     };
 

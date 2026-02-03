@@ -27,7 +27,8 @@ import {
     InputLabel,
     Card,
     CardContent,
-    Divider
+    Divider,
+    Switch
 } from '@mui/material';
 import {
     Edit as EditIcon,
@@ -117,6 +118,30 @@ export default function StudioManagement() {
             toast.error("Không thể tải dữ liệu");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const toggleStatus = async (id: string, currentIsActive: boolean) => {
+        const newIsActive = !currentIsActive;
+
+        // Optimistic update
+        setStudios(studios.map(s =>
+            s.id === id ? { ...s, is_active: newIsActive } : s
+        ));
+
+        try {
+            const success = await updateStudio(id, { is_active: newIsActive });
+
+            if (success) {
+                toast.success(newIsActive ? 'Đã bật studio' : 'Đã tắt studio');
+            } else {
+                // Revert if failed
+                fetchData();
+                toast.error('Cập nhật thất bại');
+            }
+        } catch (error) {
+            fetchData();
+            toast.error('Lỗi kết nối');
         }
     };
 
@@ -336,9 +361,10 @@ export default function StudioManagement() {
                                             )}
                                         </TableCell>
                                         <TableCell>
-                                            <Chip
-                                                label={studio.is_active ? 'Active' : 'Hidden'}
-                                                color={studio.is_active ? 'success' : 'default'}
+                                            <Switch
+                                                checked={studio.is_active}
+                                                onChange={() => toggleStatus(studio.id, studio.is_active)}
+                                                color="success"
                                                 size="small"
                                             />
                                         </TableCell>

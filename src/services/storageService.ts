@@ -1303,6 +1303,8 @@ export const getAllStudios = async () => {
         }
 
         let studios = result.data || [];
+
+        // Sort by sort_order
         studios.sort((a: any, b: any) => {
             const orderA = a.sort_order || 0;
             const orderB = b.sort_order || 0;
@@ -1315,6 +1317,22 @@ export const getAllStudios = async () => {
         return studios;
     } catch (error) {
         console.error("Error fetching studios:", error);
+        return [];
+    }
+};
+
+/**
+ * Fetches only active studios for users (filters is_active = true)
+ */
+export const getActiveStudios = async () => {
+    try {
+        console.log("[Storage] Fetching active studios for users...");
+        const allStudios = await getAllStudios();
+
+        // Filter only active studios
+        return allStudios.filter((s: any) => s.is_active === true);
+    } catch (error) {
+        console.error("Error fetching active studios:", error);
         return [];
     }
 };
