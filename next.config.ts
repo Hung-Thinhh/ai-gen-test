@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: "standalone",
+
   // Remove console.log in production
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
