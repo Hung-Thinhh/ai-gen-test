@@ -91,8 +91,17 @@ export async function POST(req: NextRequest) {
         if (!response.ok) {
             const errorText = await response.text();
             console.error('[kie.ai] API error:', errorText);
+
+            // Parse KIE error and return user-friendly message
+            let userMessage = 'Không thể tạo video. Vui lòng thử lại sau.';
+            if (errorText.includes('quota') || errorText.includes('limit')) {
+                userMessage = 'Hết lượt tạo video. Vui lòng nạp thêm credits hoặc thử lại sau.';
+            } else if (errorText.includes('invalid') || errorText.includes('bad request')) {
+                userMessage = 'Tham số không hợp lệ. Vui lòng kiểm tra lại.';
+            }
+
             return NextResponse.json(
-                { error: `kie.ai API error: ${response.statusText}`, details: errorText },
+                { error: userMessage, code: 'KIE_API_ERROR' },
                 { status: response.status }
             );
         }
@@ -104,7 +113,7 @@ export async function POST(req: NextRequest) {
     } catch (error: any) {
         console.error('[kie.ai] Proxy error:', error);
         return NextResponse.json(
-            { error: error.message || 'Failed to create task' },
+            { error: 'Không thể kết nối đến máy chủ video. Vui lòng thử lại sau.' },
             { status: 500 }
         );
     }

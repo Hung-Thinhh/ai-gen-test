@@ -21,9 +21,10 @@ export async function middleware(request: NextRequest) {
     const response = NextResponse.next();
 
     if (isInAppBrowser) {
-        // Allow cookies in third-party context
-        response.headers.set('Set-Cookie', 'SameSite=None; Secure');
-        // Relaxed security for in-app browsers
+        // Use Lax SameSite for OAuth compatibility while maintaining security
+        response.headers.set('Set-Cookie', 'SameSite=Lax; Secure');
+        // Remove X-Frame-Options for in-app browsers to ensure compatibility
+        // Zalo/Messenger don't use iframes but some features may need this
         response.headers.delete('X-Frame-Options');
     }
 

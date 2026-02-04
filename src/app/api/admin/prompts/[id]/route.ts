@@ -55,7 +55,7 @@ export async function PUT(
     } catch (error: any) {
         console.error('[API] Error updating prompt:', error);
         return NextResponse.json(
-            { success: false, error: error.message },
+            { success: false, error: 'Internal Server Error' },
             { status: 500 }
         );
     }
@@ -91,7 +91,7 @@ export async function DELETE(
     } catch (error: any) {
         console.error('[API] Error deleting prompt:', error);
         return NextResponse.json(
-            { success: false, error: error.message },
+            { success: false, error: 'Internal Server Error' },
             { status: 500 }
         );
     }

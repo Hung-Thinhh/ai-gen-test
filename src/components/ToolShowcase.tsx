@@ -101,7 +101,7 @@ export const ToolShowcase = () => {
                 />
 
                 {/* Vertical Divider */}
-                <div className="w-px h-10 bg-gradient-to-b from-transparent via-white/10 to-transparent mx-auto my-2" />
+                {/* <div className="w-px h-10 bg-gradient-to-b from-transparent via-white/10 to-transparent mx-auto my-2" />
 
                 <ToolCard
                     title="ảnh trà sữa"
@@ -109,7 +109,7 @@ export const ToolShowcase = () => {
                     description="Thử nghiệm các ý tưởng thiết kế giúp chuyển đổi concept chỉ bằng một cú nhấp chuột."
                     image="/img/showcase7.webp"
                     onClick={() => router.push('/poster/milk-tea-poster')}
-                />
+                /> */}
 
                 {/* Vertical Divider */}
                 <div className="w-px h-10 bg-gradient-to-b from-transparent via-white/10 to-transparent mx-auto my-2" />
@@ -129,14 +129,14 @@ export const ToolShowcase = () => {
                 <div className="w-px h-10 bg-gradient-to-b from-transparent via-white/10 to-transparent mx-auto my-2" />
 
                 {/* Card 3: Food Concept */}
-                <ToolCard
+                {/* <ToolCard
                     title="trong tầm tay"
                     big_title="Thời trang"
                     description="Ghép quần áo và trang sức của bạn lên các mô hình do Ai tạo ra, giữ nguyên hoạ tiết và logo."
                     image="/img/showcase3.webp"
                     btnText="Khám phá ngay"
                     onClick={() => router.push('/tool/poster-creator')}
-                />
+                /> */}
 
                 {/* Vertical Divider */}
                 <div className="w-px h-10 bg-gradient-to-b from-transparent via-white/10 to-transparent mx-auto my-2" />
@@ -155,7 +155,7 @@ export const ToolShowcase = () => {
                 {/* Vertical Divider */}
                 <div className="w-px h-10 bg-gradient-to-b from-transparent via-white/10 to-transparent mx-auto my-2" />
 
-                {/* Card 5: ID Photo */}
+                {/* Card 5: ID Photo
                 <ToolCard
                     title="dành cho người bận rộn"
                     big_title="Ảnh thẻ"
@@ -163,7 +163,7 @@ export const ToolShowcase = () => {
                     image="/img/showcase5.webp"
                     btnText="Khám phá ngay"
                     onClick={() => router.push('/tool/id-photo-creator')}
-                />
+                /> */}
             </div>
         </section>
     );

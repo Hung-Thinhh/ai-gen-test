@@ -87,14 +87,9 @@ export default function GalleryPage() {
     // Skeleton loading UI
     if (isLoading) {
         return (
-            <div className="fixed inset-0 bg-black z-50 flex flex-col top-20">
-                {/* Header skeleton */}
-                <div className="h-16 bg-neutral-900/50 border-b border-white/10 flex items-center px-4">
-                    <div className="h-8 w-32 bg-neutral-800 rounded animate-pulse"></div>
-                </div>
-
-                {/* Gallery grid skeleton */}
-                <div className="flex-1 overflow-y-auto p-4">
+            <div className="min-h-screen bg-black flex flex-col">
+                {/* Gallery grid skeleton - flex-1 to push pagination down */}
+                <div className="flex-1 p-4">
                     <div className="max-w-7xl mx-auto">
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             {Array.from({ length: 12 }).map((_, i) => (
@@ -110,8 +105,8 @@ export default function GalleryPage() {
                     </div>
                 </div>
 
-                {/* Pagination skeleton */}
-                <div className="h-16 bg-neutral-900/50 border-t border-white/10 flex items-center justify-center gap-2">
+                {/* Pagination skeleton - at bottom */}
+                <div className="bg-neutral-900/50 border-t border-white/10 flex items-center justify-center gap-2 py-6">
                     <div className="h-10 w-24 bg-neutral-800 rounded animate-pulse"></div>
                     <div className="h-10 w-10 bg-neutral-800 rounded animate-pulse"></div>
                     <div className="h-10 w-24 bg-neutral-800 rounded animate-pulse"></div>
@@ -121,17 +116,21 @@ export default function GalleryPage() {
     }
 
     return (
-        <div className="fixed inset-0 bg-black z-50 flex flex-col top-20">
-            <GalleryInline
-                images={displayImages}
-                onClose={() => router.push('/')}
-                onShareToggle={handleShareToggle}
-                onImagesChanged={handleImagesDeleted}
-            />
+        <div className="min-h-screen bg-black flex flex-col">
+            {/* Gallery Content - Takes remaining space */}
+            <div className="flex-1">
+                <GalleryInline
+                    images={displayImages}
+                    onClose={() => router.push('/')}
+                    onShareToggle={handleShareToggle}
+                    onImagesChanged={handleImagesDeleted}
+                    fullPage={true}
+                />
+            </div>
 
-            {/* Server-side Pagination Controls */}
+            {/* Server-side Pagination Controls - At bottom of page */}
             {pagination && pagination.totalPages > 1 && (
-                <div className="absolute bottom-18 md:bottom-0 left-0 right-0 bg-neutral-900/95 border-t border-white/10 flex items-center justify-center px-4 py-4">
+                <div className="bg-neutral-900/95 border-t border-white/10 flex items-center justify-center px-4 py-6">
                     <div className="flex flex-col items-center gap-2">
                         <span className="text-neutral-400 text-sm">
                             Trang {pagination.page} / {pagination.totalPages} ({pagination.totalImages} ảnh)

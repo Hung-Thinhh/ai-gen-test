@@ -3,6 +3,8 @@
 import { useEffect } from 'react';
 import Overview from '@/components/Overview';
 import { useAppControls } from '@/components/uiContexts';
+import { HomeV2 } from "@/components/homev2";
+
 
 export default function HomePage() {
   const { setActivePage } = useAppControls();
@@ -11,5 +13,5 @@ export default function HomePage() {
     setActivePage('overview' as any);
   }, [setActivePage]);
 
-  return <Overview />;
+  return <HomeV2 />;
 }

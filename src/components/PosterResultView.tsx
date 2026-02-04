@@ -279,19 +279,19 @@ export const PosterResultView: React.FC<PosterResultViewProps> = ({
 
     return (
         <div className="fixed inset-0 z-[100] bg-[#181411] text-white font-sans overflow-x-hidden min-h-screen flex flex-col">
-            <style dangerouslySetInnerHTML={{
-                __html: `
-                @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&family=Noto+Sans:wght@300..800&display=swap');
-                @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
-                
+            <link rel="preconnect" href="https://fonts.googleapis.com" />
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+            <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&family=Noto+Sans:wght@300..800&display=swap" rel="stylesheet" />
+            <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+            <style jsx global>{`
                 .font-display { font-family: 'Manrope', 'Noto Sans', sans-serif; }
-                
+
                 /* Custom scrollbar for dark theme */
                 ::-webkit-scrollbar { width: 8px; height: 8px; }
                 ::-webkit-scrollbar-track { background: #181411; }
                 ::-webkit-scrollbar-thumb { background: #393028; border-radius: 4px; }
                 ::-webkit-scrollbar-thumb:hover { background: #ec7f13; }
-                
+
                 @keyframes pulse-dark {
                     0%, 100% { opacity: 1; }
                     50% { opacity: .5; }
@@ -299,7 +299,7 @@ export const PosterResultView: React.FC<PosterResultViewProps> = ({
                 .animate-pulse-dark {
                     animation: pulse-dark 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
                 }
-            `}} />
+            `}</style>
 
             {/* Top Navigation */}
             <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-[#393028] px-4 md:px-10 py-3 bg-[#181411] z-50 sticky top-0">

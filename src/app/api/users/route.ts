@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
 
     } catch (error: any) {
         console.error('[API] Error in GET /api/users:', error);
-        return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
 
@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
 
     } catch (error: any) {
         console.error('[API] Error in POST /api/users:', error);
-        return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
 
@@ -232,6 +232,6 @@ export async function PATCH(req: NextRequest) {
 
     } catch (error: any) {
         console.error('[API] Error in PATCH /api/users:', error);
-        return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

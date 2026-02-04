@@ -4,8 +4,11 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 /**
- * GET /api/gallery - Get user's gallery images from generation_history with pagination
+ * GET /api/gallery - Get user's gallery images with proper pagination
  * Query params: ?page=1&limit=30
+ *
+ * Optimized: Uses LATERAL JOIN to unnest jsonb array and paginate at DB level
+ * Only fetches exactly the number of images needed for the page
  */
 export async function GET(req: NextRequest) {
     try {
@@ -24,94 +27,76 @@ export async function GET(req: NextRequest) {
         // Parse pagination params
         const { searchParams } = new URL(req.url);
         const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
-        const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '30'))); // Max 100, default 30
+        const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '30')));
         const offset = (page - 1) * limit;
 
-        console.log(`[API] GET /api/gallery: page=${page}, limit=${limit}, offset=${offset}`);
+        // Cache headers
+        const cacheHeaders = {
+            'Cache-Control': 'private, max-age=30, stale-while-revalidate=300',
+        };
 
-        // Get total count of IMAGES (not records) for accurate pagination
-        // Count all images across all records by summing array lengths
+        // Get total count of valid images (exclude base64)
         const countResult = await sql`
-            SELECT COALESCE(SUM(
-                CASE 
-                    WHEN output_images IS NOT NULL 
-                    THEN jsonb_array_length(output_images)
-                    ELSE 0
-                END
-            ), 0) as total_images
-            FROM generation_history
-            WHERE user_id = ${userId}
+            SELECT COUNT(*) as total
+            FROM generation_history gh,
+            LATERAL jsonb_array_elements_text(gh.output_images) AS img_url
+            WHERE gh.user_id = ${userId}
+            AND img_url LIKE 'https://%'
         `;
-        const totalImages = parseInt(countResult[0]?.total_images || '0');
-        console.log(`[API] Total images in gallery: ${totalImages}`);
+        const totalImages = parseInt(countResult[0]?.total || '0');
 
-        // Simple approach: Fetch ALL records, flatten all images, then slice
-        // This ensures pagination is always accurate
+        // Fetch exactly the images needed for this page using LATERAL JOIN
+        // This is much more efficient than fetching all records and processing in JS
         const data = await sql`
-            SELECT 
-                history_id,
-                output_images,
-                input_prompt,
-                created_at,
-                tool_key,
-                api_model_used,
-                share
-            FROM generation_history 
-            WHERE user_id = ${userId}
-            ORDER BY created_at DESC
+            SELECT
+                gh.history_id,
+                gh.input_prompt,
+                gh.created_at,
+                gh.tool_key,
+                gh.api_model_used,
+                gh.share,
+                img.img_url,
+                img.img_index
+            FROM (
+                SELECT
+                    history_id,
+                    input_prompt,
+                    created_at,
+                    tool_key,
+                    api_model_used,
+                    share,
+                    output_images
+                FROM generation_history
+                WHERE user_id = ${userId}
+                ORDER BY created_at DESC
+            ) gh,
+            LATERAL (
+                SELECT
+                    value::text as img_url,
+                    (ordinality - 1) as img_index
+                FROM jsonb_array_elements_text(gh.output_images) WITH ORDINALITY AS t(value, ordinality)
+                WHERE value::text LIKE 'https://%'
+            ) img
+            ORDER BY gh.created_at DESC, img.img_index
+            LIMIT ${limit} OFFSET ${offset}
         `;
 
-        // Transform to frontend format with extracted images and their prompts
-        // Build a COMPLETE flat list of all images first
-        const allImagesList = [];
-        const allPromptsList = [];
-        let baseCount = 0;
+        // Transform to frontend format
+        const imagesList = data.map((row: any) => ({
+            id: `${row.history_id}_${row.img_index}`,
+            history_id: row.history_id,
+            url: row.img_url,
+            created_at: row.created_at,
+            tool_key: row.tool_key,
+            model: row.api_model_used,
+            share: row.share || false
+        }));
 
-        for (const record of data) {
-            if (record.output_images && Array.isArray(record.output_images)) {
-                for (let i = 0; i < record.output_images.length; i++) {
-                    const img = record.output_images[i];
+        const promptsList = data.map((row: any) => row.input_prompt || null);
 
-                    // Filter out base64 images, only keep R2 URLs
-                    if (!img || typeof img !== 'string') continue;
-                    if (img.startsWith('data:')) {
-                        baseCount++;
-                        continue; // Skip base64
-                    }
-                    if (!img.startsWith('https://')) {
-                        continue;
-                    }
-
-                    allImagesList.push({
-                        id: `${record.history_id}_${i}`,
-                        history_id: record.history_id,
-                        url: img,
-                        created_at: record.created_at,
-                        tool_key: record.tool_key,
-                        model: record.api_model_used,
-                        share: record.share || false
-                    });
-                    // Map each image with its prompt
-                    allPromptsList.push(record.input_prompt || null);
-                }
-            }
-        }
-
-        // Now slice to get exactly the requested page
-        const imagesList = allImagesList.slice(offset, offset + limit);
-        const promptsList = allPromptsList.slice(offset, offset + limit);
-
-        console.log(`[API] GET /api/gallery: Found ${imagesList.length} URL images on page ${page} (offset ${offset}, total fetched: ${allImagesList.length}, skipped ${baseCount} base64)`);
-        console.log('[API] Sample images:', imagesList.slice(0, 2).map(img => ({
-            url: img.url.substring(0, 60) + '...',
-            tool: img.tool_key
-        })));
-        console.log('[API] Sample prompts:', promptsList.slice(0, 2).map(p => p?.substring(0, 50) + '...' || 'null'));
-
-        // Calculate pagination metadata based on total images count
         const totalPages = Math.ceil(totalImages / limit);
 
-        const response = {
+        return NextResponse.json({
             images: imagesList,
             prompts: promptsList,
             pagination: {
@@ -121,18 +106,7 @@ export async function GET(req: NextRequest) {
                 totalPages,
                 hasMore: page < totalPages
             }
-        };
-
-        console.log('[API] Response summary:', {
-            page,
-            imagesOnPage: imagesList.length,
-            totalImages,
-            totalPages,
-            skipped_base64: baseCount,
-            format: 'R2 URLs with prompts'
-        });
-
-        return NextResponse.json(response);
+        }, { headers: cacheHeaders });
 
     } catch (error: any) {
         console.error('[API] Error in GET /api/gallery:', error);
@@ -190,7 +164,7 @@ export async function POST(req: NextRequest) {
 
     } catch (error: any) {
         console.error('[API] Error in POST /api/gallery:', error);
-        return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
 
@@ -220,7 +194,7 @@ export async function DELETE(req: NextRequest) {
 
         // Delete from generation_history
         const result = await sql`
-            DELETE FROM generation_history 
+            DELETE FROM generation_history
             WHERE user_id = ${userId} AND history_id = ANY(${historyIds}::uuid[])
         `;
 

@@ -2,14 +2,79 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/postgres/client';
 
 /**
+ * Verify SePay webhook API Key
+ * SePay sends API Key in "Authorization" header with format: "Apikey API_KEY"
+ */
+function verifySePayApiKey(authHeader: string | null): boolean {
+    const SEPAY_API_KEY = process.env.SEPAY_API_KEY;
+
+    if (!SEPAY_API_KEY) {
+        console.error('[Webhook] SEPAY_API_KEY not configured');
+        return false;
+    }
+
+    if (!authHeader) {
+        console.error('[Webhook] Missing Authorization header');
+        return false;
+    }
+
+    // Parse Authorization header
+    // Format: "Apikey API_KEY_CUA_BAN"
+    const parts = authHeader.trim().split(' ');
+    if (parts.length !== 2) {
+        console.error('[Webhook] Invalid Authorization header format');
+        return false;
+    }
+
+    const [scheme, apiKey] = parts;
+
+    // Check scheme (case-insensitive)
+    if (scheme.toLowerCase() !== 'apikey') {
+        console.error('[Webhook] Invalid Authorization scheme:', scheme);
+        return false;
+    }
+
+    // Constant-time comparison to prevent timing attacks
+    try {
+        const expectedKey = Buffer.from(SEPAY_API_KEY);
+        const receivedKey = Buffer.from(apiKey);
+
+        if (expectedKey.length !== receivedKey.length) {
+            return false;
+        }
+
+        // Use timing-safe comparison
+        const crypto = require('crypto');
+        return crypto.timingSafeEqual(expectedKey, receivedKey);
+    } catch (error) {
+        // Fallback to simple comparison (less secure but works)
+        return apiKey === SEPAY_API_KEY;
+    }
+}
+
+/**
  * SePay Webhook Handler
  * Receives payment notifications from SePay
  */
 export async function POST(req: NextRequest) {
     try {
+        // Get Authorization header
+        const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
+
         // Parse SePay webhook payload
         const rawBody = await req.text();
         console.log('[Webhook] Raw body:', rawBody);
+
+        // Verify API Key
+        if (!verifySePayApiKey(authHeader)) {
+            console.error('[Webhook] Invalid API Key');
+            return NextResponse.json(
+                { error: 'Unauthorized - Invalid API Key' },
+                { status: 401 }
+            );
+        }
+
+        console.log('[Webhook] API Key verified successfully');
 
         let sepayPayload;
         try {
@@ -69,15 +134,15 @@ export async function POST(req: NextRequest) {
             payment_method
         });
 
-        // Check if transaction already processed (idempotency)
+        // Check if transaction already processed (idempotency - check any status)
         const existingTx = await sql`
-            SELECT id FROM payment_transactions 
-            WHERE transaction_id = ${transaction_id} AND status = 'completed'
+            SELECT id, status, amount FROM payment_transactions
+            WHERE transaction_id = ${transaction_id}
             LIMIT 1
         `;
 
         if (existingTx && existingTx.length > 0) {
-            console.log('[Webhook] Transaction already processed:', transaction_id);
+            console.log('[Webhook] Transaction already exists:', transaction_id, 'Status:', existingTx[0].status);
             return NextResponse.json({ success: true, message: 'Already processed' });
         }
 
@@ -112,6 +177,21 @@ export async function POST(req: NextRequest) {
         if (!transaction) {
             console.error('[Webhook] Transaction not found for order_id:', order_id);
             return NextResponse.json({ error: 'Transaction not found' }, { status: 404 });
+        }
+
+        // Verify amount matches expected amount (allow small tolerance for fees)
+        const expectedAmount = transaction.amount;
+        const tolerance = 1000; // 1000 VND tolerance
+        if (Math.abs(amount - expectedAmount) > tolerance) {
+            console.error('[Webhook] Amount mismatch:', {
+                received: amount,
+                expected: expectedAmount,
+                order_id
+            });
+            return NextResponse.json(
+                { error: 'Amount mismatch' },
+                { status: 400 }
+            );
         }
 
         console.log('[Webhook] Found transaction:', {
@@ -181,10 +261,7 @@ export async function POST(req: NextRequest) {
     } catch (error: any) {
         console.error('[Webhook] Processing error:', error);
         return NextResponse.json(
-            {
-                error: 'Webhook processing failed',
-                message: error.message || 'Unknown error'
-            },
+            { error: 'Internal server error' },
             { status: 500 }
         );
     }

@@ -41,9 +41,10 @@ interface GalleryInlineProps {
     images: GalleryItem[] | string[];
     onShareToggle?: (index: number, newState: boolean) => void;
     onImagesChanged?: (deletedIndices: number[]) => void; // Callback với deleted indices
+    fullPage?: boolean; // When true, uses min-h-screen instead of fixed vh
 }
 
-export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images: rawImages, onShareToggle, onImagesChanged }) => {
+export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images: rawImages, onShareToggle, onImagesChanged, fullPage = false }) => {
     // Normalize images to GalleryItem[] to support legacy string[] input
     const images: GalleryItem[] = React.useMemo(() => {
         if (!rawImages || rawImages.length === 0) return [];
@@ -360,7 +361,7 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images: r
 
 
     return (
-        <div className="w-full h-[75vh] md:h-[86vh] flex flex-col themed-bg" onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
+        <div className={`w-full flex flex-col themed-bg ${fullPage ? 'min-h-full flex-1' : 'h-[75vh] md:h-[86vh]'}`} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
             <input
                 type="file"
                 ref={fileInputRef}
@@ -385,10 +386,10 @@ export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images: r
             />
             {images.length > 0 ? (
                 <>
-                    <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
+                    <div ref={scrollContainerRef} className={`${fullPage ? 'flex-1' : 'flex-1 overflow-y-auto'}`}>
                         <Masonry
                             breakpointCols={masonryBreakpoints}
-                            className="gallery-masonry"
+                            className={`gallery-masonry ${fullPage ? 'min-h-full' : ''}`}
                             columnClassName="gallery-masonry-column"
                         >
                             {displayedImages.map((img, index) => {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/postgres/client';
+import { verifyAdminAuth } from '@/lib/admin-auth';
 
 /**
  * GET /api/admin/tool-custom?tool_type_id=1
@@ -8,6 +9,10 @@ import { sql } from '@/lib/postgres/client';
  */
 export async function GET(request: NextRequest) {
     try {
+        // Verify admin authentication
+        const authError = await verifyAdminAuth(request);
+        if (authError) return authError;
+
         const searchParams = request.nextUrl.searchParams;
         const toolTypeId = searchParams.get('tool_type_id');
 
@@ -53,7 +58,7 @@ export async function GET(request: NextRequest) {
     } catch (error: any) {
         console.error('[API] Error fetching tool custom:', error);
         return NextResponse.json(
-            { success: false, error: error.message },
+            { success: false, error: 'Internal Server Error' },
             { status: 500 }
         );
     }
@@ -66,6 +71,10 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
     try {
+        // Verify admin authentication
+        const authError = await verifyAdminAuth(request);
+        if (authError) return authError;
+
         const body = await request.json();
         const {
             tool_type_id,
@@ -187,7 +196,7 @@ export async function POST(request: NextRequest) {
     } catch (error: any) {
         console.error('[API] Error creating tool custom:', error);
         return NextResponse.json(
-            { success: false, error: error.message },
+            { success: false, error: 'Internal Server Error' },
             { status: 500 }
         );
     }

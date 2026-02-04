@@ -128,7 +128,7 @@ export const LeonardoHeader = () => {
                     <NavLink href="/solutions" isActive={pathname === '/solutions'}>
                         Giải pháp
                     </NavLink>
-                    <NavLink href="/learn" isActive={pathname === '/learn'}>
+                    <NavLink href="/guide" isActive={pathname === '/guide'}>
                         Hướng dẫn
                     </NavLink>
                     <NavLink href="/prompt-library" isActive={pathname === '/prompt-library'}>

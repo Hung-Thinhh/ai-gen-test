@@ -279,6 +279,35 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
     // Extract aspectRatio from config if present
     const { aspectRatio, ...restConfig } = config;
 
+    // Map UI aspect ratio format to Gemini API format
+    // Gemini API only accepts: 1:1, 2:3, 3:2, 3:4, 4:3, 4:5, 5:4, 9:16, 16:9, 21:9
+    const mapAspectRatioToApi = (uiAspectRatio?: string): string | undefined => {
+        if (!uiAspectRatio) return undefined;
+
+        // Extract ratio from UI format like "1:1 (Vuông - Instagram)" -> "1:1"
+        const ratioMatch = uiAspectRatio.match(/^(\d+:\d+)/);
+        if (ratioMatch) {
+            const ratio = ratioMatch[1];
+            // Validate against Gemini API supported ratios
+            const validRatios = ['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9'];
+            if (validRatios.includes(ratio)) {
+                return ratio;
+            }
+        }
+
+        // If no match or invalid, return undefined (API will use default)
+        devLog('[baseService] Invalid or unsupported aspect ratio:', uiAspectRatio);
+        return undefined;
+    };
+
+    const apiAspectRatio = mapAspectRatioToApi(aspectRatio);
+
+    if (aspectRatio && apiAspectRatio) {
+        devLog('[baseService] Mapped aspect ratio:', aspectRatio, '->', apiAspectRatio);
+    } else if (aspectRatio) {
+        devLog('[baseService] Invalid aspect ratio, using default. Input:', aspectRatio);
+    }
+
     // Filter out text-generation specific properties that shouldn't be used for image generation
     const cleanRestConfig = Object.keys(restConfig).reduce((acc: any, key: string) => {
         // Exclude responseMimeType, responseSchema, and responseModalities which are for text-based APIs
@@ -294,11 +323,11 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
         ? {
             imageConfig: {
                 imageSize: globalConfig.imageResolution,
-                ...(aspectRatio && { aspectRatio }),
+                ...(apiAspectRatio && { aspectRatio: apiAspectRatio }),
                 ...config.imageConfig
             }
         }
-        : (aspectRatio ? { aspectRatio } : {}); // v2: add aspectRatio at root level
+        : (apiAspectRatio ? { aspectRatio: apiAspectRatio } : {}); // v2: add aspectRatio at root level
 
     // Don't include responseModalities for image generation - it confuses the API
     // The image models generate images natively without needing this config

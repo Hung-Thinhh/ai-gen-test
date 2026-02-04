@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { X, Clock, Aperture } from 'lucide-react';
+import { X, Clock, Aperture, PaletteIcon } from 'lucide-react';
 import Masonry from 'react-masonry-css';
 
 interface GalleryItem {
@@ -62,10 +62,24 @@ export const CommunityGallery = () => {
     };
 
     return (
-        <div className="w-full">
-            <h3 className="text-2xl md:text-3xl font-bold text-center mb-10 text-orange-500">
-                Cộng đồng sáng tạo
-            </h3>
+        <div className="w-full mt-10">
+             <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5 }}
+                      className="text-center mb-10"
+                    >
+                      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-500/10 text-orange-400 text-sm mb-4">
+                        <PaletteIcon className="w-4 h-4" />
+                        <span>Thư viện cộng đồng</span>
+                      </div>
+                      <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+                        Ảnh từ cộng đồng
+                      </h2>
+                      <p className="text-neutral-400 max-w-xl mx-auto">
+                        Khám phá những tác phẩm tuyệt vừoi từ 50K+ ngườii dùng Duky
+                      </p>
+                    </motion.div>
 
             {loading ? (
                 <div className="flex justify-center py-20">

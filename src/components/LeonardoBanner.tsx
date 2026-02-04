@@ -12,15 +12,21 @@ export const LeonardoBanner = () => {
         const container = document.getElementById('main-content-scroll');
         if (!container) return;
 
+        let rafId: number;
         const updateScroll = () => {
-            scrollY.set(container.scrollTop);
+            rafId = requestAnimationFrame(() => {
+                scrollY.set(container.scrollTop);
+            });
         };
 
         // Set initial value
         updateScroll();
 
-        container.addEventListener('scroll', updateScroll);
-        return () => container.removeEventListener('scroll', updateScroll);
+        container.addEventListener('scroll', updateScroll, { passive: true });
+        return () => {
+            container.removeEventListener('scroll', updateScroll);
+            cancelAnimationFrame(rafId);
+        };
     }, [scrollY]);
 
     // Parallax transforms for floating images
@@ -43,7 +49,7 @@ export const LeonardoBanner = () => {
         <section className="relative min-h-screen flex items-center flex-col justify-center overflow-hidden bg-black">
             {/* Background Image */}
             <div className="absolute inset-0 z-0">
-                <img
+                <Image
                     src="https://res.cloudinary.com/dmxmzannb/image/upload/v1767599662/UX-Duky-AI_1_zufq7x.jpg"
                     onError={(e) => {
                         // Fallback to img_base if bg_banner is missing
@@ -86,7 +92,7 @@ export const LeonardoBanner = () => {
                     transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                     className="w-32 h-40 md:w-48 md:h-60 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20"
                 >
-                    <img
+                    <Image
                         src="https://pub-15159732d3b14718981f4ec71d2578eb.r2.dev/1769744496071-eiolbl.png"
                         alt="AI Generated Portrait"
                         className="w-full h-full object-cover rounded-xl"
@@ -104,7 +110,7 @@ export const LeonardoBanner = () => {
                     transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
                     className="w-20 h-24 md:w-52 md:h-64 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20"
                 >
-                    <img
+                    <Image
                         src="https://res.cloudinary.com/dmxmzannb/image/upload/v1768560690/fcgaoihbxxoe4hbofdso.png"
                         alt="AI Generated Art"
                         className="w-full h-full object-cover rounded-xl"
@@ -122,7 +128,7 @@ export const LeonardoBanner = () => {
                     transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
                     className="w-20 h-38 md:w-56 md:h-72 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20"
                 >
-                    <img
+                    <Image
                         src="https://res.cloudinary.com/dmxmzannb/image/upload/v1768562068/v0ybv26fss1eglne6zfu.png"
                         alt="AI Portrait"
                         className="w-full h-full object-cover"
@@ -140,7 +146,7 @@ export const LeonardoBanner = () => {
                     transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
                     className="w-32 h-40 md:w-44 md:h-56 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20"
                 >
-                    <img
+                    <Image
                         src="https://res.cloudinary.com/dmxmzannb/image/upload/f_auto,q_auto/v1768206045/krxq16y49k91zevbw6os.webp"
                         alt="AI Generated"
                         className="w-full h-full object-cover"

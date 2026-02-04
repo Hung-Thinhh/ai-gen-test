@@ -3,16 +3,23 @@ import { sql } from '@/lib/postgres/client';
 
 export async function GET() {
     try {
-        console.log('[API] Fetching packages from Neon...');
         const data = await sql`
-            SELECT * FROM packages 
+            SELECT * FROM packages
             ORDER BY sort_order ASC
         `;
 
-        return NextResponse.json({ success: true, data: data });
+        // Cache packages for 5 minutes (static data that rarely changes)
+        return NextResponse.json(
+            { success: true, data: data },
+            {
+                headers: {
+                    'Cache-Control': 'public, max-age=300, stale-while-revalidate=600',
+                }
+            }
+        );
     } catch (error: any) {
         console.error('[API] Server error:', error);
-        return NextResponse.json({ success: false, error: error.message || 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
     }
 }
 
@@ -54,7 +61,7 @@ export async function PUT(request: Request) {
 
     } catch (error: any) {
         console.error('[API] Update exception:', error);
-        return NextResponse.json({ success: false, error: error.message || 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
     }
 }
 
@@ -102,7 +109,7 @@ export async function POST(request: Request) {
 
     } catch (error: any) {
         console.error('[API] Create exception:', error);
-        return NextResponse.json({ success: false, error: error.message || 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
     }
 }
 
@@ -125,6 +132,6 @@ export async function DELETE(request: Request) {
 
     } catch (error: any) {
         console.error('[API] Delete exception:', error);
-        return NextResponse.json({ success: false, error: error.message || 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
     }
 }

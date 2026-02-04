@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { sql } from '@/lib/postgres/client';
+import { verifyAdminAuth } from '@/lib/admin-auth';
 
 // GET all packages
 export async function GET(req: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-
-        // Check admin role (optional - uncomment if you want admin-only access)
-        // if (!session?.user || (session.user as any).role !== 'admin') {
-        //     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        // }
+        // Verify admin authentication
+        const authError = await verifyAdminAuth(req);
+        if (authError) return authError;
 
         const packages = await sql`
             SELECT package_id, name, description, price, credits, duration_days, is_active
@@ -22,6 +18,6 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ packages });
     } catch (error: any) {
         console.error('[API] GET /api/admin/packages error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

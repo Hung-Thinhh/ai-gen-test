@@ -456,6 +456,7 @@ export async function POST(req: NextRequest) {
 
     } catch (error: any) {
         console.error("Server-side Gemini generation error:", error);
+        console.error("Error details:", JSON.stringify(error, null, 2));
 
         // Return user-friendly error messages
         let userMessage = 'Đã xảy ra lỗi khi tạo ảnh. Vui lòng thử lại.';
@@ -464,28 +465,74 @@ export async function POST(req: NextRequest) {
 
         const errorMessage = error.message || String(error);
 
+        // Parse Gemini API error details if available
+        let geminiDetails = '';
+
+        // Try to extract details from error object
+        if (error.details) {
+            if (typeof error.details === 'string') {
+                geminiDetails = error.details;
+            } else if (typeof error.details === 'object') {
+                geminiDetails = JSON.stringify(error.details);
+            }
+        }
+
+        // Also check if error itself contains the API response
+        if (!geminiDetails && error.response?.data) {
+            geminiDetails = JSON.stringify(error.response.data);
+        }
+
+        // Try parse JSON string details
+        let parsedDetails = '';
+        if (geminiDetails) {
+            try {
+                const parsed = JSON.parse(geminiDetails);
+                parsedDetails = parsed?.error?.message || parsed?.message || geminiDetails;
+            } catch {
+                parsedDetails = geminiDetails;
+            }
+        }
+
+        // Combine error message for checking
+        const fullErrorMessage = `${errorMessage} ${parsedDetails}`.toLowerCase();
+        console.log("Full error message for checking:", fullErrorMessage);
+
         if (errorMessage.startsWith('GEMINI_REFUSAL:')) {
             userMessage = errorMessage.replace('GEMINI_REFUSAL:', '').trim();
             statusCode = 400;
             errorCode = 'MODEL_REFUSAL';
-        } else if (errorMessage.includes('safety') || errorMessage.includes('blocked') || errorMessage.includes('IMAGE_SAFETY')) {
+        } else if (fullErrorMessage.includes('aspect ratio') || fullErrorMessage.includes('16:9') || fullErrorMessage.includes('4:3') || fullErrorMessage.includes('1:1')) {
+            // Aspect ratio error from Gemini
+            userMessage = 'Tỷ lệ khung hình không hợp lệ. Vui lòng chọn 1:1, 4:3, 16:9, hoặc 21:9.';
+            statusCode = 400;
+            errorCode = 'INVALID_ASPECT_RATIO';
+        } else if (fullErrorMessage.includes('safety') || fullErrorMessage.includes('blocked') || fullErrorMessage.includes('image_safety')) {
             userMessage = 'Nội dung bị chặn vì vi phạm chính sách an toàn. Vui lòng thử prompt khác.';
-            statusCode = 400; // Bad Request (Content Policy)
+            statusCode = 400;
             errorCode = 'SAFETY_VIOLATION';
-        } else if (errorMessage.includes('quota') || errorMessage.includes('429')) {
+        } else if (fullErrorMessage.includes('quota') || fullErrorMessage.includes('429') || fullErrorMessage.includes('rate limit')) {
             userMessage = 'Hệ thống đang quá tải. Vui lòng thử lại sau.';
-            statusCode = 429; // Too Many Requests
+            statusCode = 429;
             errorCode = 'QUOTA_EXCEEDED';
-        } else if (errorMessage.includes('IMAGE_OTHER') || errorMessage.includes('STOP')) {
+        } else if (fullErrorMessage.includes('prompt') && fullErrorMessage.includes('too long')) {
+            userMessage = 'Prompt quá dài. Vui lòng rút ngắn nội dung mô tả.';
+            statusCode = 400;
+            errorCode = 'PROMPT_TOO_LONG';
+        } else if (fullErrorMessage.includes('invalid') && fullErrorMessage.includes('argument')) {
+            userMessage = 'Tham số không hợp lệ. Vui lòng kiểm tra lại cài đặt.';
+            statusCode = 400;
+            errorCode = 'INVALID_ARGUMENT';
+        } else if (fullErrorMessage.includes('image_other') || fullErrorMessage.includes('stop')) {
             userMessage = 'Mô hình gặp lỗi khi xử lý yêu cầu này. Vui lòng thử lại hoặc điều chỉnh prompt.';
             statusCode = 500;
             errorCode = 'GENERATION_FAILED';
         } else if (errorMessage.includes('400')) {
+            userMessage = 'Yêu cầu không hợp lệ. Vui lòng kiểm tra lại thông tin.';
             statusCode = 400;
             errorCode = 'BAD_REQUEST';
-        } else if (errorMessage.includes('503') || errorMessage.includes('overloaded') || errorMessage.includes('UNAVAILABLE')) {
+        } else if (fullErrorMessage.includes('503') || fullErrorMessage.includes('overloaded') || fullErrorMessage.includes('unavailable')) {
             userMessage = 'Máy chủ AI đang bận (Overloaded). Vui lòng thử lại sau ít phút.';
-            statusCode = 503; // Service Unavailable
+            statusCode = 503;
             errorCode = 'SERVER_BUSY';
         }
 
@@ -493,7 +540,7 @@ export async function POST(req: NextRequest) {
             {
                 error: userMessage,
                 code: errorCode,
-                details: errorMessage
+                details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
             },
             { status: statusCode }
         );

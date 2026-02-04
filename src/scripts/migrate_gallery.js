@@ -1,9 +1,12 @@
 require('dotenv').config({ path: '.env.local' });
 const { Pool } = require('pg');
 
-// Credentials from README as fallback
-const README_URL = 'postgresql://postgres:yj5x6moshhlx1vcw@77.42.94.105:3100/postgres';
-const connectionString = process.env.POSTGRES_URL || README_URL;
+const connectionString = process.env.POSTGRES_URL;
+
+if (!connectionString) {
+    console.error('Error: POSTGRES_URL environment variable is required');
+    process.exit(1);
+}
 
 console.log('Connecting with:', connectionString.replace(/:[^:@]*@/, ':****@')); // Hide password
 

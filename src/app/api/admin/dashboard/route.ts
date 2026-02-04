@@ -1,9 +1,17 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/postgres/client';
+import { verifyAdminAuth } from '@/lib/admin-auth';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
     try {
-        console.log('[API] Fetching dashboard stats from Neon...');
+        // Verify admin authentication
+        const authError = await verifyAdminAuth(req);
+        if (authError) return authError;
+
+        // Cache headers - dashboard data cached for 60 seconds
+        const cacheHeaders = {
+            'Cache-Control': 'private, max-age=60, stale-while-revalidate=300',
+        };
 
         // 1. Fetch User Stats
         const userCountResult = await sql`
@@ -102,80 +110,61 @@ export async function GET() {
             }
         });
 
-        // 4. Fetch Newest Users (From users table)
-        const recentPublicUsers = await sql`
-            SELECT 
-                user_id, 
-                email, 
-                display_name, 
-                role, 
-                current_credits, 
-                created_at
-            FROM users
-            ORDER BY created_at DESC
+        // 4. Fetch Newest Users with generation stats in single query
+        const recentUsersRaw = await sql`
+            SELECT
+                u.user_id,
+                u.email,
+                u.display_name,
+                u.role,
+                u.current_credits,
+                u.created_at,
+                COALESCE(SUM(h.generation_count), 0) as total_gen
+            FROM users u
+            LEFT JOIN generation_history h ON u.user_id = h.user_id AND h.created_at >= ${dateStr}
+            GROUP BY u.user_id, u.email, u.display_name, u.role, u.current_credits, u.created_at
+            ORDER BY u.created_at DESC
             LIMIT 5
         `;
 
-        const recentUsers = recentPublicUsers?.map((user: any) => {
-            // Calculate usage stats from historyData
-            const userHistory = historyData?.filter((h: any) => h.user_id === user.user_id) || [];
-            const userGen = userHistory.reduce((sum: number, h: any) => sum + (h.generation_count || 1), 0);
+        const recentUsers = recentUsersRaw?.map((user: any) => ({
+            user_id: user.user_id,
+            email: user.email,
+            full_name: user.display_name || 'N/A',
+            role: user.role || 'user',
+            current_credits: user.current_credits || 0,
+            created_at: user.created_at,
+            total_gen: parseInt(user.total_gen) || 0,
+            plan: user.role === 'admin' ? 'Admin' : 'Free'
+        })) || [];
 
-            return {
-                user_id: user.user_id,
-                email: user.email,
-                full_name: user.display_name || 'N/A',
-                role: user.role || 'user',
-                current_credits: user.current_credits || 0,
-                created_at: user.created_at,
-                total_gen: userGen,
-                plan: user.role === 'admin' ? 'Admin' : 'Free'
-            };
-        }) || [];
-
-        // 5. Fetch Recent Transactions
-        const recentTxData = await sql`
-            SELECT 
-                id, 
-                amount, 
-                status, 
-                created_at, 
-                user_id
-            FROM payment_transactions
-            ORDER BY created_at DESC
+        // 5. Fetch Recent Transactions with user info (single query with JOIN)
+        const recentTransactions = await sql`
+            SELECT
+                t.id,
+                t.amount,
+                t.status,
+                t.created_at,
+                u.email,
+                u.display_name,
+                u.avatar_url
+            FROM payment_transactions t
+            LEFT JOIN users u ON t.user_id = u.user_id
+            ORDER BY t.created_at DESC
             LIMIT 5
         `;
 
-        // Enrich transactions with user info
-        let recentTransactions: any[] = [];
-        if (recentTxData && recentTxData.length > 0) {
-            const txUserIds = [...new Set(recentTxData.map((tx: any) => tx.user_id))];
-
-            const txUsers = await sql`
-                SELECT 
-                    user_id, 
-                    email, 
-                    display_name, 
-                    avatar_url
-                FROM users
-                WHERE user_id = ANY(${txUserIds})
-            `;
-
-            recentTransactions = recentTxData.map((tx: any) => {
-                const user = txUsers?.find((u: any) => u.user_id === tx.user_id);
-                return {
-                    id: tx.id,
-                    amount: tx.amount,
-                    status: tx.status,
-                    created_at: tx.created_at,
-                    user: {
-                        email: user?.email || 'Unknown',
-                        full_name: user?.display_name || 'N/A',
-                        avatar_url: user?.avatar_url
-                    }
-                };
-            });
-        }
+        const formattedTransactions = recentTransactions?.map((tx: any) => ({
+            id: tx.id,
+            amount: tx.amount,
+            status: tx.status,
+            created_at: tx.created_at,
+            user: {
+                email: tx.email || 'Unknown',
+                full_name: tx.display_name || 'N/A',
+                avatar_url: tx.avatar_url
+            }
+        })) || [];
 
         const revenueChartData = chartLabels.map(day => dailyRevenue[day] || 0);
 
@@ -197,15 +186,14 @@ export async function GET() {
                 topModels
             },
             recentUsers,
-            recentTransactions
-        });
+            recentTransactions: formattedTransactions
+        }, { headers: cacheHeaders });
 
     } catch (error: any) {
         console.error('[API] Dashboard stats error:', error);
         return NextResponse.json({
             success: false,
-            error: 'Internal Server Error',
-            details: error.message
+            error: 'Internal Server Error'
         }, { status: 500 });
     }
 }
