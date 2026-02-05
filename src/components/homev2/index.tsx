@@ -8,7 +8,7 @@ import { ToolsShowcaseV2 } from "./ToolsShowcaseV2";
 import { HowItWorks } from "./HowItWorks";
 import { CommunityShowcase } from "./CommunityShowcase";
 import { Testimonials } from "./Testimonials";
-import { PricingV2 } from "./PricingV2";
+import { Pricing } from "../Pricing";
 import { FAQ } from "./FAQ";
 import { FinalCTA } from "./FinalCTA";
 import { FooterV2 } from "./FooterV2";
@@ -17,6 +17,7 @@ import { CommunityGallery } from "../CommunityGallery";
 import { MobileHomeHeader } from "../MobileHeader";
 import { useAppControls } from "../uiContexts";
 import { useIsMobile } from "@/utils/mobileUtils";
+import StudioConcept from "../StudioConcept";
 
 
 export const HomeV2 = () => {
@@ -47,17 +48,31 @@ const currentCredits = isLoggedIn ? userCredits : guestCredits;
         <ToolShowcase />
       </div>
       <HowItWorks />
+       {/* Studio Concept Section */}
+                  <div className="relative z-10 w-screen left-1/2 -translate-x-1/2 bg-black">
+                      <StudioConcept />
+                  </div>
       <CommunityGallery />
       {/* <CommunityShowcase /> */}
       <Testimonials />
-      <section id="pricing" className="hidden md:block">
-        <PricingV2 />
+      <section id="pricing" className="hidden md:block py-20">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">
+              Chọn gói phù hợp
+            </h2>
+            <p className="text-neutral-400 max-w-2xl mx-auto">
+              Bắt đầu miễn phí, nâng cấp khi cần. Hoàn tiền trong 7 ngày nếu không hài lòng.
+            </p>
+          </div>
+          <Pricing />
+        </div>
       </section>
       <section id="faq">
         <FAQ />
       </section>
       <FinalCTA />
-      <FooterV2 />
+     
     </main>
   );
 };

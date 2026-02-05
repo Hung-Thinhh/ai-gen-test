@@ -82,7 +82,7 @@ const tools = [
     category: "portrait",
     cost: "1 credit",
     usage: 7000,
-    image: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExeTczYWJlYnBlc3V1dHBxMnJidmVvcWlqd293dWQ1Ymt3Z2N3bjl3MSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/Rh0btaKsTkIIrls5yT/giphy.gif",
+    image: "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExYm11eXA3ZjR4Y2Q0anJ6Y2pubHl0aHV1dXd1ZTdtcHA0bmU2cWc2YiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/bCEGJKTfuUnja/giphy.gif",
   },
   {
     id: "milk-tea-poster",

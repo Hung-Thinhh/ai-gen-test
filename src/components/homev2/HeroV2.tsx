@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { motion, useScroll, useTransform, useMotionValue } from 'framer-motion';
+import { useState, useEffect, useRef, ChangeEvent } from "react";
+import { motion, useScroll, useTransform, useMotionValue, AnimatePresence } from 'framer-motion';
 import { useRouter } from "next/navigation";
-import { PencilIcon, ZapIcon, StarIcon } from "./icons";
+import { PencilIcon, ZapIcon, StarIcon, PlusIcon, ImagePlusIcon, XIcon } from "./icons";
+import { generateFreeImage } from '@/services/gemini/freeGenerationService';
 
 // Particle Network Component
 const ParticleNetwork = () => {
@@ -255,17 +256,173 @@ const ImageMarquee = () => {
   );
 };
 
+// Simple file upload handler
+const handleFileUpload = (
+  e: ChangeEvent<HTMLInputElement>,
+  callback: (result: string) => void
+) => {
+  if (e.target.files && e.target.files[0]) {
+    const file = e.target.files[0];
+    const MAX_SIZE_MB = 15;
+    if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+      alert(`File quá lớn. Vui lòng upload ảnh dưới ${MAX_SIZE_MB}MB.`);
+      e.target.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === 'string') {
+        callback(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+};
+
+// Result Dialog Component
+interface ResultDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  imageUrl: string | null;
+  isLoading: boolean;
+  error: string | null;
+}
+
+const ResultDialog: React.FC<ResultDialogProps> = ({ isOpen, onClose, imageUrl, isLoading, error }) => {
+  if (!isOpen) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 20 }}
+          className="relative w-full max-w-2xl bg-[#1a1a2e] border border-orange-500/30 rounded-2xl p-6 overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 p-2 text-neutral-400 hover:text-white hover:bg-white/10 rounded-full transition-all"
+          >
+            <XIcon className="w-5 h-5" />
+          </button>
+
+          <h3 className="text-xl font-bold text-white mb-4">Kết quả tạo ảnh</h3>
+
+          {isLoading && (
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="w-12 h-12 border-4 border-orange-500/30 border-t-orange-500 rounded-full animate-spin mb-4" />
+              <p className="text-neutral-300">Đang tạo ảnh...</p>
+            </div>
+          )}
+
+          {error && (
+            <div className="text-center py-8">
+              <p className="text-red-400 mb-2">Có lỗi xảy ra</p>
+              <p className="text-neutral-400 text-sm">{error}</p>
+            </div>
+          )}
+
+          {imageUrl && !isLoading && (
+            <div className="space-y-4">
+              <div className="relative rounded-xl overflow-hidden border border-white/10">
+                <img src={imageUrl} alt="Generated" className="w-full h-auto max-h-[60vh] object-contain" />
+              </div>
+              <div className="flex gap-3 justify-center">
+                <a
+                  href={imageUrl}
+                  download="generated-image.png"
+                  className="px-6 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-orange-500/30 transition-all"
+                >
+                  Tải xuống
+                </a>
+                <button
+                  onClick={onClose}
+                  className="px-6 py-2 bg-white/10 text-white font-semibold rounded-xl hover:bg-white/20 transition-all"
+                >
+                  Đóng
+                </button>
+              </div>
+            </div>
+          )}
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+};
+
 export const HeroV2 = () => {
   const router = useRouter();
   const [demoInput, setDemoInput] = useState("");
   const [isFocused, setIsFocused] = useState(false);
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showDialog, setShowDialog] = useState(false);
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleGenerate = () => {
-    if (demoInput.trim()) {
-      router.push(`/tool/free-generation?prompt=${encodeURIComponent(demoInput)}`);
-    } else {
-      router.push("/tool/free-generation");
+  const handleGenerate = async () => {
+    if (!demoInput.trim()) {
+      // Focus input if no prompt
+      return;
     }
+
+    // Generate directly in dialog - no redirect
+    setIsGenerating(true);
+    setShowDialog(true);
+    setGeneratedImage(null);
+    setGenerationError(null);
+
+    try {
+      const results = await generateFreeImage(
+        demoInput,
+        1,
+        '1:1',
+        uploadedImage || undefined,
+        undefined,
+        undefined,
+        undefined,
+        true,
+        'hero-generation'
+      );
+      if (results.length > 0) {
+        setGeneratedImage(results[0]);
+      } else {
+        setGenerationError('Không thể tạo ảnh. Vui lòng thử lại.');
+      }
+    } catch (error: any) {
+      setGenerationError(error.message || 'Có lỗi xảy ra khi tạo ảnh.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
+    handleFileUpload(e, (imageData) => {
+      setUploadedImage(imageData);
+    });
+  };
+
+  const clearUploadedImage = () => {
+    setUploadedImage(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleCloseDialog = () => {
+    setShowDialog(false);
+    setGeneratedImage(null);
+    setGenerationError(null);
   };
 
   const quickPrompts = [
@@ -441,23 +598,63 @@ useEffect(() => {
                 : "border-white/20"
               }`}
           >
-            <PencilIcon className="w-6 h-6 text-neutral-200 ml-3" />
+            {/* Image Upload Button */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              accept="image/*"
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className={`p-2 rounded-xl transition-all duration-300 ml-1 ${uploadedImage
+                  ? "bg-orange-500/20 text-orange-400"
+                  : "text-neutral-300 hover:text-white hover:bg-white/10"
+                }`}
+              title={uploadedImage ? "Đã chọn ảnh" : "Tải ảnh lên"}
+            >
+              {uploadedImage ? (
+                <ImagePlusIcon className="w-5 h-5" />
+              ) : (
+                <PlusIcon className="w-5 h-5" />
+              )}
+            </button>
+
+            {/* Uploaded Image Preview */}
+            {uploadedImage && (
+              <div className="relative flex-shrink-0">
+                <img
+                  src={uploadedImage}
+                  alt="Uploaded"
+                  className="w-10 h-10 rounded-lg object-cover border border-white/20"
+                />
+                <button
+                  onClick={clearUploadedImage}
+                  className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-xs"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+
             <input
               type="text"
               value={demoInput}
               onChange={(e) => setDemoInput(e.target.value)}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
-              placeholder="Mô tả ảnh bạn muốn tạo..."
+              placeholder={uploadedImage ? "Mô tả thay đổi cho ảnh..." : "Mô tả ảnh bạn muốn tạo..."}
               className="flex-1 bg-transparent text-white placeholder-neutral-300 outline-none py-3 px-2"
               onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
             />
             <button
               onClick={handleGenerate}
-              className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-orange-500/30 transition-all duration-300 hover:scale-105 flex items-center gap-2 cursor-pointer"
+              disabled={isGenerating}
+              className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-orange-500/30 transition-all duration-300 hover:scale-105 flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ZapIcon className="w-5 h-5" />
-              <span className="hidden sm:inline">TẠO NGAY</span>
+              <span className="hidden sm:inline">{isGenerating ? "ĐANG TẠO..." : "TẠO NGAY"}</span>
             </button>
           </div>
 
@@ -505,6 +702,15 @@ useEffect(() => {
           <ImageMarquee />
         </motion.div>
       </div>
+
+      {/* Result Dialog */}
+      <ResultDialog
+        isOpen={showDialog}
+        onClose={handleCloseDialog}
+        imageUrl={generatedImage}
+        isLoading={isGenerating}
+        error={generationError}
+      />
     </section>
   );
 };

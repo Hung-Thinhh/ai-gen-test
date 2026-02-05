@@ -5,6 +5,7 @@ import GoogleProvider from "next-auth/providers/google";
 import { getUserByEmail, createUser } from "@/lib/postgres/queries";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
+import { headers } from "next/headers";
 
 // Keep Supabase client ONLY for password authentication
 // (Neon doesn't have built-in auth, so we still use Supabase Auth for credentials login)
@@ -12,6 +13,20 @@ const supabaseAuth = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
+
+// Get the base URL from environment or request headers
+const getBaseUrl = () => {
+    // Use VERCEL_URL if available (Vercel deployment)
+    if (process.env.VERCEL_URL) {
+        return `https://${process.env.VERCEL_URL}`;
+    }
+    // Use NEXTAUTH_URL if set
+    if (process.env.NEXTAUTH_URL) {
+        return process.env.NEXTAUTH_URL;
+    }
+    // Default to production domain
+    return "https://dukyai.com";
+};
 
 export const authOptions: NextAuthOptions = {
     providers: [
@@ -54,6 +69,17 @@ export const authOptions: NextAuthOptions = {
         signIn: '/admin/login',
     },
     callbacks: {
+        async redirect({ url, baseUrl }) {
+            // Use our custom base URL detection
+            const siteUrl = getBaseUrl();
+
+            // If url is relative, prepend siteUrl
+            if (url.startsWith('/')) return `${siteUrl}${url}`;
+            // If url is on the same site, allow it
+            if (url.startsWith(siteUrl)) return url;
+            // Default to home page
+            return siteUrl;
+        },
         async signIn({ user, account, profile }) {
             // Only auto-create for OAuth providers (Google)
             if (account?.provider === 'google' && user.email) {

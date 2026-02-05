@@ -3,10 +3,7 @@
 import React, { useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { cn } from '../lib/utils';
-import Sidebar from './Sidebar';
 import LeonardoHeader from './LeonardoHeader';
-import AppToolbar from './AppToolbar';
-import Footer from './Footer';
 import LoginScreen from './LoginScreen';
 import SearchModal from './SearchModal';
 import { ImageEditorModal } from './ImageEditorModal';
@@ -22,11 +19,12 @@ import {
 import { OutOfCreditsModal } from './OutOfCreditsModal';
 import { BottomNavigation } from './BottomNavigation';
 import {
-    HomeIcon, SparklesIcon, GalleryIcon, GridSquaresIcon, PlaceholderPersonIcon, LoadingSpinnerIcon, LayerComposerIcon,
+    HomeIcon, GalleryIcon, GridSquaresIcon, PlaceholderPersonIcon, LoadingSpinnerIcon,
     CameraSparklesIcon
 } from './icons';
 import { useIsMobile } from '../utils/mobileUtils';
 import { MobilePageHeader } from './MobileHeader';
+import { FooterV2 } from './homev2/FooterV2';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     const {
@@ -45,17 +43,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         closeImageLayoutModal,
         closeBeforeAfterModal,
         closeAppCoverCreatorModal,
-        closeStoryboardingModal,
         isLoginModalOpen,
         closeLoginModal,
         t,
         language,
         modelVersion,
-        v2UsageCount,
-        v3UsageCount,
         handleModelVersionChange,
-        guestCredits,
-        userCredits,
         user,
         isLoggedIn
     } = useAppControls();
@@ -213,7 +206,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     <div className="flex-1 w-full flex flex-col">
                         {children}
                     </div>
-                    {!isMobile && <Footer />}
+                    <FooterV2 />
                 </div>
 
                 <SearchModal

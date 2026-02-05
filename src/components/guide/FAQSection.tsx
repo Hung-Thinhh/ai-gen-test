@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { HelpCircleIcon, ChevronDownIcon, MessageCircleIcon, ArrowRightIcon } from "./icons";
+import { ZaloCTA } from "../ZaloCTA";
 
 const faqs = [
   {
@@ -127,20 +128,9 @@ export const FAQSection = () => {
           transition={{ duration: 0.5, delay: 0.3 }}
           className="mt-12 text-center"
         >
-          <div className="bg-gradient-to-r from-orange-500/10 to-red-500/10 rounded-2xl p-6 border border-orange-500/20">
-            <div className="flex items-center justify-center gap-2 mb-3">
-              <MessageCircleIcon className="w-5 h-5 text-orange-500" />
-              <span className="text-white font-semibold">Vẫn còn thắc mắc?</span>
-            </div>
-            <p className="text-neutral-400 text-sm mb-4">
-              Đội ngũ hỗ trợ của chúng tôi luôn sẵn sàng giúp đỡ bạn 24/7
-            </p>
-            <button className="inline-flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-full hover:bg-orange-600 transition-colors font-medium">
-              Liên hệ hỗ trợ
-              <ArrowRightIcon className="w-4 h-4" />
-            </button>
-          </div>
+          <ZaloCTA />
         </motion.div>
+        
       </div>
     </section>
   );

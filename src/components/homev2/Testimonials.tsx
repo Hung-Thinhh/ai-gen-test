@@ -121,7 +121,7 @@ export const Testimonials = () => {
             <span>Khách hàng nói gì</span>
           </div>
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Được tin dùng bởi 50,000+ ngườii dùng
+            Được tin dùng bởi 50,000+ người dùng
           </h2>
           <p className="text-neutral-400 max-w-xl mx-auto">
             Tham gia cộng đồng ngườii dùng hài lòng
