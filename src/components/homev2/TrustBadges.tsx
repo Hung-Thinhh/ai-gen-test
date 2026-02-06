@@ -24,7 +24,7 @@ const partners = [
 ];
 export const TrustBadges = () => {
   return (
-    <section className="relative py-12 bg-black border-y border-white/5">
+    <section className="relative py-12 bg-black border-y border-white/5 z-99999999999">
       {/* Gradient divider top */}
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-orange-500/50 to-transparent" />
 

@@ -49,18 +49,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         language,
         modelVersion,
         handleModelVersionChange,
-        user,
         isLoggedIn
     } = useAppControls();
 
     const { imageToEdit, closeImageEditor } = useImageEditor();
-    const { isLoading, loginGoogle } = useAuth();
+    const { isLoading } = useAuth();
     const isMobile = useIsMobile();
-
-    // DEBUG AUTH STATE IN UI
-    useEffect(() => {
-        console.log('🖥️ [AppLayout] Rendered. isLoggedIn:', isLoggedIn, 'User:', user?.email, 'isLoading:', isLoading);
-    }, [isLoggedIn, user, isLoading]);
 
     // Prevent body scroll when modals are open
     useEffect(() => {

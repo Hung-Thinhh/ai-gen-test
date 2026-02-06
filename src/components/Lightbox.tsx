@@ -207,7 +207,7 @@ const Lightbox: React.FC<LightboxProps> = ({ images, selectedIndex, onClose, onN
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                 >
-                    <div className="w-full h-[88vh] mt-20 flex flex-col md:flex-row overflow-hidden relative">
+                    <div className="w-full h-[88vh] mt-20 flex flex-col md:flex-row overflow-hidden relative z-9999999">
 
                         {/* Close Button - Global (Desktop Only) */}
                         <button

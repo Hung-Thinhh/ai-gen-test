@@ -286,6 +286,33 @@ button {
     background: var(--border-hover);
 }
 
+/* Floating Animation for Hero Images */
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-15px);
+    }
+}
+
+.float-animation {
+    animation: float ease-in-out infinite;
+    will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .float-animation {
+        animation: none;
+    }
+}
+
+/* Object Maintain (for background images) */
+.object-maintain {
+    object-fit: contain;
+    object-position: center;
+}
+
 /* ========================================================================= */
 /*                              OVERVIEW STYLES                              */
 /* ========================================================================= */

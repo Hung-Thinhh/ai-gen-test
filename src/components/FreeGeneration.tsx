@@ -110,6 +110,36 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
         }
     }, []); // Run only once on mount
 
+    // Auto-fill prompt and uploaded image from Hero section
+    useEffect(() => {
+        const heroPrompt = sessionStorage.getItem('heroPrompt');
+        const heroUploadedImage = sessionStorage.getItem('heroUploadedImage');
+
+        if (heroPrompt) {
+            console.log('[FreeGeneration] Auto-filling prompt from hero:', heroPrompt);
+            setLocalPrompt(heroPrompt);
+            const newState: FreeGenerationState = {
+                ...appState,
+                options: {
+                    ...appState.options,
+                    prompt: heroPrompt
+                }
+            };
+
+            // If there's an uploaded image from hero, set it as image1
+            if (heroUploadedImage) {
+                console.log('[FreeGeneration] Setting uploaded image from hero');
+                newState.image1 = heroUploadedImage;
+            }
+
+            onStateChange(newState);
+
+            // Clear from sessionStorage after using
+            sessionStorage.removeItem('heroPrompt');
+            sessionStorage.removeItem('heroUploadedImage');
+        }
+    }, []); // Run only once on mount
+
 
 
 

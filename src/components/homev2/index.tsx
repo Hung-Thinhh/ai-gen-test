@@ -1,17 +1,14 @@
 "use client";
 
 import { AnnouncementBar } from "./AnnouncementBar";
-import { LandingNavbar } from "./LandingNavbar";
 import { HeroV2 } from "./HeroV2";
 import { TrustBadges } from "./TrustBadges";
 import { ToolsShowcaseV2 } from "./ToolsShowcaseV2";
 import { HowItWorks } from "./HowItWorks";
-import { CommunityShowcase } from "./CommunityShowcase";
 import { Testimonials } from "./Testimonials";
 import { Pricing } from "../Pricing";
 import { FAQ } from "./FAQ";
 import { FinalCTA } from "./FinalCTA";
-import { FooterV2 } from "./FooterV2";
 import ToolShowcase from "../ToolShowcase";
 import { CommunityGallery } from "../CommunityGallery";
 import { MobileHomeHeader } from "../MobileHeader";
@@ -22,10 +19,9 @@ import StudioConcept from "../StudioConcept";
 
 export const HomeV2 = () => {
   const appControls = useAppControls() as any;
-    const { t, handleSelectApp, settings, language, modelVersion, handleModelVersionChange, guestCredits, userCredits, isLoggedIn } = appControls;
-const currentCredits = isLoggedIn ? userCredits : guestCredits;
-  const isMobile = useIsMobile();
-    const toolGridCount = isMobile ? 9 : 15;
+    const { t, handleSelectApp, settings, guestCredits, userCredits, isLoggedIn } = appControls;
+    const currentCredits = isLoggedIn ? userCredits : guestCredits;
+    const isMobile = useIsMobile();
   
   return (
     <main className="min-h-screen bg-black">

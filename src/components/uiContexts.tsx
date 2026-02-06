@@ -782,34 +782,32 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         if (pathname?.startsWith('/video-generator')) return; // Skip Video Generator page
 
 
-        let targetView = 'overview';
         const path = pathname;
 
         // Parse URL
+        let targetView: string | null = null;
         if (path === '/') {
             targetView = 'overview';
         } else if (path === '/tool') {
-            // /tool alone → redirect to generators
             targetView = 'generators';
         } else if (path.startsWith('/tool/')) {
-            // Tool routes: /tool/free-generation
             targetView = path.slice(6); // Remove '/tool/'
         } else if (path.startsWith('/studio/')) {
-            // Studio detail routes
             targetView = 'studio';
         } else {
-            // System routes: /gallery, /history, etc.
+            // System routes: /gallery, /profile, etc.
             targetView = path.slice(1); // Remove leading '/'
         }
+
+        if (!targetView) return;
 
         // CRITICAL FIX: Skip if already on this view (prevent state reset on re-render)
         if (currentView.viewId === targetView) {
             return;
         }
 
-        // System views
-        // System views
-        const systemViews = ['overview', 'home', 'generators','guide', 'gallery', 'community-gallery','contact', 'prompt-library', 'storyboarding', 'profile', 'settings', 'studio', 'pricing', 'about', 'blog', 'careers', 'help', 'api-docs', 'status', 'terms', 'privacy', 'refund'];
+        // System views handled by MainApp
+        const systemViews = ['overview', 'home', 'generators', 'gallery', 'prompt-library', 'profile', 'settings', 'pricing', 'storyboarding', 'community-gallery', 'studio'];
         if (systemViews.includes(targetView)) {
             navigateTo(targetView);
             return;
@@ -817,12 +815,15 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
         // Regular apps (tools)
         const validAppIds = settings.apps.map((app: AppConfig) => app.id);
-
         if (validAppIds.includes(targetView)) {
             navigateTo(targetView);
-        } else {
+            return;
+        }
+
+        // For all other paths (about, blog, contact, etc.), let Next.js handle them
+        // Just reset currentView to avoid confusion, but don't redirect
+        if (currentView.viewId !== 'overview') {
             navigateTo('overview');
-            router.replace('/');
         }
     }, [pathname, settings, currentView.viewId]); // Added currentView.viewId to deps
 

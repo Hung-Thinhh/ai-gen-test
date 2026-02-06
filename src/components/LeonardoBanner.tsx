@@ -1,49 +1,12 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
-import { motion, useScroll, useTransform, useMotionValue } from 'framer-motion';
+import { motion } from 'framer-motion';
 import Image from 'next/image'
+
 export const LeonardoBanner = () => {
     const router = useRouter();
-    const scrollY = useMotionValue(0);
-
-    useEffect(() => {
-        const container = document.getElementById('main-content-scroll');
-        if (!container) return;
-
-        let rafId: number;
-        const updateScroll = () => {
-            rafId = requestAnimationFrame(() => {
-                scrollY.set(container.scrollTop);
-            });
-        };
-
-        // Set initial value
-        updateScroll();
-
-        container.addEventListener('scroll', updateScroll, { passive: true });
-        return () => {
-            container.removeEventListener('scroll', updateScroll);
-            cancelAnimationFrame(rafId);
-        };
-    }, [scrollY]);
-
-    // Parallax transforms for floating images
-    const y1 = useTransform(scrollY, [0, 500], [0, -100]);
-    const x1 = useTransform(scrollY, [0, 500], [0, -100]); // Top-Left: Up & Left
-
-    const y2 = useTransform(scrollY, [0, 500], [0, 100]);
-    const x2 = useTransform(scrollY, [0, 500], [0, -100]); // Bottom-Left: Down & Left
-
-    const y3 = useTransform(scrollY, [0, 500], [0, -80]);
-    const x3 = useTransform(scrollY, [0, 500], [0, 80]);   // Top-Right: Up & Right
-
-    const y4 = useTransform(scrollY, [0, 500], [0, 120]);
-    const x4 = useTransform(scrollY, [0, 500], [0, 100]);  // Bottom-Right: Down & Right
-
-    const rotate1 = useTransform(scrollY, [0, 500], [0, -10]);
-    const rotate2 = useTransform(scrollY, [0, 500], [0, 10]);
 
     return (
         <section className="relative min-h-screen flex items-center flex-col justify-center overflow-hidden bg-black">
@@ -81,78 +44,62 @@ export const LeonardoBanner = () => {
 
 
 
-            {/* Floating Images - Parallax Effect + Idle Float */}
+            {/* Floating Images - CSS Animation Optimized */}
             {/* Top Left */}
-            <motion.div
-                style={{ y: y1, x: x1, rotate: -16 }}
-                className="absolute origin-bottom top-60 md:top-30 left-10 md:left-[20%] z-10"
+            <div
+                className="absolute origin-bottom top-60 md:top-30 left-10 md:left-[20%] z-10 float-animation"
+                style={{ transform: 'rotate(-16deg)', animationDelay: '0s', animationDuration: '4s' }}
             >
-                <motion.div
-                    animate={{ y: [-10, 10, -10] }}
-                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                    className="w-32 h-40 md:w-48 md:h-60 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20"
-                >
+                <div className="w-32 h-40 md:w-48 md:h-60 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20">
                     <Image
                         src="https://pub-15159732d3b14718981f4ec71d2578eb.r2.dev/1769744496071-eiolbl.png"
                         alt="AI Generated Portrait"
                         className="w-full h-full object-cover rounded-xl"
                     />
-                </motion.div>
-            </motion.div>
+                </div>
+            </div>
 
             {/* Bottom Left */}
-            <motion.div
-                style={{ y: y2, x: x2, rotate: 8 }}
-                className="absolute  bottom-60 md:bottom-70 left-10 md:left-[20%] z-99"
+            <div
+                className="absolute bottom-60 md:bottom-70 left-10 md:left-[20%] z-[99] float-animation"
+                style={{ transform: 'rotate(8deg)', animationDelay: '0.5s', animationDuration: '5s' }}
             >
-                <motion.div
-                    animate={{ y: [-12, 12, -12] }}
-                    transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-                    className="w-20 h-24 md:w-52 md:h-64 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20"
-                >
+                <div className="w-20 h-24 md:w-52 md:h-64 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20">
                     <Image
                         src="https://res.cloudinary.com/dmxmzannb/image/upload/v1768560690/fcgaoihbxxoe4hbofdso.png"
                         alt="AI Generated Art"
                         className="w-full h-full object-cover rounded-xl"
                     />
-                </motion.div>
-            </motion.div>
+                </div>
+            </div>
 
             {/* Top Right */}
-            <motion.div
-                style={{ y: y3, x: x3, rotate: 12 }}
-                className="absolute origin-center top-70 md:top-30 right-10 md:right-[20%] z-10"
+            <div
+                className="absolute origin-center top-70 md:top-30 right-10 md:right-[20%] z-10 float-animation"
+                style={{ transform: 'rotate(12deg)', animationDelay: '1s', animationDuration: '4.5s' }}
             >
-                <motion.div
-                    animate={{ y: [-8, 8, -8] }}
-                    transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                    className="w-20 h-38 md:w-56 md:h-72 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20"
-                >
+                <div className="w-20 h-38 md:w-56 md:h-72 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20">
                     <Image
                         src="https://res.cloudinary.com/dmxmzannb/image/upload/v1768562068/v0ybv26fss1eglne6zfu.png"
                         alt="AI Portrait"
                         className="w-full h-full object-cover"
                     />
-                </motion.div>
-            </motion.div>
+                </div>
+            </div>
 
             {/* Bottom Right */}
-            <motion.div
-                style={{ y: y4, x: x4, rotate: -8 }}
-                className="absolute origin-center bottom-50 md:bottom-85 right-5 md:right-[20%] z-99"
+            <div
+                className="absolute origin-center bottom-50 md:bottom-85 right-5 md:right-[20%] z-[99] float-animation"
+                style={{ transform: 'rotate(-8deg)', animationDelay: '1.5s', animationDuration: '5.5s' }}
             >
-                <motion.div
-                    animate={{ y: [-15, 15, -15] }}
-                    transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
-                    className="w-32 h-40 md:w-44 md:h-56 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20"
-                >
+                <div className="w-32 h-40 md:w-44 md:h-56 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20">
                     <Image
                         src="https://res.cloudinary.com/dmxmzannb/image/upload/f_auto,q_auto/v1768206045/krxq16y49k91zevbw6os.webp"
                         alt="AI Generated"
                         className="w-full h-full object-cover"
                     />
-                </motion.div>
-            </motion.div>
+                </div>
+            </div>
 
             {/* Center Content - Fixed */}
             <div className="relative z-20 w-full px-6 pb-40 text-center top-[-50px] md:top-10">

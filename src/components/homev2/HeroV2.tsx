@@ -1,17 +1,22 @@
 "use client";
 
 import { useState, useEffect, useRef, ChangeEvent } from "react";
-import { motion, useScroll, useTransform, useMotionValue, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useRouter } from "next/navigation";
-import { PencilIcon, ZapIcon, StarIcon, PlusIcon, ImagePlusIcon, XIcon } from "./icons";
-import { generateFreeImage } from '@/services/gemini/freeGenerationService';
+import { ZapIcon, PlusIcon, ImagePlusIcon, XIcon } from "./icons";
 
-// Particle Network Component
+// Particle Network Component - Optimized
 const ParticleNetwork = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mouseRef = useRef({ x: 0, y: 0 });
+  const frameSkipRef = useRef(0);
 
   useEffect(() => {
+    // Skip on mobile or if user prefers reduced motion
+    const isMobile = window.matchMedia('(pointer: coarse)').matches;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (isMobile || prefersReducedMotion) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -34,14 +39,15 @@ const ParticleNetwork = () => {
 
     const createParticles = () => {
       particles = [];
-      const count = Math.min(50, Math.floor((canvas.width * canvas.height) / 20000));
+      // Reduced from 50 to 25 particles
+      const count = Math.min(25, Math.floor((canvas.width * canvas.height) / 40000));
       for (let i = 0; i < count; i++) {
         particles.push({
           x: Math.random() * canvas.width,
           y: Math.random() * canvas.height,
-          vx: (Math.random() - 0.5) * 0.5,
-          vy: (Math.random() - 0.5) * 0.5,
-          radius: Math.random() * 2 + 1,
+          vx: (Math.random() - 0.5) * 0.3,
+          vy: (Math.random() - 0.5) * 0.3,
+          radius: Math.random() * 1.5 + 0.5,
         });
       }
     };
@@ -51,12 +57,20 @@ const ParticleNetwork = () => {
     };
 
     const animate = () => {
+      // Frame skipping: render every 2nd frame (30fps instead of 60fps)
+      frameSkipRef.current++;
+      if (frameSkipRef.current % 2 !== 0) {
+        animationId = requestAnimationFrame(animate);
+        return;
+      }
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       const mx = mouseRef.current.x;
       const my = mouseRef.current.y;
 
-      // Draw particles
+      // Batch draw particles
+      ctx.fillStyle = "rgba(255, 107, 0, 0.5)";
       for (let i = 0; i < particles.length; i++) {
         const particle = particles[i];
         particle.x += particle.vx;
@@ -68,32 +82,33 @@ const ParticleNetwork = () => {
         const dx = mx - particle.x;
         const dy = my - particle.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 100) {
-          particle.x -= dx * 0.01;
-          particle.y -= dy * 0.01;
+        if (dist < 80) {
+          particle.x -= dx * 0.005;
+          particle.y -= dy * 0.005;
         }
 
         ctx.beginPath();
         ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(255, 107, 0, 0.5)";
         ctx.fill();
       }
 
-      // Draw connections with for loop (no slice)
+      // Reduced connection distance and batch stroke operations
+      ctx.lineWidth = 1;
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
           const p1 = particles[i];
           const p2 = particles[j];
           const dx = p1.x - p2.x;
           const dy = p1.y - p2.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
+          const distSq = dx * dx + dy * dy;
 
-          if (dist < 150) {
+          // Use squared distance to avoid sqrt, reduced from 150 to 100
+          if (distSq < 10000) {
+            const dist = Math.sqrt(distSq);
             ctx.beginPath();
             ctx.moveTo(p1.x, p1.y);
             ctx.lineTo(p2.x, p2.y);
-            ctx.strokeStyle = `rgba(255, 107, 0, ${0.2 * (1 - dist / 150)})`;
-            ctx.lineWidth = 1;
+            ctx.strokeStyle = `rgba(255, 107, 0, ${0.15 * (1 - dist / 100)})`;
             ctx.stroke();
           }
         }
@@ -106,15 +121,17 @@ const ParticleNetwork = () => {
     createParticles();
     animate();
 
-    window.addEventListener("resize", () => {
+    const handleResize = () => {
       resize();
       createParticles();
-    });
-    window.addEventListener("mousemove", handleMouseMove);
+    };
+
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("mousemove", handleMouseMove, { passive: true });
 
     return () => {
       cancelAnimationFrame(animationId);
-      window.removeEventListener("resize", resize);
+      window.removeEventListener("resize", handleResize);
       window.removeEventListener("mousemove", handleMouseMove);
     };
   }, []);
@@ -122,8 +139,8 @@ const ParticleNetwork = () => {
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 pointer-events-none"
-      style={{ opacity: 0.6 }}
+      className="absolute inset-0 pointer-events-none hidden md:block"
+      style={{ opacity: 0.5 }}
     />
   );
 };
@@ -180,7 +197,7 @@ const AnimatedCounter = ({ end, suffix = "" }: { end: number; suffix?: string })
   );
 };
 
-// Floating Image
+// Floating Image - Optimized with CSS Animation
 const FloatingImage = ({
   src,
   className,
@@ -191,32 +208,20 @@ const FloatingImage = ({
   delay?: number;
 }) => {
   return (
-    <motion.div
-      className={`absolute rounded-2xl overflow-hidden shadow-2xl border-2 border-white/10 ${className}`}
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={{
-        opacity: 1,
-        scale: 1,
-        y: [0, -15, 0],
+    <div
+      className={`absolute rounded-2xl overflow-hidden shadow-2xl border-2 border-white/10 float-animation ${className}`}
+      style={{
+        willChange: "transform",
+        animationDelay: `${delay}s`,
+        animationDuration: `${4 + delay}s`
       }}
-      transition={{
-        opacity: { duration: 0.5, delay },
-        scale: { duration: 0.5, delay },
-        y: {
-          duration: 4 + delay,
-          repeat: Infinity,
-          ease: "easeInOut",
-        },
-      }}
-      whileHover={{ scale: 1.05, rotate: 2 }}
-      style={{ willChange: "transform, opacity" }}
     >
-      <img src={src} alt="AI Generated" className="w-full h-full object-cover" loading="lazy" />
-    </motion.div>
+      <img src={src} alt="AI Generated" className="w-full h-full object-cover" loading="lazy" decoding="async" />
+    </div>
   );
 };
 
-// Image Marquee with Framer Motion
+// Image Marquee with Framer Motion - Seamless Loop
 const ImageMarquee = () => {
   const images = [
     "https://res.cloudinary.com/dmxmzannb/image/upload/v1768560690/fcgaoihbxxoe4hbofdso.png",
@@ -226,32 +231,43 @@ const ImageMarquee = () => {
     "https://pub-15159732d3b14718981f4ec71d2578eb.r2.dev/1768622719139-5ilv1h.png",
   ];
 
+  // Triple duplicate for seamless infinite loop
+  const allImages = [...images, ...images, ...images];
+  
+  // Calculate offset: each item is ~140px (112px + 16px gap on mobile, ~208px + gap on desktop)
+  // We animate through ONE set of original images, then loop resets seamlessly
+  const offset = images.length * 140;
+
   return (
-    <div className="relative w-full overflow-hidden py-8">
+    <div className="relative w-full overflow-hidden py-0 md:py-4">
       <motion.div
-        className="flex gap-4 w-max"
-        animate={{ x: ["0%", "-50%"] }}
+        className="flex gap-4"
+        initial={{ x: 0 }}
+        animate={{ x: -offset }}
         transition={{
-          duration: 50,
-          ease: "linear",
+          duration: 25,
           repeat: Infinity,
+          ease: "linear",
+          repeatDelay: 0,
         }}
-        style={{ willChange: "transform" }}
       >
-        {[...images, ...images, ...images, ...images, ...images, ...images, ...images, ...images].map((src, i) => (
-          <motion.div
+        {allImages.map((src, i) => (
+          <div
             key={i}
-            className="flex-shrink-0 w-48 h-64 rounded-xl overflow-hidden md:border border-0 border-white/10"
-            whileHover={{ scale: 1.05, y: -5 }}
-            transition={{ duration:30 }}
-            style={{ willChange: "transform" }}
+            className="flex-shrink-0 !p-0 w-28 h-40 md:w-48 md:h-62 rounded-xl overflow-hidden md:border border-0 border-white/10 hover:scale-105 hover:-translate-y-1 transition-transform duration-300"
           >
-            <img src={src} alt="" className="w-full h-full object-cover" loading="lazy" />
-          </motion.div>
+            <img
+              src={src}
+              alt=""
+              className="w-full h-full object-cover"
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
         ))}
       </motion.div>
-      <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-black to-transparent pointer-events-none z-10" />
-      <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-black to-transparent pointer-events-none z-10" />
+      <div className="absolute inset-y-0 top-0 md:top-4 left-0 w-20 md:w-32 bg-gradient-to-r from-black to-transparent pointer-events-none z-10" />
+      <div className="absolute inset-y-0 top-0 md:top-4 right-0 w-20 md:w-32 bg-gradient-to-l from-black to-transparent pointer-events-none z-10" />
     </div>
   );
 };
@@ -279,131 +295,26 @@ const handleFileUpload = (
   }
 };
 
-// Result Dialog Component
-interface ResultDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  imageUrl: string | null;
-  isLoading: boolean;
-  error: string | null;
-}
-
-const ResultDialog: React.FC<ResultDialogProps> = ({ isOpen, onClose, imageUrl, isLoading, error }) => {
-  if (!isOpen) return null;
-
-  return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-        onClick={onClose}
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="relative w-full max-w-2xl bg-[#1a1a2e] border border-orange-500/30 rounded-2xl p-6 overflow-hidden"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Close button */}
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 p-2 text-neutral-400 hover:text-white hover:bg-white/10 rounded-full transition-all"
-          >
-            <XIcon className="w-5 h-5" />
-          </button>
-
-          <h3 className="text-xl font-bold text-white mb-4">Kết quả tạo ảnh</h3>
-
-          {isLoading && (
-            <div className="flex flex-col items-center justify-center py-12">
-              <div className="w-12 h-12 border-4 border-orange-500/30 border-t-orange-500 rounded-full animate-spin mb-4" />
-              <p className="text-neutral-300">Đang tạo ảnh...</p>
-            </div>
-          )}
-
-          {error && (
-            <div className="text-center py-8">
-              <p className="text-red-400 mb-2">Có lỗi xảy ra</p>
-              <p className="text-neutral-400 text-sm">{error}</p>
-            </div>
-          )}
-
-          {imageUrl && !isLoading && (
-            <div className="space-y-4">
-              <div className="relative rounded-xl overflow-hidden border border-white/10">
-                <img src={imageUrl} alt="Generated" className="w-full h-auto max-h-[60vh] object-contain" />
-              </div>
-              <div className="flex gap-3 justify-center">
-                <a
-                  href={imageUrl}
-                  download="generated-image.png"
-                  className="px-6 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-orange-500/30 transition-all"
-                >
-                  Tải xuống
-                </a>
-                <button
-                  onClick={onClose}
-                  className="px-6 py-2 bg-white/10 text-white font-semibold rounded-xl hover:bg-white/20 transition-all"
-                >
-                  Đóng
-                </button>
-              </div>
-            </div>
-          )}
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
-  );
-};
-
 export const HeroV2 = () => {
   const router = useRouter();
   const [demoInput, setDemoInput] = useState("");
   const [isFocused, setIsFocused] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [showDialog, setShowDialog] = useState(false);
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
-  const [generationError, setGenerationError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleGenerate = async () => {
+  const handleGenerate = () => {
     if (!demoInput.trim()) {
-      // Focus input if no prompt
       return;
     }
 
-    // Generate directly in dialog - no redirect
-    setIsGenerating(true);
-    setShowDialog(true);
-    setGeneratedImage(null);
-    setGenerationError(null);
-
-    try {
-      const results = await generateFreeImage(
-        demoInput,
-        1,
-        '1:1',
-        uploadedImage || undefined,
-        undefined,
-        undefined,
-        undefined,
-        true,
-        'hero-generation'
-      );
-      if (results.length > 0) {
-        setGeneratedImage(results[0]);
-      } else {
-        setGenerationError('Không thể tạo ảnh. Vui lòng thử lại.');
-      }
-    } catch (error: any) {
-      setGenerationError(error.message || 'Có lỗi xảy ra khi tạo ảnh.');
-    } finally {
-      setIsGenerating(false);
+    // Save prompt and uploaded image to sessionStorage for FreeGeneration page
+    sessionStorage.setItem('heroPrompt', demoInput);
+    if (uploadedImage) {
+      sessionStorage.setItem('heroUploadedImage', uploadedImage);
     }
+
+    // Navigate to free generation page
+    router.push('/tool/free-generation');
   };
 
   const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
@@ -419,53 +330,13 @@ export const HeroV2 = () => {
     }
   };
 
-  const handleCloseDialog = () => {
-    setShowDialog(false);
-    setGeneratedImage(null);
-    setGenerationError(null);
-  };
-
   const quickPrompts = [
     "Chân dung doanh nhân",
     "Poster trà sữa",
     "Avatar chibi",
   ];
-  const scrollY = useMotionValue(0);
-useEffect(() => {
-        const container = document.getElementById('main-content-scroll');
-        if (!container) return;
-
-        let rafId: number;
-        const updateScroll = () => {
-            rafId = requestAnimationFrame(() => {
-                scrollY.set(container.scrollTop);
-            });
-        };
-
-        // Set initial value
-        updateScroll();
-
-        container.addEventListener('scroll', updateScroll, { passive: true });
-        return () => {
-            container.removeEventListener('scroll', updateScroll);
-            cancelAnimationFrame(rafId);
-        };
-    }, [scrollY]);
-
-    // Parallax transforms for floating images
-    const y1 = useTransform(scrollY, [0, 500], [0, -100]);
-    const x1 = useTransform(scrollY, [0, 500], [0, -100]); // Top-Left: Up & Left
-
-    const y2 = useTransform(scrollY, [0, 500], [0, 100]);
-    const x2 = useTransform(scrollY, [0, 500], [0, -100]); // Bottom-Left: Down & Left
-
-    const y3 = useTransform(scrollY, [0, 500], [0, -80]);
-    const x3 = useTransform(scrollY, [0, 500], [0, 80]);   // Top-Right: Up & Right
-
-    const y4 = useTransform(scrollY, [0, 500], [0, 120]);
-    const x4 = useTransform(scrollY, [0, 500], [0, 100]);  // Bottom-Right: Down & Right
   return (
-    <section className="relative min-h-screen bg-black overflow-hidden">
+    <section className="relative min-h-200 md:min-h-screen bg-black overflow-hidden">
       {/* Background Effects */}
       <div className="absolute inset-0 z-0">
         <img
@@ -475,7 +346,7 @@ useEffect(() => {
             e.currentTarget.src = "/img/img_base.webp";
           }}
           alt="Banner Background"
-          className="w-full h-full object-maintain"
+          className="w-full h-full object-cover"
         />
       </div>
       <div className="absolute inset-0">
@@ -493,81 +364,73 @@ useEffect(() => {
           }}
         />
       </div>
-{/* Floating Images - Parallax Effect + Idle Float */}
+{/* Floating Images - CSS Animation Optimized */}
             {/* Top Left */}
-            <motion.div
-                style={{ y: y1, x: x1, rotate: -16 }}
-                className="absolute origin-bottom top-60 md:top-30 left-10 md:left-[15%] z-10"
+            <div
+                className="absolute origin-bottom top-10 md:top-30 left-10 md:left-[15%] z-10 float-animation"
+                style={{ transform: 'rotate(-16deg)', animationDelay: '0s', animationDuration: '4s' }}
             >
-                <motion.div
-                    animate={{ y: [-10, 10, -10] }}
-                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                    className="w-32 h-40 md:w-48 md:h-60 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20"
-                >
+                <div className="w-32 h-40 md:w-48 md:h-60 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20 -rotate-12">
                     <img
                         src="https://pub-15159732d3b14718981f4ec71d2578eb.r2.dev/1769744496071-eiolbl.png"
                         alt="AI Generated Portrait"
                         className="w-full h-full object-cover rounded-xl"
+                        loading="lazy"
+                        decoding="async"
                     />
-                </motion.div>
-            </motion.div>
+                </div>
+            </div>
 
             {/* Bottom Left */}
-            <motion.div
-                style={{ y: y2, x: x2, rotate: 8 }}
-                className="absolute  bottom-60 md:bottom-70 left-10 md:left-[10%] z-99"
+            <div
+                className="absolute bottom-140 md:bottom-70 left-10 md:left-[10%] z-[99] float-animation rotate-8"
+                style={{ transform: 'rotate(8deg)', animationDelay: '0.5s', animationDuration: '5s' }}
             >
-                <motion.div
-                    animate={{ y: [-12, 12, -12] }}
-                    transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-                    className="w-20 h-24 md:w-52 md:h-64 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20"
-                >
+                <div className="w-20 h-24 md:w-52 md:h-64 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20 -rotate-2 hidden md:block">
                     <img
                         src="https://res.cloudinary.com/dmxmzannb/image/upload/v1768560690/fcgaoihbxxoe4hbofdso.png"
                         alt="AI Generated Art"
                         className="w-full h-full object-cover rounded-xl"
+                        loading="lazy"
+                        decoding="async"
                     />
-                </motion.div>
-            </motion.div>
+                </div>
+            </div>
 
             {/* Top Right */}
-            <motion.div
-                style={{ y: y3, x: x3, rotate: 12 }}
-                className="absolute origin-center top-70 md:top-30 right-10 md:right-[15%] z-10"
+            <div
+                className="absolute origin-center top-8 md:top-30 right-10 md:right-[15%] z-10 float-animation rotate-12"
+                style={{ transform: 'rotate(12deg)', animationDelay: '1s', animationDuration: '4.5s' }}
             >
-                <motion.div
-                    animate={{ y: [-8, 8, -8] }}
-                    transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                    className="w-20 h-38 md:w-56 md:h-72 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20"
-                >
+                <div className="w-20 h-38 md:w-56 md:h-72 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20">
                     <img
                         src="https://res.cloudinary.com/dmxmzannb/image/upload/v1768562068/v0ybv26fss1eglne6zfu.png"
                         alt="AI Portrait"
                         className="w-full h-full object-cover"
+                        loading="lazy"
+                        decoding="async"
                     />
-                </motion.div>
-            </motion.div>
+                </div>
+            </div>
 
             {/* Bottom Right */}
-            <motion.div
-                style={{ y: y4, x: x4, rotate: -8 }}
-                className="absolute origin-center bottom-50 md:bottom-85 right-5 md:right-[10%] z-99"
+            <div
+                className="absolute origin-center bottom-120 md:bottom-85 right-5 md:right-[10%] z-[99] float-animation -rotate-8 hidden md:block"
+                style={{ transform: 'rotate(-8deg)', animationDelay: '1.5s', animationDuration: '5.5s' }}
             >
-                <motion.div
-                    animate={{ y: [-15, 15, -15] }}
-                    transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
-                    className="w-32 h-40 md:w-44 md:h-56 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20"
-                >
+                <div className="w-32 h-40 md:w-44 md:h-56 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20">
                     <img
                         src="https://res.cloudinary.com/dmxmzannb/image/upload/f_auto,q_auto/v1768206045/krxq16y49k91zevbw6os.webp"
                         alt="AI Generated"
                         className="w-full h-full object-cover"
+                        loading="lazy"
+                        decoding="async"
                     />
-                </motion.div>
-            </motion.div>
+                </div>
+            </div>
       
 
-      <div className="relative z-999 flex flex-col items-center justify-center min-h-screen px-4 pt-20 pb-10">
+      <div className="relative z-999 flex flex-col items-center justify-center min-h-200 md:min-h-screen pt-20 pb-0 md:pb-10">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -590,10 +453,10 @@ useEffect(() => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
-          className="w-full max-w-2xl mb-6"
+          className="w-full max-w-2xl mb-6 px-2"
         >
           <div
-            className={`relative flex items-center gap-2 p-2 rounded-2xl bg-white/5 backdrop-blur-xl border transition-all duration-300 ${isFocused
+            className={`relative flex items-center gap-2 p-2 rounded-2xl bg-white/10 md:bg-white/5 backdrop-blur-xl border transition-all duration-300 ${isFocused
                 ? "border-orange-500 shadow-[0_0_30px_rgba(255,107,0,0.3)]"
                 : "border-white/20"
               }`}
@@ -650,15 +513,14 @@ useEffect(() => {
             />
             <button
               onClick={handleGenerate}
-              disabled={isGenerating}
-              className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-orange-500/30 transition-all duration-300 hover:scale-105 flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-orange-500/30 transition-all duration-300 hover:scale-105 flex items-center gap-2 cursor-pointer"
             >
               <ZapIcon className="w-5 h-5" />
-              <span className="hidden sm:inline">{isGenerating ? "ĐANG TẠO..." : "TẠO NGAY"}</span>
+              <span className="hidden sm:inline">TẠO NGAY</span>
             </button>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-2 mt-3 text-sm">
+          <div className="hidden md:flex flex-wrap items-center justify-center gap-2 mt-3 text-sm">
             <span className="text-neutral-200">Thử:</span>
             {quickPrompts.map((prompt) => (
               <button
@@ -688,7 +550,7 @@ useEffect(() => {
               <div className="text-2xl md:text-3xl font-bold text-white">
                 <AnimatedCounter end={stat.value} suffix={stat.suffix} />
               </div>
-              <div className="text-sm text-neutral-400">{stat.label}</div>
+              <div className="text-sm text-neutral-3s00">{stat.label}</div>
             </div>
           ))}
         </motion.div>
@@ -696,21 +558,12 @@ useEffect(() => {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.7 }}
+          transition={{ duration: 0.2, delay: 0.7 }}
           className="w-[100vw] md:w-full"
         >
           <ImageMarquee />
         </motion.div>
       </div>
-
-      {/* Result Dialog */}
-      <ResultDialog
-        isOpen={showDialog}
-        onClose={handleCloseDialog}
-        imageUrl={generatedImage}
-        isLoading={isGenerating}
-        error={generationError}
-      />
     </section>
   );
 };
