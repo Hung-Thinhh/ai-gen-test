@@ -104,21 +104,47 @@ const MilkTeaPosterGenerator: React.FC<MilkTeaPosterGeneratorProps> = ({ studio 
         if (typeof studio?.domain_prompts === 'string') {
             return studio.domain_prompts;
         } else if (studio?.domain_prompts && typeof studio.domain_prompts === 'object') {
-            // If it's an object, get the first value (or 'Trà sữa & Đồ uống' key if exists)
+            // If it's an object with 'context' key, use that
+            if (studio.domain_prompts.context) {
+                return studio.domain_prompts.context;
+            }
+            // Otherwise get the first string value
             const keys = Object.keys(studio.domain_prompts);
-            return studio.domain_prompts[keys[0]] || undefined;
+            const firstValue = studio.domain_prompts[keys[0]];
+            return typeof firstValue === 'string' ? firstValue : undefined;
         }
         return undefined;
     }, [studio?.domain_prompts]);
 
+    // Extract custom prompts from DB (backgrounds, lighting, angles, posterTypes)
+    const domainPrompts = useMemo(() => {
+        if (!studio?.domain_prompts || typeof studio.domain_prompts !== 'object') {
+            return undefined;
+        }
+        return {
+            backgrounds: studio.domain_prompts.backgrounds,
+            lighting: studio.domain_prompts.lighting,
+            angles: studio.domain_prompts.angles,
+            posterTypes: studio.domain_prompts.posterTypes,
+        };
+    }, [studio?.domain_prompts]);
+
+    // Extract theme from DB ui_config
+    const theme = useMemo(() => {
+        if (studio?.ui_config?.theme) {
+            return studio.ui_config.theme;
+        }
+        return undefined;
+    }, [studio?.ui_config]);
+
     return (
         <PosterCreatorInternal
             mainTitle={studio?.name || 'Milk Tea Poster Creator'}
-            subtitle="Tạo poster trà sữa chuyên nghiệp"
+            subtitle={studio?.description_vi || studio?.description || 'Tạo poster sản phẩm chuyên nghiệp'}
             useSmartTitleWrapping={true}
             smartTitleWrapWords={4}
             uploaderCaption="Tải ảnh sản phẩm"
-            uploaderDescription="Chọn ảnh trà sữa của bạn"
+            uploaderDescription="Chọn ảnh sản phẩm của bạn"
             addImagesToGallery={addImagesToGallery}
             appState={appState}
             onStateChange={setAppState}
@@ -127,6 +153,8 @@ const MilkTeaPosterGenerator: React.FC<MilkTeaPosterGeneratorProps> = ({ studio 
             logGeneration={logGeneration}
             stylePresets={stylePresets}
             domainContext={domainContext}
+            domainPrompts={domainPrompts}
+            theme={theme}
         />
     );
 };

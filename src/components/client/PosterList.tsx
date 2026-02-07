@@ -45,16 +45,16 @@ export default function PosterList() {
     }, []);
 
     const handleToolClick = (tool: PosterTool) => {
-        router.push(`/poster/${tool.slug}`);
+        router.push(`/product/${tool.slug}`);
     };
 
     return (
         <Container maxWidth="lg" sx={{ py: 4, minHeight: '80vh' }}>
             <Typography variant="h4" fontWeight="bold" align="center" gutterBottom sx={{ mb: 1, color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '2px' }}>
-                Poster Creator Tools
+                THIẾT KẾ SẢN PHẨM
             </Typography>
             <Typography variant="body1" align="center" sx={{ mb: 4, color: 'var(--text-secondary)' }}>
-                Chọn công cụ tạo poster phù hợp với bạn
+                Chọn công cụ tạo sannr phẩm phù hợp với bạn
             </Typography>
 
             {loading ? (

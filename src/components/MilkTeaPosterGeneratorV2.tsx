@@ -43,7 +43,8 @@ import { processApiError, GeminiErrorCodes, GeminiError } from '@/services/gemin
 import { embedJsonInPng } from './uiFileUtilities';
 
 // --- PROMPT COMPONENTS ---
-const BACKGROUND_PROMPTS: Record<string, string> = {
+// Default prompts - can be overridden by studio config
+const DEFAULT_BACKGROUND_PROMPTS: Record<string, string> = {
     'Studio chuyên nghiệp': 'professional photography studio setup, seamless backdrop with soft gradient matching product colors',
     'Thiên nhiên': 'product photographed in natural setting, real wooden surface or stone platform',
     'Đường phố': 'urban lifestyle photography, product on textured concrete or brick surface',
@@ -55,7 +56,7 @@ const BACKGROUND_PROMPTS: Record<string, string> = {
     'Cổ điển': 'vintage product photography, antique wooden furniture surface',
 };
 
-const LIGHTING_PROMPTS: Record<string, string> = {
+const DEFAULT_LIGHTING_PROMPTS: Record<string, string> = {
     'Studio chuyên nghiệp': 'professional 3-point studio lighting setup',
     'Ánh sáng tự nhiên': 'soft natural window light from side',
     'Golden hour': 'warm golden hour sunlight',
@@ -65,7 +66,7 @@ const LIGHTING_PROMPTS: Record<string, string> = {
     'Rim light': 'soft volumetric rim/back lighting',
 };
 
-const ANGLE_PROMPTS: Record<string, string> = {
+const DEFAULT_ANGLE_PROMPTS: Record<string, string> = {
     'Góc chụp studio chuẩn': 'professional eye-level studio shot',
     'Góc nhìn trực diện': 'straight-on frontal view',
     'Góc 45 độ': 'three-quarter view at 45-degree angle',
@@ -75,7 +76,7 @@ const ANGLE_PROMPTS: Record<string, string> = {
     'Góc cận cảnh': 'close-up macro angle',
 };
 
-const POSTER_TYPE_PROMPTS: Record<string, string> = {
+const DEFAULT_POSTER_TYPE_PROMPTS: Record<string, string> = {
     'Poster quảng cáo sản phẩm': 'professional product advertisement poster',
     'Banner social media': 'social media banner, modern digital marketing',
     'Mockup sản phẩm 3D': '3D product mockup, realistic rendering',
@@ -171,6 +172,17 @@ interface PosterGeneratorV2Props {
     onGoBack?: () => void;
     stylePresets?: Record<string, any>;
     domainContext?: string;
+    domainPrompts?: {
+        backgrounds?: Record<string, string>;
+        lighting?: Record<string, string>;
+        angles?: Record<string, string>;
+        posterTypes?: Record<string, string>;
+    };
+    theme?: {
+        primaryColor?: string;
+        secondaryColor?: string;
+        gradient?: string;
+    };
 }
 
 export const MilkTeaPosterGeneratorV2: React.FC<PosterGeneratorV2Props> = ({
@@ -183,6 +195,8 @@ export const MilkTeaPosterGeneratorV2: React.FC<PosterGeneratorV2Props> = ({
     subtitle = 'Công cụ thiết kế AI chuyên nghiệp',
     stylePresets,
     domainContext,
+    domainPrompts,
+    theme,
     // Other props are ignored for now in V2
 }) => {
     const { t, checkCredits, modelVersion, handleModelVersionChange } = useAppControls();
@@ -198,6 +212,23 @@ export const MilkTeaPosterGeneratorV2: React.FC<PosterGeneratorV2Props> = ({
     const STYLE_PRESETS = useMemo(() => {
         return stylePresets || FALLBACK_STYLE_PRESETS;
     }, [stylePresets]);
+
+    // Use domain prompts from DB if available, otherwise fallback to defaults
+    const BACKGROUND_PROMPTS = useMemo(() => {
+        return domainPrompts?.backgrounds || DEFAULT_BACKGROUND_PROMPTS;
+    }, [domainPrompts]);
+
+    const LIGHTING_PROMPTS = useMemo(() => {
+        return domainPrompts?.lighting || DEFAULT_LIGHTING_PROMPTS;
+    }, [domainPrompts]);
+
+    const ANGLE_PROMPTS = useMemo(() => {
+        return domainPrompts?.angles || DEFAULT_ANGLE_PROMPTS;
+    }, [domainPrompts]);
+
+    const POSTER_TYPE_PROMPTS = useMemo(() => {
+        return domainPrompts?.posterTypes || DEFAULT_POSTER_TYPE_PROMPTS;
+    }, [domainPrompts]);
 
     // Load style presets from DB for UI display
     const availablePresets = useMemo(() => {

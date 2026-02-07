@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { getPosterToolBySlug } from '../../../services/storageService';
-import MilkTeaPosterGenerator from '../../../components/MilkTeaPosterWrapper2';
+import { getPosterToolBySlug } from '../../../../services/storageService';
+import MilkTeaPosterGenerator from '../../../../components/MilkTeaPosterWrapper2';
 import { Box, CircularProgress, Typography } from '@mui/material';
 
 export default function PosterToolDetailPage() {

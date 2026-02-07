@@ -2,9 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { getStudioBySlug } from '../../../services/storageService';
-import StudioGenerator, { Studio } from '../../../components/client/StudioGenerator';
-import AppLayout from '../../../components/AppLayout';
+import { getStudioBySlug } from '../../../../services/storageService';
+import StudioGenerator, { Studio } from '../../../../components/client/StudioGenerator';
+import AppLayout from '../../../../components/AppLayout';
 import { Box, CircularProgress, Typography } from '@mui/material';
 
 export default function StudioDetailPage() {
