@@ -146,6 +146,83 @@ SELECT
     '{"icon": "🥢", "iconBg": "#5D4037", "description": "Không khí sum họp gia đình, mâm cơm ngày Tết", "description_vi": "Family reunion feast theme"}'::jsonb
 FROM tool_custom tc WHERE tc.slug = 'tet-poster';
 
+INSERT INTO prompt_templates (tool_custom_id, tool_type_id, category, name, name_vi, prompt_text, metadata)
+SELECT
+    tc.id,
+    tc.tool_type_id,
+    'style_preset',
+    'Premium Gift Box',
+    'Hộp Quà Cao Cấp',
+    'CREATE A VIETNAMESE TET (LUNAR NEW YEAR) {posterType} featuring {productDesc}. LUXURIOUS PREMIUM GIFT BOX presentation on vibrant red background. High-end packaging with gold foil details, elegant ribbon, surrounded by traditional Tet elements like peach blossoms, tea cups, and festive decorations. Background: {bgPrompt}. Lighting: {lightPrompt}. Shot at {anglePrompt}. Sophisticated, elegant, premium quality atmosphere. Studio product photography with perfect lighting. {notes}',
+    '{"icon": "🎁", "iconBg": "#B71C1C", "description": "Hộp quà Tết cao cấp với bao bì sang trọng", "description_vi": "Premium luxury gift box presentation"}'::jsonb
+FROM tool_custom tc WHERE tc.slug = 'tet-poster';
+
+INSERT INTO prompt_templates (tool_custom_id, tool_type_id, category, name, name_vi, prompt_text, metadata)
+SELECT
+    tc.id,
+    tc.tool_type_id,
+    'style_preset',
+    'Flat Lay Style',
+    'Phong Cách Flat Lay',
+    'CREATE A VIETNAMESE TET (LUNAR NEW YEAR) {posterType} featuring {productDesc}. OVERHEAD FLAT LAY composition on solid colored background (red, pink, or peach). Symmetrical arrangement with {productDesc} as center piece, surrounded by Tet decorations: lucky envelopes, plum blossoms branches, traditional ornaments, watermelon slices, and festive props. Background: {bgPrompt}. Lighting: {lightPrompt}. Shot from directly above. Clean, modern, Instagram-worthy aesthetic. Professional flat lay photography. {notes}',
+    '{"icon": "📐", "iconBg": "#E91E63", "description": "Bố cục phẳng từ trên xuống, phong cách hiện đại", "description_vi": "Modern overhead flat lay composition"}'::jsonb
+FROM tool_custom tc WHERE tc.slug = 'tet-poster';
+
+INSERT INTO prompt_templates (tool_custom_id, tool_type_id, category, name, name_vi, prompt_text, metadata)
+SELECT
+    tc.id,
+    tc.tool_type_id,
+    'style_preset',
+    'Minimalist Modern',
+    'Tối Giản Hiện Đại',
+    'CREATE A VIETNAMESE TET (LUNAR NEW YEAR) {posterType} featuring {productDesc}. MINIMALIST MODERN DESIGN with clean solid background in pastel pink, peach, or soft red. Simple composition with {productDesc} and minimal Tet elements: single plum blossom branch, one or two lucky envelopes, subtle gold accents. Background: {bgPrompt}. Lighting: {lightPrompt}. Shot at {anglePrompt}. Clean, contemporary, elegant simplicity. Soft shadows and gentle lighting. Professional minimalist product photography. {notes}',
+    '{"icon": "✨", "iconBg": "#F8BBD0", "description": "Thiết kế tối giản, hiện đại với màu pastel", "description_vi": "Clean minimalist modern aesthetic"}'::jsonb
+FROM tool_custom tc WHERE tc.slug = 'tet-poster';
+
+INSERT INTO prompt_templates (tool_custom_id, tool_type_id, category, name, name_vi, prompt_text, metadata)
+SELECT
+    tc.id,
+    tc.tool_type_id,
+    'style_preset',
+    'Product Photography',
+    'Chụp Sản Phẩm Chuyên Nghiệp',
+    'CREATE A VIETNAMESE TET (LUNAR NEW YEAR) {posterType} featuring {productDesc}. PROFESSIONAL PRODUCT PHOTOGRAPHY setup with {productDesc} as hero product. Vibrant red or gradient red-to-orange background. Complementary Tet props: decorative fan, traditional patterns, subtle floral elements. Background: {bgPrompt}. Lighting: {lightPrompt}. Shot at {anglePrompt}. Commercial advertising quality with perfect focus, depth of field, and studio lighting. Premium e-commerce product shot. {notes}',
+    '{"icon": "📸", "iconBg": "#FF5722", "description": "Chụp sản phẩm chuyên nghiệp phong cách quảng cáo", "description_vi": "Professional commercial product photography"}'::jsonb
+FROM tool_custom tc WHERE tc.slug = 'tet-poster';
+
+INSERT INTO prompt_templates (tool_custom_id, tool_type_id, category, name, name_vi, prompt_text, metadata)
+SELECT
+    tc.id,
+    tc.tool_type_id,
+    'style_preset',
+    'Watermelon & Lucky Symbols',
+    'Dưa Hấu & Biểu Tượng May Mắn',
+    'CREATE A VIETNAMESE TET (LUNAR NEW YEAR) {posterType} featuring {productDesc}. Playful composition with WATERMELON SLICES (symbol of luck and prosperity), lucky red envelopes with cute illustrations, traditional knot decorations, and festive elements on pastel pink or peach background. Background: {bgPrompt}. Lighting: {lightPrompt}. Shot at {anglePrompt}. Fun, cheerful, youthful Tet vibe. Bright and vibrant colors. Modern lifestyle product photography. {notes}',
+    '{"icon": "🍉", "iconBg": "#4CAF50", "description": "Phong cách vui nhộn với dưa hấu và biểu tượng may mắn", "description_vi": "Playful watermelon and lucky symbols theme"}'::jsonb
+FROM tool_custom tc WHERE tc.slug = 'tet-poster';
+
+INSERT INTO prompt_templates (tool_custom_id, tool_type_id, category, name, name_vi, prompt_text, metadata)
+SELECT
+    tc.id,
+    tc.tool_type_id,
+    'style_preset',
+    'Elegant Tea Set',
+    'Bộ Trà Sang Trọng',
+    'CREATE A VIETNAMESE TET (LUNAR NEW YEAR) {posterType} featuring {productDesc}. ELEGANT TEA CEREMONY setup with traditional Vietnamese/Chinese tea set, delicate cups, teapot on red background. Plum blossom branches, traditional patterns, and refined Tet decorations. Background: {bgPrompt}. Lighting: {lightPrompt}. Shot at {anglePrompt}. Sophisticated, cultural, refined atmosphere. Soft natural lighting. High-end lifestyle product photography. {notes}',
+    '{"icon": "🍵", "iconBg": "#8D6E63", "description": "Bối cảnh trà đạo sang trọng, văn hóa truyền thống", "description_vi": "Elegant traditional tea ceremony theme"}'::jsonb
+FROM tool_custom tc WHERE tc.slug = 'tet-poster';
+
+INSERT INTO prompt_templates (tool_custom_id, tool_type_id, category, name, name_vi, prompt_text, metadata)
+SELECT
+    tc.id,
+    tc.tool_type_id,
+    'style_preset',
+    'Traditional Snacks',
+    'Bánh Kẹo Truyền Thống',
+    'CREATE A VIETNAMESE TET (LUNAR NEW YEAR) {posterType} featuring {productDesc}. Traditional TET SNACKS AND TREATS presentation: candied fruits, traditional cookies, decorative boxes on vibrant red or warm orange background. Festive packaging with gold patterns, traditional motifs. Background: {bgPrompt}. Lighting: {lightPrompt}. Shot at {anglePrompt}. Warm, nostalgic, appetizing atmosphere. Food photography with mouth-watering appeal. {notes}',
+    '{"icon": "🥮", "iconBg": "#FF6F00", "description": "Bánh kẹo Tết truyền thống, mứt ngọt", "description_vi": "Traditional Tet snacks and treats"}'::jsonb
+FROM tool_custom tc WHERE tc.slug = 'tet-poster';
+
 -- Add sample prompts/inspirations
 INSERT INTO prompt_templates (tool_custom_id, tool_type_id, category, name, name_vi, prompt_text, metadata)
 SELECT

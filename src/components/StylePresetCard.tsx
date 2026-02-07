@@ -35,12 +35,12 @@ export const StylePresetCard: React.FC<StylePresetCardProps> = ({
             )}
 
             {/* Icon */}
-            <div
+            {/* <div
                 className="w-12 h-12 rounded-full hidden md:flex items-center justify-center text-2xl mb-3"
                 style={{ backgroundColor: iconBg }}
             >
                 {icon}
-            </div>
+            </div> */}
 
             {/* Title */}
             <h3 className="text-white font-semibold text-sm mb-1">{title}</h3>

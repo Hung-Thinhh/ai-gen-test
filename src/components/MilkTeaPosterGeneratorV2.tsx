@@ -4,7 +4,8 @@
  */
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -262,8 +263,8 @@ export const MilkTeaPosterGeneratorV2: React.FC<PosterGeneratorV2Props> = ({
     const lightingTypeOptions = Object.keys(LIGHTING_PROMPTS);
     const productAngleOptions = Object.keys(ANGLE_PROMPTS);
 
-    // Local UI State
-    const [selectedStyle, setSelectedStyle] = useState<string | null>(Object.keys(availablePresets)[0] || 'studio_professional');
+    // Local UI State - Allow multiple style selection (max 4)
+    const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
     const [productDesc, setProductDesc] = useState('');
     const [envDesc, setEnvDesc] = useState('');
     const [selectedAspectRatio, setSelectedAspectRatio] = useState('1:1 (Vuông - Instagram)');
@@ -345,8 +346,48 @@ export const MilkTeaPosterGeneratorV2: React.FC<PosterGeneratorV2Props> = ({
         onStateChange({ ...appState, textEffectImage: imageDataUrl });
     }, [appState, onStateChange]);
 
+    // Handle browser back button - prevent leaving the tool accidentally
+    useEffect(() => {
+        if (showResultView) {
+            // Push a new state when entering result view
+            window.history.pushState({ resultView: true }, '', window.location.href);
+
+            const handlePopState = (event: PopStateEvent) => {
+                // When user presses back, return to editor instead of leaving page
+                event.preventDefault();
+                setShowResultView(false);
+                // Push state again to prevent actually going back
+                window.history.pushState({ resultView: false }, '', window.location.href);
+            };
+
+            window.addEventListener('popstate', handlePopState);
+
+            return () => {
+                window.removeEventListener('popstate', handlePopState);
+            };
+        }
+    }, [showResultView]);
+
+    // Warn user before leaving page while generating
+    useEffect(() => {
+        if (isGenerating) {
+            const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+                e.preventDefault();
+                e.returnValue = 'Đang tạo ảnh, bạn có chắc muốn rời trang?';
+                return e.returnValue;
+            };
+
+            window.addEventListener('beforeunload', handleBeforeUnload);
+
+            return () => {
+                window.removeEventListener('beforeunload', handleBeforeUnload);
+            };
+        }
+    }, [isGenerating]);
+
     // Build prompt - FULL LOGIC FROM OLD VERSION
-    const buildPrompt = useCallback(() => {
+    // Now accepts optional styleKey to build prompt for a specific style
+    const buildPrompt = useCallback((styleKey?: string) => {
         const desc = productDesc || 'the product in the image';
         const posterTypePrompt = POSTER_TYPE_PROMPTS[posterType] || 'professional product poster';
         const bgPrompt = BACKGROUND_PROMPTS[backgroundType] || 'professional background';
@@ -465,10 +506,10 @@ ${appState.secondaryObjectImage ? '9. **SECONDARY OBJECTS:** Incorporate element
                 environmentContext += 'Include secondary objects from the uploaded reference as surrounding elements. ';
             }
 
-            // Get style preset (nếu có chọn)
+            // Get style preset for this specific image (if styleKey provided)
             let styleDescription = '';
-            if (selectedStyle) {
-                const preset = STYLE_PRESETS[selectedStyle];
+            if (styleKey && STYLE_PRESETS[styleKey]) {
+                const preset = STYLE_PRESETS[styleKey];
                 styleDescription = preset?.prompt || preset?.buildPrompt?.(desc, posterTypePrompt, bgPrompt, lightPrompt, anglePrompt, notes) || '';
             }
 
@@ -666,16 +707,23 @@ ${aspectRatioPrompt}
         // Only add SMART_STYLING_PROMPT if advanced styling is enabled (saves ~500 tokens)
         const advancedStyling = hasReferenceImage ? '' : SMART_STYLING_PROMPT;
         return `${aspectRatioContext}${mainPrompt}${textContext}${advancedStyling}`;
-    }, [productDesc, posterType, backgroundType, lightingType, productAngle, domainContext, envDesc, appState, selectedStyle, STYLE_PRESETS, includeText, headline, subheadline, callToAction, selectedAspectRatio]);
+    }, [productDesc, posterType, backgroundType, lightingType, productAngle, domainContext, envDesc, appState, STYLE_PRESETS, includeText, headline, subheadline, callToAction, selectedAspectRatio]);
 
-    // Generate Handler
+    // Generate Handler - Create one image per selected style
     const handleGenerate = async () => {
         if (!appState.productImages[0]) {
             toast.error('Vui lòng tải ảnh sản phẩm lên!');
             return;
         }
 
-        if (!await checkCredits(imageCount)) {
+        if (selectedStyles.length === 0) {
+            toast.error('Vui lòng chọn ít nhất 1 phong cách!');
+            return;
+        }
+
+        // Check credits based on number of selected styles
+        const totalImagesToGenerate = selectedStyles.length;
+        if (!await checkCredits(totalImagesToGenerate)) {
             return;
         }
 
@@ -690,12 +738,7 @@ ${aspectRatioPrompt}
         onStateChange({ ...appState, stage: 'generating' });
 
         try {
-            // Use buildPrompt function to get full prompt (same as old version)
-            const prompt = buildPrompt();
-
-            console.log('[V2] Generating with prompt:', prompt);
-
-            // Prepare image URLs for generation
+            // Prepare image URLs for generation (same for all styles)
             const imageUrls: string[] = [];
 
             // Add product images
@@ -714,12 +757,17 @@ ${aspectRatioPrompt}
             }
 
             console.log('[V2] Image URLs count:', imageUrls.length);
-            console.log('[V2] Image count to generate:', imageCount);
+            console.log('[V2] Styles to generate:', selectedStyles.length, selectedStyles);
 
-            // Generate multiple images in PARALLEL
-            const generateImagePromise = async (index: number) => {
-                console.log(`[V2] Starting generation for image ${index + 1}/${imageCount}...`);
+            // Generate one image per selected style in PARALLEL
+            const generateImageForStyle = async (styleKey: string, index: number) => {
+                const styleName = STYLE_PRESETS[styleKey]?.name || styleKey;
+                console.log(`[V2] Starting generation ${index + 1}/${selectedStyles.length} for style: ${styleName}...`);
+
                 try {
+                    // Build prompt specifically for this style
+                    const prompt = buildPrompt(styleKey);
+
                     const imageUrl = await generateStyledImage(
                         prompt,
                         imageUrls,
@@ -729,7 +777,7 @@ ${aspectRatioPrompt}
                     );
 
                     if (imageUrl) {
-                        console.log(`[V2] Image ${index + 1} generated successfully:`, imageUrl);
+                        console.log(`[V2] Image ${index + 1} (${styleName}) generated successfully:`, imageUrl);
                         // Update UI immediately for this image
                         setDisplayImages(prev => [imageUrl, ...prev]);
 
@@ -743,14 +791,14 @@ ${aspectRatioPrompt}
                     return null;
                 } catch (err: any) {
                     const error = processApiError(err);
-                    console.error(`[V2] Error generating image ${index + 1}:`, error);
-                    toast.error(`Lỗi tạo ảnh ${index + 1}: ${error.message}`);
+                    console.error(`[V2] Error generating image for style ${styleName}:`, error);
+                    toast.error(`Lỗi tạo ảnh ${styleName}: ${error.message}`);
                     return null;
                 }
             };
 
-            // Create array of promises
-            const promises = Array.from({ length: imageCount }, (_, i) => generateImagePromise(i));
+            // Create array of promises - one per selected style
+            const promises = selectedStyles.map((styleKey, index) => generateImageForStyle(styleKey, index));
 
             // Wait for all to complete (in parallel)
             const results = await Promise.all(promises);
@@ -769,7 +817,7 @@ ${aspectRatioPrompt}
                 //     input_prompt: prompt,
                 // });
 
-                toast.success(`✨ Tạo thành công ${generatedImages.length} poster!`);
+                toast.success(`✨ Tạo thành công ${generatedImages.length}/${selectedStyles.length} poster!`);
 
                 // Result view already shown, no need to set again
 
@@ -955,24 +1003,44 @@ ${aspectRatioPrompt}
                     <div className="flex flex-col gap-6">
                         {/* Style Presets */}
                         <div className="bg-[#0c0c0c] border border-neutral-800 rounded-xl p-6">
-                            <label className="text-white font-semibold text-base flex items-center gap-2 mb-4">
-                                <PaletteIcon className="w-5 h-5" />
+                            <label className="block text-sm font-medium text-neutral-300 mb-3 flex items-center gap-2">
+                                <PaletteIcon className="w-4 h-4" />
                                 Phong cách thiết kế
+                                {selectedStyles.length > 0 && (
+                                    <span className="ml-auto text-xs bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full">
+                                        {selectedStyles.length}/4 đã chọn
+                                    </span>
+                                )}
                             </label>
 
                             {/* Desktop Grid */}
                             <div className="hidden md:grid grid-cols-2 md:grid-cols-4 gap-3">
-                                {Object.entries(availablePresets).map(([key, config]) => (
-                                    <StylePresetCard
-                                        key={key}
-                                        icon={config.icon}
-                                        iconBg={config.iconBg}
-                                        title={config.title}
-                                        description={config.description}
-                                        isSelected={selectedStyle === key}
-                                        onClick={() => setSelectedStyle(selectedStyle === key ? null : key)}
-                                    />
-                                ))}
+                                {Object.entries(availablePresets).map(([key, config]) => {
+                                    const isSelected = selectedStyles.includes(key);
+                                    const canSelect = selectedStyles.length < 4 || isSelected;
+
+                                    return (
+                                        <StylePresetCard
+                                            key={key}
+                                            icon={config.icon}
+                                            iconBg={config.iconBg}
+                                            title={config.title}
+                                            description={config.description}
+                                            isSelected={isSelected}
+                                            onClick={() => {
+                                                if (isSelected) {
+                                                    // Deselect
+                                                    setSelectedStyles(prev => prev.filter(s => s !== key));
+                                                } else if (canSelect) {
+                                                    // Select (max 4)
+                                                    setSelectedStyles(prev => [...prev, key]);
+                                                } else {
+                                                    toast.error('Chỉ được chọn tối đa 4 phong cách!');
+                                                }
+                                            }}
+                                        />
+                                    );
+                                })}
                             </div>
 
                             {/* Mobile Swiper */}
@@ -988,18 +1056,31 @@ ${aspectRatioPrompt}
                                     }}
                                     className="style-presets-swiper !p-2"
                                 >
-                                    {Object.entries(availablePresets).map(([key, config]) => (
-                                        <SwiperSlide key={key}>
-                                            <StylePresetCard
-                                                icon={config.icon}
-                                                iconBg={config.iconBg}
-                                                title={config.title}
-                                                description={config.description}
-                                                isSelected={selectedStyle === key}
-                                                onClick={() => setSelectedStyle(selectedStyle === key ? null : key)}
-                                            />
-                                        </SwiperSlide>
-                                    ))}
+                                    {Object.entries(availablePresets).map(([key, config]) => {
+                                        const isSelected = selectedStyles.includes(key);
+                                        const canSelect = selectedStyles.length < 4 || isSelected;
+
+                                        return (
+                                            <SwiperSlide key={key}>
+                                                <StylePresetCard
+                                                    icon={config.icon}
+                                                    iconBg={config.iconBg}
+                                                    title={config.title}
+                                                    description={config.description}
+                                                    isSelected={isSelected}
+                                                    onClick={() => {
+                                                        if (isSelected) {
+                                                            setSelectedStyles(prev => prev.filter(s => s !== key));
+                                                        } else if (canSelect) {
+                                                            setSelectedStyles(prev => [...prev, key]);
+                                                        } else {
+                                                            toast.error('Chỉ được chọn tối đa 4 phong cách!');
+                                                        }
+                                                    }}
+                                                />
+                                            </SwiperSlide>
+                                        );
+                                    })}
                                 </Swiper>
                             </div>
                         </div>

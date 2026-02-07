@@ -341,10 +341,10 @@ export const PosterResultView: React.FC<PosterResultViewProps> = ({
                 </div>
             </header>
 
-            <div className="flex-1 flex justify-center w-full px-4 md:px-10 py-6 md:py-10 mb-30">
+            <div className="flex-1 flex justify-center w-full px-4 md:px-10 py-6 md:py-10">
                 <div className="w-full max-w-[1440px] flex flex-col gap-6">
                     {/* Breadcrumbs */}
-                    <nav className="flex items-center gap-2 text-sm text-[#b9ab9d]">
+                    {/* <nav className="flex items-center gap-2 text-sm text-[#b9ab9d]">
                         <a className="hover:text-[#ec7f13] transition-colors flex items-center gap-1" href="#" onClick={onBack}>
                             <span className="material-symbols-outlined text-[18px]">home</span>
                             Trang chủ
@@ -353,7 +353,7 @@ export const PosterResultView: React.FC<PosterResultViewProps> = ({
                         <a className="hover:text-[#ec7f13] transition-colors" href="/poster/cosmetic-poster">Poster</a>
                         <span className="material-symbols-outlined text-[16px]">chevron_right</span>
                         <span className="text-white font-medium">{posterTitle}</span>
-                    </nav>
+                    </nav> */}
 
                     {/* Main Content Layout */}
                     <div className="flex flex-col lg:flex-row gap-8 h-full min-h-[600px]">
@@ -543,7 +543,7 @@ export const PosterResultView: React.FC<PosterResultViewProps> = ({
                                 </div>
                                 <button
                                     onClick={onBack}
-                                    className="flex items-center justify-center gap-2 w-full py-2.5 px-4 border border-[#393028] rounded-lg text-sm font-medium text-white hover:bg-[#3a2d23] transition-colors"
+                                    className="flex items-center justify-center gap-2 w-full py-2.5 px-4 border border-[#393028] rounded-lg text-sm bg-white/20 font-medium text-white hover:bg-[#3a2d23] transition-colors"
                                 >
                                     <span className="material-symbols-outlined text-[18px]">design_services</span>
                                     Quay lại chỉnh sửa
@@ -558,7 +558,7 @@ export const PosterResultView: React.FC<PosterResultViewProps> = ({
                                 </h3>
 
                                 {/* Format Selection */}
-                                <div className="mb-6">
+                                {/* <div className="mb-6">
                                     <label className="block text-xs font-semibold uppercase tracking-wider text-[#b9ab9d] mb-3">Định dạng file</label>
                                     <div className="grid grid-cols-3 gap-2">
                                         {['PNG', 'JPG', 'PDF'].map(fmt => (
@@ -576,7 +576,7 @@ export const PosterResultView: React.FC<PosterResultViewProps> = ({
                                             </label>
                                         ))}
                                     </div>
-                                </div>
+                                </div> */}
 
                                 {/* Quality/Size Selection */}
                                 <div className="mb-8">
@@ -598,7 +598,7 @@ export const PosterResultView: React.FC<PosterResultViewProps> = ({
                                             </div>
                                             <span className="material-symbols-outlined text-[#8a7a6e] group-has-[:checked]:text-[#ec7f13]">image</span>
                                         </label>
-                                        <label className="flex items-center justify-between p-3 rounded-lg border border-[#393028] cursor-pointer hover:border-[#ec7f13]/50 transition-colors group has-[:checked]:border-[#ec7f13] has-[:checked]:bg-[#ec7f13]/10">
+                                        {/* <label className="flex items-center justify-between p-3 rounded-lg border border-[#393028] cursor-pointer hover:border-[#ec7f13]/50 transition-colors group has-[:checked]:border-[#ec7f13] has-[:checked]:bg-[#ec7f13]/10">
                                             <div className="flex items-center gap-3">
                                                 <input
                                                     type="radio"
@@ -613,7 +613,7 @@ export const PosterResultView: React.FC<PosterResultViewProps> = ({
                                                 </div>
                                             </div>
                                             <span className="material-symbols-outlined text-[#8a7a6e] group-has-[:checked]:text-[#ec7f13]">print</span>
-                                        </label>
+                                        </label> */}
                                     </div>
                                 </div>
 

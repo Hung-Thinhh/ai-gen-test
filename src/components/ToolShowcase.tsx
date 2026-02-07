@@ -97,19 +97,19 @@ export const ToolShowcase = () => {
                     big_title="Studio"
                     description="Thử nghiệm các ý tưởng thiết kế giúp chuyển đổi concept chỉ bằng một cú nhấp chuột."
                     image="/img/showcase1.webp"
-                    onClick={() => router.push('/poster/cosmetic-poster')}
+                    onClick={() => router.push('/product/cosmetic-poster')}
                 />
 
                 {/* Vertical Divider */}
-                {/* <div className="w-px h-10 bg-gradient-to-b from-transparent via-white/10 to-transparent mx-auto my-2" />
+                <div className="w-px h-10 bg-gradient-to-b from-transparent via-white/10 to-transparent mx-auto my-2" />
 
                 <ToolCard
-                    title="ảnh trà sữa"
-                    big_title="Studio"
+                    title="cho sản phẩm"
+                    big_title="Ảnh tết"
                     description="Thử nghiệm các ý tưởng thiết kế giúp chuyển đổi concept chỉ bằng một cú nhấp chuột."
-                    image="/img/showcase7.webp"
-                    onClick={() => router.push('/poster/milk-tea-poster')}
-                /> */}
+                    image="https://pub-15159732d3b14718981f4ec71d2578eb.r2.dev/1770444827533-9zfc54.png"
+                    onClick={() => router.push('/product/tet-poster')}
+                />
 
                 {/* Vertical Divider */}
                 <div className="w-px h-10 bg-gradient-to-b from-transparent via-white/10 to-transparent mx-auto my-2" />
