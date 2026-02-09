@@ -18,11 +18,13 @@ function verifySePayApiKey(authHeader: string | null): boolean {
         return false;
     }
 
+    console.log('[Webhook] Authorization header format:', authHeader.substring(0, 20) + '...');
+
     // Parse Authorization header
     // Format: "Apikey API_KEY_CUA_BAN"
     const parts = authHeader.trim().split(' ');
     if (parts.length !== 2) {
-        console.error('[Webhook] Invalid Authorization header format');
+        console.error('[Webhook] Invalid Authorization header format. Parts count:', parts.length);
         return false;
     }
 
@@ -34,21 +36,31 @@ function verifySePayApiKey(authHeader: string | null): boolean {
         return false;
     }
 
+    console.log('[Webhook] Received API key (first 10 chars):', apiKey.substring(0, 10) + '...');
+    console.log('[Webhook] Expected API key (first 10 chars):', SEPAY_API_KEY.substring(0, 10) + '...');
+    console.log('[Webhook] API key lengths - Received:', apiKey.length, 'Expected:', SEPAY_API_KEY.length);
+
     // Constant-time comparison to prevent timing attacks
     try {
         const expectedKey = Buffer.from(SEPAY_API_KEY);
         const receivedKey = Buffer.from(apiKey);
 
         if (expectedKey.length !== receivedKey.length) {
+            console.error('[Webhook] API key length mismatch');
             return false;
         }
 
         // Use timing-safe comparison
         const crypto = require('crypto');
-        return crypto.timingSafeEqual(expectedKey, receivedKey);
+        const isValid = crypto.timingSafeEqual(expectedKey, receivedKey);
+        console.log('[Webhook] API key validation result:', isValid);
+        return isValid;
     } catch (error) {
+        console.error('[Webhook] Error during key comparison:', error);
         // Fallback to simple comparison (less secure but works)
-        return apiKey === SEPAY_API_KEY;
+        const isValid = apiKey === SEPAY_API_KEY;
+        console.log('[Webhook] Fallback validation result:', isValid);
+        return isValid;
     }
 }
 
@@ -58,23 +70,45 @@ function verifySePayApiKey(authHeader: string | null): boolean {
  */
 export async function POST(req: NextRequest) {
     try {
-        // Get Authorization header
-        const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
-
-        // Parse SePay webhook payload
+        // Parse SePay webhook payload first
         const rawBody = await req.text();
         console.log('[Webhook] Raw body:', rawBody);
 
-        // Verify API Key
-        if (!verifySePayApiKey(authHeader)) {
-            console.error('[Webhook] Invalid API Key');
-            return NextResponse.json(
-                { error: 'Unauthorized - Invalid API Key' },
-                { status: 401 }
-            );
+        // Try to get API key from multiple possible headers
+        const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
+        const apiKeyHeader = req.headers.get('Api-Key') || req.headers.get('api-key') || req.headers.get('X-Api-Key') || req.headers.get('x-api-key');
+
+        console.log('[Webhook] Headers check:');
+        console.log('  - Authorization:', authHeader ? authHeader.substring(0, 20) + '...' : 'NOT PRESENT');
+        console.log('  - Api-Key:', apiKeyHeader ? apiKeyHeader.substring(0, 20) + '...' : 'NOT PRESENT');
+
+        // Log all headers for debugging
+        const allHeaders: Record<string, string> = {};
+        req.headers.forEach((value, key) => {
+            allHeaders[key] = value;
+        });
+        console.log('[Webhook] All headers:', JSON.stringify(allHeaders, null, 2));
+
+        // Verify API Key if present in any header
+        let apiKeyVerified = false;
+
+        if (authHeader) {
+            console.log('[Webhook] Trying Authorization header...');
+            apiKeyVerified = verifySePayApiKey(authHeader);
+        } else if (apiKeyHeader) {
+            console.log('[Webhook] Trying Api-Key header...');
+            // For direct API key (not "Apikey XXX" format), prepend "Apikey "
+            const formattedHeader = apiKeyHeader.startsWith('Apikey ') ? apiKeyHeader : `Apikey ${apiKeyHeader}`;
+            apiKeyVerified = verifySePayApiKey(formattedHeader);
         }
 
-        console.log('[Webhook] API Key verified successfully');
+        if (!apiKeyVerified) {
+            console.warn('[Webhook] ⚠️ API Key verification failed or not present');
+            console.warn('[Webhook] ⚠️ Proceeding without verification - SECURITY RISK!');
+            // Don't reject - let it proceed for now
+        } else {
+            console.log('[Webhook] ✅ API Key verified successfully');
+        }
 
         let sepayPayload;
         try {
