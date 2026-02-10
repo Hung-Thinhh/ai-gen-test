@@ -6,7 +6,8 @@ import { cn } from '@/lib/utils';
 import { useAppControls } from './uiUtils';
 import { useAuth } from '../contexts/AuthContext';
 import { useSession } from 'next-auth/react';
-import Link from 'next/link'
+import Link from 'next/link';
+import { Menu, MenuItem } from '@mui/material';
 export const LeonardoHeader = () => {
     const [scrolled, setScrolled] = useState(false);
     const router = useRouter();
@@ -125,9 +126,7 @@ export const LeonardoHeader = () => {
                     <NavLink href="/tool" isActive={pathname?.startsWith('/tool')}>
                         Công cụ
                     </NavLink>
-                    <NavLink href="/solutions" isActive={pathname === '/solutions'}>
-                        Giải pháp
-                    </NavLink>
+                    <SolutionsDropdown isActive={pathname?.startsWith('/solutions')} />
                     <NavLink href="/guide" isActive={pathname === '/guide'}>
                         Hướng dẫn
                     </NavLink>
@@ -243,6 +242,196 @@ export const LeonardoHeader = () => {
                 </div>
             </div>
         </header>
+    );
+};
+
+
+// Solutions Dropdown Component
+const SolutionsDropdown = ({ isActive }: { isActive?: boolean }) => {
+    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+    const open = Boolean(anchorEl);
+
+    const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    const handleClose = () => {
+        setAnchorEl(null);
+    };
+
+    const solutions = [
+        {
+            title: 'Công cụ Marketing AI',
+            description: 'Nâng cấp chiến dịch marketing của bạn với sức mạnh AI.',
+            icon: (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+            ),
+            href: '/solutions/marketing-ads',
+            color: 'from-orange-500/20 to-orange-600/20'
+        },
+        {
+            title: 'Thiết kế Đồ họa AI',
+            description: 'Tối ưu hóa quy trình thiết kế với các công cụ tạo ảnh nghệ thuật.',
+            icon: (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                </svg>
+            ),
+            href: '/solutions/graphic-design',
+            color: 'from-orange-500/20 to-orange-600/20'
+        },
+        {
+            title: 'In ấn theo yêu cầu (POD)',
+            description: 'Biến tác phẩm kỹ thuật số thành các sản phẩm in ấn thực tế.',
+            icon: (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+            ),
+            href: '/solutions/pod',
+            color: 'from-orange-500/20 to-orange-600/20'
+        },
+        {
+            title: 'Chụp ảnh AI chuyên nghiệp',
+            description: 'Công cụ chụp ảnh sản phẩm và chân dung chất lượng studio.',
+            icon: (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            ),
+            href: '/solutions/photography',
+            color: 'from-orange-500/20 to-orange-600/20'
+        },
+        {
+            title: 'Studio Chân dung AI',
+            description: 'Tạo bộ ảnh chân dung chuyên nghiệp từ ảnh selfie cá nhân.',
+            icon: (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                </svg>
+            ),
+            href: '/solutions/ai-studio',
+            color: 'from-orange-500/20 to-orange-600/20'
+        }
+    ];
+
+    return (
+        <div className="relative">
+            <button
+                onClick={handleClick}
+                onMouseEnter={handleClick}
+                className={cn(
+                    "transition-colors relative group inline-flex items-center gap-1 py-4 md:py-6", // Tăng vùng tương tác
+                    isActive ? "text-orange-400 font-medium" : "text-gray-400 hover:text-orange-400"
+                )}
+            >
+                Giải pháp
+                <svg
+                    className={cn(
+                        "w-4 h-4 transition-transform duration-200",
+                        open && "rotate-180"
+                    )}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+                <span className={cn(
+                    "absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-orange-400 to-orange-600 transition-all duration-300",
+                    isActive ? "w-full" : "w-0 group-hover:w-full"
+                )} />
+            </button>
+
+            <Menu
+                anchorEl={anchorEl}
+                open={open}
+                onClose={handleClose}
+                MenuListProps={{
+                    onMouseLeave: handleClose,
+                }}
+                slotProps={{
+                    paper: {
+                        sx: {
+                            mt: 1, // Giảm margin top để gần button hơn
+                            width: 1200, // Tăng thêm chiều rộng
+                            maxWidth: '100vw',
+                            backgroundColor: 'rgba(9, 9, 11, 0.98)', // Đậm hơn một chút
+                            backdropFilter: 'blur(24px)',
+                            border: '1px solid rgba(251, 146, 60, 0.15)', // Viền cam nhạt
+                            borderRadius: '20px',
+                            boxShadow: '0 25px 50px -12px rgba(249, 115, 22, 0.15), 0 0 30px rgba(0, 0, 0, 0.5)',
+                            padding: '8px',
+                            overflow: 'hidden'
+                        }
+                    }
+                }}
+                transformOrigin={{ horizontal: 'center', vertical: 'top' }}
+                anchorOrigin={{ horizontal: 'center', vertical: 'bottom' }}
+            >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-2">
+                    {solutions.map((solution, index) => (
+                        <MenuItem
+                            key={index}
+                            onClick={handleClose}
+                            sx={{
+                                padding: 0,
+                                borderRadius: '16px',
+                                transition: 'all 0.3s ease',
+                                '&:hover': {
+                                    backgroundColor: 'rgba(251, 146, 60, 0.05)',
+                                    transform: 'translateY(-2px)',
+                                    boxShadow: '0 10px 20px -10px rgba(249, 115, 22, 0.2)'
+                                }
+                            }}
+                            className="group/item"
+                        >
+                            <Link
+                                href={solution.href}
+                                className="w-full p-5 flex items-start gap-5 no-underline"
+                            >
+                                {/* Icon */}
+                                <div className={cn(
+                                    "w-14 h-14 rounded-2xl bg-gradient-to-br flex items-center justify-center flex-shrink-0 transition-all duration-300",
+                                    "border border-orange-500/20 group-hover/item:border-orange-500/40",
+                                    "shadow-sm group-hover/item:shadow-orange-500/20 shadow-orange-500/5",
+                                    solution.color
+                                )}>
+                                    <div className="text-orange-500 group-hover/item:text-orange-400 group-hover/item:scale-110 transition-transform duration-300">
+                                        {solution.icon}
+                                    </div>
+                                </div>
+
+                                {/* Content */}
+                                <div className="flex-1 space-y-1.5 pt-1">
+                                    <h3 className="text-white text-[15px] font-bold tracking-wide group-hover/item:text-orange-400 transition-colors">
+                                        {solution.title}
+                                    </h3>
+                                    <p className="text-[13px] text-zinc-400 leading-relaxed font-medium">
+                                        {solution.description}
+                                    </p>
+                                </div>
+
+                                {/* Arrow */}
+                                <div className="pt-1 opacity-0 -translate-x-2 group-hover/item:opacity-100 group-hover/item:translate-x-0 transition-all duration-300">
+                                    <svg className="w-5 h-5 text-orange-500/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                    </svg>
+                                </div>
+                            </Link>
+                        </MenuItem>
+                    ))}
+                </div>
+                {/* Optional subtle footer */}
+                <div className="mt-2 pt-3 px-4 pb-2 border-t border-white/5 flex justify-between items-center text-[11px] text-zinc-500 font-medium">
+                    <span>Duky AI Solutions Suite</span>
+                    <span className="text-orange-500/50 italic font-normal">Sức mạnh công nghệ trong tầm tay bạn</span>
+                </div>
+            </Menu>
+        </div>
     );
 };
 

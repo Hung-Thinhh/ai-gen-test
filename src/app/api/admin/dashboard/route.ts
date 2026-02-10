@@ -138,33 +138,57 @@ export async function GET(req: NextRequest) {
             plan: user.role === 'admin' ? 'Admin' : 'Free'
         })) || [];
 
-        // 5. Fetch Recent Transactions with user info (single query with JOIN)
-        const recentTransactions = await sql`
+        // 5. Fetch Recent Transactions (simplified - no JOIN to avoid type casting issues)
+        const recentTransactionsRaw = await sql`
             SELECT
-                t.id,
-                t.amount,
-                t.status,
-                t.created_at,
-                u.email,
-                u.display_name,
-                u.avatar_url
-            FROM payment_transactions t
-            LEFT JOIN users u ON t.user_id = u.user_id
-            ORDER BY t.created_at DESC
+                id,
+                user_id,
+                amount,
+                status,
+                created_at
+            FROM payment_transactions
+            ORDER BY created_at DESC
             LIMIT 5
         `;
 
-        const formattedTransactions = recentTransactions?.map((tx: any) => ({
-            id: tx.id,
-            amount: tx.amount,
-            status: tx.status,
-            created_at: tx.created_at,
-            user: {
-                email: tx.email || 'Unknown',
-                full_name: tx.display_name || 'N/A',
-                avatar_url: tx.avatar_url
-            }
-        })) || [];
+        // Fetch user info separately for each transaction
+        const formattedTransactions = await Promise.all(
+            (recentTransactionsRaw || []).map(async (tx: any) => {
+                try {
+                    const userInfo = await sql`
+                        SELECT email, display_name, avatar_url
+                        FROM users
+                        WHERE user_id = ${tx.user_id}
+                        LIMIT 1
+                    `;
+
+                    return {
+                        id: tx.id,
+                        amount: tx.amount,
+                        status: tx.status,
+                        created_at: tx.created_at,
+                        user: {
+                            email: userInfo[0]?.email || 'Unknown',
+                            full_name: userInfo[0]?.display_name || 'N/A',
+                            avatar_url: userInfo[0]?.avatar_url
+                        }
+                    };
+                } catch (err) {
+                    console.error('[Dashboard] Error fetching user for transaction:', tx.id, err);
+                    return {
+                        id: tx.id,
+                        amount: tx.amount,
+                        status: tx.status,
+                        created_at: tx.created_at,
+                        user: {
+                            email: 'Unknown',
+                            full_name: 'N/A',
+                            avatar_url: null
+                        }
+                    };
+                }
+            })
+        );
 
         const revenueChartData = chartLabels.map(day => dailyRevenue[day] || 0);
 

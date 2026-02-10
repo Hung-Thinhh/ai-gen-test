@@ -3,7 +3,7 @@
  * - HomeHeader: Logo, app name, model toggle, credits
  * - PageHeader: Back button, page title, search button
  */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { SearchIcon, LoadingSpinnerIcon } from './icons'; // Ensure LoadingSpinnerIcon is imported or use fallback
 import { getAllStudios } from '../services/storageService';
@@ -23,6 +23,9 @@ export const MobileHomeHeader: React.FC<PageHeaderProps> = ({
     const [studios, setStudios] = useState<any[]>([]);
     const [filteredResults, setFilteredResults] = useState<{ type: 'tool' | 'studio', item: any }[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
+
+    // Memoize apps to prevent infinite re-renders
+    const stableApps = useMemo(() => apps, [JSON.stringify(apps)]);
 
     useEffect(() => {
         const fetchStudios = async () => {
@@ -44,7 +47,7 @@ export const MobileHomeHeader: React.FC<PageHeaderProps> = ({
             return;
         }
         const lowerQuery = searchQuery.toLowerCase();
-        const matchedTools = apps.filter(app =>
+        const matchedTools = stableApps.filter(app =>
             (app.title?.toLowerCase().includes(lowerQuery) || app.description?.toLowerCase().includes(lowerQuery))
         ).map(app => ({ type: 'tool' as const, item: app }));
         const matchedStudios = studios.filter(studio =>
@@ -52,7 +55,7 @@ export const MobileHomeHeader: React.FC<PageHeaderProps> = ({
         ).map(studio => ({ type: 'studio' as const, item: studio }));
 
         setFilteredResults([...matchedTools, ...matchedStudios]);
-    }, [searchQuery, apps, studios]);
+    }, [searchQuery, stableApps, studios]);
 
     const handleSearchClick = () => {
         setIsSearching(true);
@@ -201,8 +204,10 @@ export const MobilePageHeader: React.FC<PageHeaderProps> = ({
     const [filteredResults, setFilteredResults] = useState<{ type: 'tool' | 'studio', item: any }[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    // Fetch studios on mount (lazy load implies only when component exists, but maybe better on search open?)
-    // To be responsive, let's fetch once.
+    // Memoize apps to prevent infinite re-renders
+    const stableApps = useMemo(() => apps, [JSON.stringify(apps)]);
+
+    // Fetch studios on mount
     useEffect(() => {
         const fetchStudios = async () => {
             const data = await getAllStudios();
@@ -228,7 +233,7 @@ export const MobilePageHeader: React.FC<PageHeaderProps> = ({
         const lowerQuery = searchQuery.toLowerCase();
 
         // Filter Tools
-        const matchedTools = apps.filter(app =>
+        const matchedTools = stableApps.filter(app =>
             (app.title?.toLowerCase().includes(lowerQuery) || app.description?.toLowerCase().includes(lowerQuery))
         ).map(app => ({ type: 'tool' as const, item: app }));
 
@@ -239,7 +244,7 @@ export const MobilePageHeader: React.FC<PageHeaderProps> = ({
 
         setFilteredResults([...matchedTools, ...matchedStudios]);
 
-    }, [searchQuery, apps, studios]);
+    }, [searchQuery, stableApps, studios]);
 
 
     const handleBack = () => {

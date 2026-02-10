@@ -1,74 +1,78 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { HelpCircleIcon, FileTextIcon, ZapIcon, ArrowRightIcon } from "./icons";
 
 const options = [
   {
     icon: HelpCircleIcon,
     title: "Trung tâm hỗ trợ",
-    description: "Tìm câu trả lờii cho các câu hỏi thường gặp",
+    description: "Tìm câu trả lời cho các câu hỏi thường gặp",
     href: "/guide",
-    color: "blue",
   },
   {
     icon: FileTextIcon,
     title: "Tài liệu API",
     description: "Tài liệu kỹ thuật cho nhà phát triển",
-    href: "#",
-    color: "purple",
+    href: "/api-docs",
   },
   {
     icon: ZapIcon,
     title: "Báo cáo lỗi",
     description: "Báo cáo vấn đề kỹ thuật hoặc bug",
-    href: "#",
-    color: "orange",
+    href: "/contact",
   },
 ];
 
-const colorClasses: Record<string, { bg: string; border: string; text: string }> = {
-  blue: { bg: "bg-blue-500/10", border: "border-blue-500/20", text: "text-blue-400" },
-  purple: { bg: "bg-purple-500/10", border: "border-purple-500/20", text: "text-purple-400" },
-  orange: { bg: "bg-orange-500/10", border: "border-orange-500/20", text: "text-orange-400" },
-};
-
 export const ContactOptions = () => {
   return (
-    <section className="py-16 bg-neutral-950">
+    <section className="py-16 md:py-24 bg-transparent relative">
       <div className="max-w-6xl mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="text-center mb-10"
+          className="text-center mb-10 md:mb-16"
         >
-          <h2 className="text-2xl font-bold text-white mb-2">Các cách khác để nhận hỗ trợ</h2>
-          <p className="text-neutral-400">Khám phá các tài nguyên hỗ trợ khác của chúng tôi</p>
+          <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">Các cách khác để nhận hỗ trợ</h2>
+          <p className="text-neutral-400 max-w-lg mx-auto">
+            Khám phá các tài nguyên hỗ trợ khác của chúng tôi để tìm giải pháp nhanh chóng nhất
+          </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {options.map((option, index) => {
-            const colors = colorClasses[option.color];
             return (
-              <motion.a
-                key={option.title}
-                href={option.href}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: index * 0.1 }}
-                className={`group p-6 rounded-2xl bg-neutral-900 border ${colors.border} hover:border-opacity-50 transition-all`}
-              >
-                <div className={`w-12 h-12 rounded-xl ${colors.bg} flex items-center justify-center mb-4`}>
-                  <option.icon className={`w-6 h-6 ${colors.text}`} />
-                </div>
-                <h3 className="text-white font-semibold text-lg mb-2">{option.title}</h3>
-                <p className="text-neutral-400 text-sm mb-4">{option.description}</p>
-                <div className="flex items-center gap-2 text-sm text-neutral-500 group-hover:text-white transition-colors">
-                  <span>Tìm hiểu thêm</span>
-                  <ArrowRightIcon className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </motion.a>
+              <Link href={option.href} key={option.title} className="block group">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: index * 0.1 }}
+                  className="h-full p-6 md:p-8 rounded-2xl bg-gradient-to-br from-white/5 to-white/0 border border-white/10 hover:border-orange-500/30 group-hover:bg-white/5 transition-all duration-300 relative overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+                  <div className="w-14 h-14 rounded-2xl bg-neutral-900 border border-white/5 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:border-orange-500/30 transition-all duration-300 shadow-lg">
+                    {/* Render Icon component directly */}
+                    <option.icon className="w-7 h-7 text-neutral-400 group-hover:text-orange-400 transition-colors" />
+                  </div>
+
+                  <h3 className="text-white font-bold text-lg mb-3 group-hover:text-orange-400 transition-colors">
+                    {option.title}
+                  </h3>
+                  <p className="text-neutral-400 text-sm mb-6 leading-relaxed">
+                    {option.description}
+                  </p>
+
+                  <div className="flex items-center gap-2 text-sm text-neutral-500 group-hover:text-orange-400 font-medium transition-colors mt-auto">
+                    <span>Truy cập ngay</span>
+                    <svg className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                  </div>
+                </motion.div>
+              </Link>
             );
           })}
         </div>
