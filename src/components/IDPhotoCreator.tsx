@@ -7,7 +7,9 @@ import { motion } from 'framer-motion';
 import { generateStyledImage } from '../services/gemini/advancedImageService';
 import { processApiError } from '@/services/gemini/baseService';
 import { cn, cropImageToAspectRatio } from '../lib/utils';
-import { useAppControls } from './uiUtils';
+import { useAppControls, useLightbox, useMediaQuery, downloadImage } from './uiUtils';
+import ActionablePolaroidCard from './ActionablePolaroidCard';
+import Lightbox from './Lightbox';
 import LanguageSwitcher from './LanguageSwitcher';
 import { createPrintSheet } from '../utils/printUtils';
 import type { IDPhotoCreatorState } from './uiTypes';
@@ -117,17 +119,7 @@ const Uploader = ({ onImageUpload }: { onImageUpload: (file: File) => void }) =>
     );
 };
 
-const ImageViewer = ({ title, imageUrl, children }: { title: string, imageUrl: string | null, children?: React.ReactNode }) => {
-    return (
-        <div className="bg-black/20 backdrop-blur-md border border-neutral-800 rounded-2xl p-6 shadow-lg flex flex-col w-full">
-            <h3 className="font-bold text-2xl text-neutral-200 mb-4">{title}</h3>
-            <div className="aspect-[4/5] w-full bg-black/20 rounded-lg border-2 border-dashed border-neutral-700 flex items-center justify-center text-neutral-500 text-center relative overflow-hidden">
-                {imageUrl ? <img src={imageUrl} alt={title} className="w-full h-full object-cover" /> : null}
-                {children}
-            </div>
-        </div>
-    )
-}
+// ImageViewer removed — now using ActionablePolaroidCard for consistent UI
 
 const OptionButton = ({ label, isSelected, onClick }: { label: string, isSelected: boolean, onClick: () => void }) => (
     <button
@@ -158,6 +150,8 @@ interface IDPhotoCreatorProps {
 
 export default function IDPhotoCreator({ appState, onStateChange, onBack }: IDPhotoCreatorProps) {
     const { t, checkCredits } = useAppControls();
+    const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
+    const isMobile = useMediaQuery('(max-width: 768px)');
 
     // Destructure state from props
     const {
@@ -180,6 +174,9 @@ export default function IDPhotoCreator({ appState, onStateChange, onBack }: IDPh
 
     const [isLoading, setIsLoading] = useState(false);
     const [isCreatingSheet, setIsCreatingSheet] = useState(false);
+
+    // Build lightbox images array
+    const lightboxImages = [uploadedImage, generatedImage, printSheet].filter((img): img is string => !!img);
 
     const updateOptions = (updates: Partial<typeof appState.options>) => {
         onStateChange({
@@ -345,16 +342,6 @@ export default function IDPhotoCreator({ appState, onStateChange, onBack }: IDPh
         }
     }
 
-    const handleDownload = (url: string | null, filename: string) => {
-        if (!url) return;
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
     const isGenerateDisabled = !uploadedImage || isLoading;
 
     // View logic: check if we are in 'idle' or 'configuring' -> show config
@@ -414,71 +401,147 @@ export default function IDPhotoCreator({ appState, onStateChange, onBack }: IDPh
     );
 
     const renderResultView = () => (
-        <div className="w-full flex flex-col items-center gap-8">
-            <div className="w-full grid md:grid-cols-2 gap-8">
-                <ImageViewer title={t('common_originalImage')} imageUrl={uploadedImage} />
-                <ImageViewer title={t('idPhotoCreator_resultTitle')} imageUrl={generatedImage}>
-                    {isLoading && (
-                        <div className="w-full h-full flex items-center justify-center absolute bg-black/50">
-                            <svg className="animate-spin h-10 w-10 text-neutral-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                        </div>
-                    )}
-                    {error && !isLoading && (
-                        <div className="p-4 text-red-400">
-                            <p className="font-semibold mb-2">{t('idPhotoCreator_generationFailed')}</p>
-                            <p className="text-xs text-slate-400 mb-4">{error}</p>
-                            <button onClick={handleGenerate} className="text-sm bg-red-500/20 text-red-300 px-3 py-1 rounded-md hover:bg-red-500/40">{t('common_retry')}</button>
-                        </div>
-                    )}
-                </ImageViewer>
+        <div className="w-full flex-1 flex flex-col items-center pt-4">
+            {/* Title */}
+            <div className="text-center mb-6">
+                <h2 className="text-3xl font-bold text-white mb-2">Kết quả</h2>
+                <p className="text-neutral-400">{isLoading ? "Đang tạo ảnh..." : "Đã tạo xong!"}</p>
             </div>
 
-            {generatedImage && (
-                <div className="w-full max-w-2xl flex flex-col items-center gap-4 bg-black/20 backdrop-blur-md border border-neutral-800 rounded-2xl p-6">
-                    <div className="flex flex-col sm:flex-row items-center gap-4 w-full">
-                        <button
-                            onClick={() => handleDownload(generatedImage, `portrait-${printSize}.jpg`)}
-                            disabled={!generatedImage || isLoading}
-                            className="w-full flex items-center justify-center gap-2 text-black font-bold py-3 px-5 rounded-lg bg-neutral-200/80 hover:bg-neutral-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                            {t('common_download')}
-                        </button>
-                        <button
-                            onClick={handleGeneratePrintSheet}
-                            disabled={!generatedImage || isLoading || isCreatingSheet}
-                            className="w-full flex items-center justify-center gap-2 font-bold text-center text-neutral-300 bg-black/20 backdrop-blur-sm border-2 border-neutral-700 py-3 px-5 rounded-lg transition-all duration-300 hover:scale-105 hover:bg-neutral-800 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {isCreatingSheet ? t('idPhotoCreator_generatingPrintSheet') : t('idPhotoCreator_generatePrintSheet')}
-                        </button>
+            <div className="w-full max-w-6xl px-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* LEFT COLUMN: Original Image */}
+                    <div className="themed-card backdrop-blur-md p-4 rounded-2xl flex flex-col items-center gap-4 h-fit">
+                        <h3 className="text-lg font-bold text-orange-400">{t('common_originalImage')}</h3>
+                        <div className="w-full max-w-xs">
+                            <ActionablePolaroidCard
+                                type="display"
+                                mediaUrl={uploadedImage || undefined}
+                                caption={t('common_originalImage')}
+                                status="done"
+                                onClick={uploadedImage ? () => openLightbox(lightboxImages.indexOf(uploadedImage)) : undefined}
+                                isMobile={isMobile}
+                            />
+                        </div>
                     </div>
 
-                    {printSheet && (
-                        <div className="w-full mt-4">
-                            <h3 className="font-bold text-xl text-neutral-200 mb-4 text-center">{t('idPhotoCreator_printSheetTitle')}</h3>
-                            <div className="aspect-[6/4] w-full bg-black/20 rounded-lg border-2 border-dashed border-neutral-700 flex items-center justify-center text-neutral-500 text-center relative overflow-hidden">
+                    {/* RIGHT COLUMN: Result */}
+                    <div className="themed-card backdrop-blur-md p-4 rounded-2xl flex flex-col items-center gap-4 h-fit">
+                        <h3 className="text-lg font-bold text-orange-400">{t('idPhotoCreator_resultTitle')}</h3>
+
+                        {/* Loading State */}
+                        {isLoading && !generatedImage && (
+                            <div className="aspect-[4/5] w-full max-w-xs rounded-xl bg-neutral-900/50 border border-neutral-700 flex flex-col items-center justify-center gap-2 relative overflow-hidden shadow-lg">
+                                <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin relative z-10" />
+                                <p className="text-neutral-300 text-xs font-bold relative z-10">{t('idPhotoCreator_generatingButton')}</p>
+                                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent animate-pulse" />
+                            </div>
+                        )}
+
+                        {/* Success State */}
+                        {generatedImage && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.5 }}
+                                className="w-full max-w-xs"
+                            >
+                                <ActionablePolaroidCard
+                                    type="output"
+                                    caption={t('idPhotoCreator_resultTitle')}
+                                    status="done"
+                                    mediaUrl={generatedImage}
+                                    onClick={() => openLightbox(lightboxImages.indexOf(generatedImage))}
+                                    isMobile={isMobile}
+                                />
+                            </motion.div>
+                        )}
+
+                        {/* Error State */}
+                        {error && !isLoading && (
+                            <div className="w-full max-w-xs">
+                                <ActionablePolaroidCard
+                                    type="output"
+                                    caption={t('idPhotoCreator_generationFailed')}
+                                    status="error"
+                                    error={error}
+                                    isMobile={isMobile}
+                                />
+                            </div>
+                        )}
+
+                        {/* Action Buttons */}
+                        <div className="flex flex-wrap gap-2 mt-4 justify-center w-full border-t border-neutral-700/50 pt-4">
+                            {isLoading ? (
+                                <button
+                                    onClick={handleGoBackToConfig}
+                                    className="px-6 py-2 bg-neutral-700 text-white rounded-full hover:bg-neutral-600 transition-colors text-sm"
+                                >
+                                    Hủy
+                                </button>
+                            ) : (
+                                <>
+                                    {generatedImage && (
+                                        <>
+                                            <button
+                                                onClick={() => downloadImage(generatedImage, `portrait-${printSize}.jpg`)}
+                                                className="px-6 py-2 bg-blue-600/80 text-white rounded-full hover:bg-blue-500 transition-colors text-sm"
+                                            >
+                                                {t('common_download')}
+                                            </button>
+                                            <button
+                                                onClick={handleGeneratePrintSheet}
+                                                disabled={isCreatingSheet}
+                                                className="px-6 py-2 bg-emerald-600/80 text-white rounded-full hover:bg-emerald-500 transition-colors text-sm disabled:opacity-50"
+                                            >
+                                                {isCreatingSheet ? t('idPhotoCreator_generatingPrintSheet') : t('idPhotoCreator_generatePrintSheet')}
+                                            </button>
+                                        </>
+                                    )}
+                                    {error && (
+                                        <button
+                                            onClick={handleGenerate}
+                                            className="px-6 py-2 bg-red-600/80 text-white rounded-full hover:bg-red-500 transition-colors text-sm"
+                                        >
+                                            {t('common_retry')}
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={handleGoBackToConfig}
+                                        className="px-6 py-2 bg-neutral-600 cursor-pointer text-white rounded-full hover:bg-neutral-500 transition-colors text-sm"
+                                    >
+                                        {t('common_edit')}
+                                    </button>
+                                    <button
+                                        onClick={handleStartOver}
+                                        className="px-6 py-2 bg-gradient-to-r from-orange-400 to-orange-600 hover:from-orange-600 hover:to-orange-400 text-white rounded-full cursor-pointer transition-colors text-sm"
+                                    >
+                                        {t('common_startOver')}
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Print Sheet Section */}
+                {printSheet && (
+                    <div className="mt-6 themed-card backdrop-blur-md p-4 rounded-2xl flex flex-col items-center gap-4">
+                        <h3 className="text-lg font-bold text-orange-400">{t('idPhotoCreator_printSheetTitle')}</h3>
+                        <div className="w-full max-w-lg cursor-pointer" onClick={() => openLightbox(lightboxImages.indexOf(printSheet))}>
+                            <div className="aspect-[6/4] w-full bg-black/20 rounded-lg border border-neutral-700 flex items-center justify-center relative overflow-hidden">
                                 <img src={printSheet} alt="Print Sheet" className="w-full h-full object-contain" />
                             </div>
-                            <button
-                                onClick={() => handleDownload(printSheet, 'print-sheet-4x6.jpg')}
-                                className="w-full mt-4 flex items-center justify-center gap-2 text-black font-bold py-3 px-6 rounded-lg bg-neutral-200 hover:bg-white transition-all duration-300 transform hover:scale-105"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                                {t('idPhotoCreator_downloadSheet')}
-                            </button>
                         </div>
-                    )}
-                    <button
-                        onClick={handleStartOver}
-                        className="mt-6 font-bold text-center text-neutral-400 hover:text-white transition-colors"
-                    >
-                        {t('common_startOver')}
-                    </button>
-                </div>
-            )}
+                        <button
+                            onClick={() => downloadImage(printSheet, 'print-sheet-4x6.jpg')}
+                            className="px-6 py-2 bg-blue-600/80 text-white rounded-full hover:bg-blue-500 transition-colors text-sm"
+                        >
+                            {t('idPhotoCreator_downloadSheet')}
+                        </button>
+                    </div>
+                )}
+            </div>
         </div>
     );
 
@@ -518,6 +581,13 @@ export default function IDPhotoCreator({ appState, onStateChange, onBack }: IDPh
                 {isConfigView ? renderConfigView() : renderResultView()}
 
             </motion.div>
+
+            <Lightbox
+                images={lightboxImages}
+                selectedIndex={lightboxIndex}
+                onClose={closeLightbox}
+                onNavigate={navigateLightbox}
+            />
         </main>
     );
 }

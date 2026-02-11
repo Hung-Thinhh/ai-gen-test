@@ -224,16 +224,22 @@ const FloatingImage = ({
 // Image Marquee with Framer Motion - Seamless Loop
 const ImageMarquee = () => {
   const images = [
-    "https://res.cloudinary.com/dmxmzannb/image/upload/v1768560690/fcgaoihbxxoe4hbofdso.png",
-    "https://res.cloudinary.com/dmxmzannb/image/upload/v1768562068/v0ybv26fss1eglne6zfu.png",
-    "https://res.cloudinary.com/dmxmzannb/image/upload/f_auto,q_auto/v1768206045/krxq16y49k91zevbw6os.webp",
     "https://pub-15159732d3b14718981f4ec71d2578eb.r2.dev/1769744496071-eiolbl.png",
     "https://pub-15159732d3b14718981f4ec71d2578eb.r2.dev/1768622719139-5ilv1h.png",
+    "https://pub-15159732d3b14718981f4ec71d2578eb.r2.dev/1770095197300-44qi7m.png",
+    "https://pub-15159732d3b14718981f4ec71d2578eb.r2.dev/1768624706006-7devla.png",
+    "https://pub-15159732d3b14718981f4ec71d2578eb.r2.dev/1770269731594-sq3hnm.png",
+    "https://pub-15159732d3b14718981f4ec71d2578eb.r2.dev/1770099433453-4bbull.png",
+    "https://pub-15159732d3b14718981f4ec71d2578eb.r2.dev/1768986464055-fubv1r.png",
+    "https://pub-15159732d3b14718981f4ec71d2578eb.r2.dev/1769588012174-40ewoa.png",
+    "https://pub-15159732d3b14718981f4ec71d2578eb.r2.dev/1769502622430-ti0hdp.png",
+    "https://pub-15159732d3b14718981f4ec71d2578eb.r2.dev/1769662015224-1gh2f6.png",
+    "https://pub-15159732d3b14718981f4ec71d2578eb.r2.dev/1770265613029-3wslm.png"
   ];
 
   // Triple duplicate for seamless infinite loop
   const allImages = [...images, ...images, ...images];
-  
+
   // Calculate offset: each item is ~140px (112px + 16px gap on mobile, ~208px + gap on desktop)
   // We animate through ONE set of original images, then loop resets seamlessly
   const offset = images.length * 140;
@@ -364,71 +370,71 @@ export const HeroV2 = () => {
           }}
         />
       </div>
-{/* Floating Images - CSS Animation Optimized */}
-            {/* Top Left */}
-            <div
-                className="absolute origin-bottom top-10 md:top-30 left-10 md:left-[15%] z-10 float-animation"
-                style={{ transform: 'rotate(-16deg)', animationDelay: '0s', animationDuration: '4s' }}
-            >
-                <div className="w-32 h-40 md:w-48 md:h-60 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20 -rotate-12">
-                    <img
-                        src="https://pub-15159732d3b14718981f4ec71d2578eb.r2.dev/1769744496071-eiolbl.png"
-                        alt="AI Generated Portrait"
-                        className="w-full h-full object-cover rounded-xl"
-                        loading="lazy"
-                        decoding="async"
-                    />
-                </div>
-            </div>
+      {/* Floating Images - CSS Animation Optimized */}
+      {/* Top Left */}
+      <div
+        className="absolute origin-bottom top-10 md:top-30 left-10 md:left-[15%] z-10 float-animation"
+        style={{ transform: 'rotate(-16deg)', animationDelay: '0s', animationDuration: '4s' }}
+      >
+        <div className="w-32 h-40 md:w-48 md:h-60 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20 -rotate-12">
+          <img
+            src="https://pub-15159732d3b14718981f4ec71d2578eb.r2.dev/1769744496071-eiolbl.png"
+            alt="AI Generated Portrait"
+            className="w-full h-full object-cover rounded-xl"
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+      </div>
 
-            {/* Bottom Left */}
-            <div
-                className="absolute bottom-140 md:bottom-70 left-10 md:left-[10%] z-[99] float-animation rotate-8"
-                style={{ transform: 'rotate(8deg)', animationDelay: '0.5s', animationDuration: '5s' }}
-            >
-                <div className="w-20 h-24 md:w-52 md:h-64 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20 -rotate-2 hidden md:block">
-                    <img
-                        src="https://res.cloudinary.com/dmxmzannb/image/upload/v1768560690/fcgaoihbxxoe4hbofdso.png"
-                        alt="AI Generated Art"
-                        className="w-full h-full object-cover rounded-xl"
-                        loading="lazy"
-                        decoding="async"
-                    />
-                </div>
-            </div>
+      {/* Bottom Left */}
+      <div
+        className="absolute bottom-140 md:bottom-70 left-10 md:left-[10%] z-[99] float-animation rotate-8"
+        style={{ transform: 'rotate(8deg)', animationDelay: '0.5s', animationDuration: '5s' }}
+      >
+        <div className="w-20 h-24 md:w-52 md:h-64 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20 -rotate-2 hidden md:block">
+          <img
+            src="https://res.cloudinary.com/dmxmzannb/image/upload/v1768560690/fcgaoihbxxoe4hbofdso.png"
+            alt="AI Generated Art"
+            className="w-full h-full object-cover rounded-xl"
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+      </div>
 
-            {/* Top Right */}
-            <div
-                className="absolute origin-center top-8 md:top-30 right-10 md:right-[15%] z-10 float-animation rotate-12"
-                style={{ transform: 'rotate(12deg)', animationDelay: '1s', animationDuration: '4.5s' }}
-            >
-                <div className="w-20 h-38 md:w-56 md:h-72 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20">
-                    <img
-                        src="https://res.cloudinary.com/dmxmzannb/image/upload/v1768562068/v0ybv26fss1eglne6zfu.png"
-                        alt="AI Portrait"
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                        decoding="async"
-                    />
-                </div>
-            </div>
+      {/* Top Right */}
+      <div
+        className="absolute origin-center top-8 md:top-30 right-10 md:right-[15%] z-10 float-animation rotate-12"
+        style={{ transform: 'rotate(12deg)', animationDelay: '1s', animationDuration: '4.5s' }}
+      >
+        <div className="w-20 h-38 md:w-56 md:h-72 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20">
+          <img
+            src="https://res.cloudinary.com/dmxmzannb/image/upload/v1768562068/v0ybv26fss1eglne6zfu.png"
+            alt="AI Portrait"
+            className="w-full h-full object-cover"
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+      </div>
 
-            {/* Bottom Right */}
-            <div
-                className="absolute origin-center bottom-120 md:bottom-85 right-5 md:right-[10%] z-[99] float-animation -rotate-8 hidden md:block"
-                style={{ transform: 'rotate(-8deg)', animationDelay: '1.5s', animationDuration: '5.5s' }}
-            >
-                <div className="w-32 h-40 md:w-44 md:h-56 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20">
-                    <img
-                        src="https://res.cloudinary.com/dmxmzannb/image/upload/f_auto,q_auto/v1768206045/krxq16y49k91zevbw6os.webp"
-                        alt="AI Generated"
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                        decoding="async"
-                    />
-                </div>
-            </div>
-      
+      {/* Bottom Right */}
+      <div
+        className="absolute origin-center bottom-120 md:bottom-85 right-5 md:right-[10%] z-[99] float-animation -rotate-8 hidden md:block"
+        style={{ transform: 'rotate(-8deg)', animationDelay: '1.5s', animationDuration: '5.5s' }}
+      >
+        <div className="w-32 h-40 md:w-44 md:h-56 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20">
+          <img
+            src="https://res.cloudinary.com/dmxmzannb/image/upload/f_auto,q_auto/v1768206045/krxq16y49k91zevbw6os.webp"
+            alt="AI Generated"
+            className="w-full h-full object-cover"
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+      </div>
+
 
       <div className="relative z-999 flex flex-col items-center justify-center min-h-200 md:min-h-screen pt-20 pb-0 md:pb-10">
         <motion.div
@@ -457,8 +463,8 @@ export const HeroV2 = () => {
         >
           <div
             className={`relative flex items-center gap-2 p-2 rounded-2xl bg-white/10 md:bg-white/5 backdrop-blur-xl border transition-all duration-300 ${isFocused
-                ? "border-orange-500 shadow-[0_0_30px_rgba(255,107,0,0.3)]"
-                : "border-white/20"
+              ? "border-orange-500 shadow-[0_0_30px_rgba(255,107,0,0.3)]"
+              : "border-white/20"
               }`}
           >
             {/* Image Upload Button */}
@@ -472,8 +478,8 @@ export const HeroV2 = () => {
             <button
               onClick={() => fileInputRef.current?.click()}
               className={`p-2 rounded-xl transition-all duration-300 ml-1 ${uploadedImage
-                  ? "bg-orange-500/20 text-orange-400"
-                  : "text-neutral-300 hover:text-white hover:bg-white/10"
+                ? "bg-orange-500/20 text-orange-400"
+                : "text-neutral-300 hover:text-white hover:bg-white/10"
                 }`}
               title={uploadedImage ? "Đã chọn ảnh" : "Tải ảnh lên"}
             >

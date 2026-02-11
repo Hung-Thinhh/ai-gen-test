@@ -186,17 +186,48 @@ export const downloadImage = async (url: string, filenameWithoutExtension: strin
         }
 
         const filename = `${filenameWithoutExtension}.${extension}`;
-        const objectUrl = URL.createObjectURL(blob);
 
-        const link = document.createElement('a');
-        link.href = objectUrl;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // --- Mobile Share / Save to Photos Support ---
+        // Check if Web Share API is supported and can share files
+        const file = new File([blob], filename, { type: blob.type });
 
-        // Clean up
-        setTimeout(() => URL.revokeObjectURL(objectUrl), 100);
+        // Use a flag to track if we should fallback
+        let usedShare = false;
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+                // On Mobile (iOS/Android), this opens the Share Sheet with "Save Image" option
+                await navigator.share({
+                    files: [file],
+                    title: 'Tải ảnh',
+                    text: 'Ảnh được tạo bởi Duky AI'
+                });
+                usedShare = true;
+                toast.success('Đã lưu ảnh thành công!');
+            } catch (shareError) {
+                // Ignore AbortError (user cancelled share)
+                if ((shareError as Error).name !== 'AbortError') {
+                    console.error('Share failed:', shareError);
+                    // If share failed for other reasons, we'll fall back to download
+                } else {
+                    // User cancelled, so we consider it "handled" to avoid double action
+                    usedShare = true;
+                }
+            }
+        }
+
+        if (!usedShare) {
+            // Fallback: Standard browser download
+            const objectUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = objectUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(objectUrl), 100);
+            toast.success('Đang tải về...');
+        }
 
     } catch (e) {
         console.error('Download failed:', e);

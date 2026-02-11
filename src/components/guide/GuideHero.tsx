@@ -15,7 +15,7 @@ export const GuideHero = () => {
       {/* Background Effects */}
       <div className="absolute inset-0">
         <div className="absolute top-0 left-1/6 w-220 h-96 bg-orange-600/60 rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 right-1/6 w-220 h-96 bg-purple-600/30 rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 right-1/6 w-220 h-96 bg-purple-600/10 rounded-full blur-[120px]" />
       </div>
 
       <div className="max-w-6xl mx-auto px-4 relative z-10">

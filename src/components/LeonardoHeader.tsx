@@ -15,7 +15,16 @@ export const LeonardoHeader = () => {
     const { t, guestCredits } = useAppControls();
     const { user, isLoggedIn, loginGoogle, logout } = useAuth();
     const { data: session } = useSession();
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [profileAnchorEl, setProfileAnchorEl] = useState<null | HTMLElement>(null);
+    const isProfileOpen = Boolean(profileAnchorEl);
+
+    const handleProfileClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+        setProfileAnchorEl(event.currentTarget);
+    };
+
+    const handleProfileClose = () => {
+        setProfileAnchorEl(null);
+    };
 
     // Local state for credits to allow real-time updates
     const [currentCredits, setCurrentCredits] = useState<number>(0);
@@ -159,7 +168,7 @@ export const LeonardoHeader = () => {
                             {/* Profile Dropdown */}
                             <div className="relative hidden md:block">
                                 <button
-                                    onClick={() => setIsMenuOpen(!isMenuOpen)}
+                                    onClick={handleProfileClick}
                                     className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 p-0.5 hover:scale-110 transition-transform duration-300"
                                 >
                                     <div className="w-full h-full rounded-full bg-black flex items-center justify-center overflow-hidden">
@@ -171,58 +180,74 @@ export const LeonardoHeader = () => {
                                     </div>
                                 </button>
 
-                                {/* Dropdown Menu */}
-                                {isMenuOpen && (
-                                    <>
-                                        {/* Backdrop to close menu on click outside */}
-                                        <div className="fixed inset-0 z-40" onClick={() => setIsMenuOpen(false)} />
+                                {/* MUI Dropdown Menu */}
+                                <Menu
+                                    anchorEl={profileAnchorEl}
+                                    open={isProfileOpen}
+                                    onClose={handleProfileClose}
+                                    onClick={handleProfileClose}
+                                    slotProps={{
+                                        paper: {
+                                            sx: {
+                                                mt: 1.5,
+                                                width: 240,
+                                                backgroundColor: 'rgba(9, 9, 11, 0.98)',
+                                                backdropFilter: 'blur(24px)',
+                                                border: '1px solid rgba(251, 146, 60, 0.15)',
+                                                borderRadius: '16px',
+                                                boxShadow: '0 25px 50px -12px rgba(249, 115, 22, 0.15), 0 0 30px rgba(0, 0, 0, 0.5)',
+                                                padding: '8px',
+                                                overflow: 'hidden'
+                                            }
+                                        }
+                                    }}
+                                    transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                                    anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                                >
+                                    {/* User Info Header */}
+                                    <div className="px-4 py-3 border-b border-white/10 mb-2 outline-none">
+                                        <p className="text-sm font-bold text-white truncate">{user?.user_metadata?.full_name || 'User'}</p>
+                                        <p className="text-xs text-neutral-400 truncate">{user?.email}</p>
+                                    </div>
 
-                                        <div className="absolute right-0 mt-2 w-48 bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
-                                            {/* User Info Header */}
-                                            <div className="px-4 py-2 border-b border-neutral-800 mb-1">
-                                                <p className="text-sm font-bold text-white truncate">{user?.user_metadata?.full_name || 'User'}</p>
-                                                <p className="text-xs text-neutral-400 truncate">{user?.email}</p>
-                                            </div>
-
-                                            <button
-                                                onClick={() => {
-                                                    router.push('/profile');
-                                                    setIsMenuOpen(false);
-                                                }}
-                                                className="w-full text-left px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors flex items-center gap-2"
-                                            >
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                                </svg>
-                                                <span>Thông tin cá nhân</span>
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    router.push('/gallery');
-                                                    setIsMenuOpen(false);
-                                                }}
-                                                className="w-full text-left px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors flex items-center gap-2"
-                                            >
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                </svg>
-                                                <span>Thư viện</span>
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    logout();
-                                                    setIsMenuOpen(false);
-                                                }}
-                                                className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-2"
-                                            >
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                                </svg>
-                                                <span>Đăng xuất</span>
-                                            </button>
+                                    <MenuItem
+                                        onClick={() => router.push('/profile')}
+                                        sx={{ borderRadius: '12px', mb: 0.5, '&:hover': { backgroundColor: 'rgba(255,255,255,0.05)' } }}
+                                    >
+                                        <div className="flex items-center gap-3 w-full text-neutral-300">
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                            </svg>
+                                            <span className="text-sm font-medium">Thông tin cá nhân</span>
                                         </div>
-                                    </>
-                                )}
+                                    </MenuItem>
+
+                                    <MenuItem
+                                        onClick={() => router.push('/gallery')}
+                                        sx={{ borderRadius: '12px', mb: 0.5, '&:hover': { backgroundColor: 'rgba(255,255,255,0.05)' } }}
+                                    >
+                                        <div className="flex items-center gap-3 w-full text-neutral-300">
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                            <span className="text-sm font-medium">Thư viện</span>
+                                        </div>
+                                    </MenuItem>
+
+                                    <div className="my-1 border-t border-white/5 mx-2" />
+
+                                    <MenuItem
+                                        onClick={() => logout()}
+                                        sx={{ borderRadius: '12px', '&:hover': { backgroundColor: 'rgba(239, 68, 68, 0.1)' } }}
+                                    >
+                                        <div className="flex items-center gap-3 w-full text-red-400">
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                            </svg>
+                                            <span className="text-sm font-medium">Đăng xuất</span>
+                                        </div>
+                                    </MenuItem>
+                                </Menu>
                             </div>
                         </>
                     ) : (
@@ -322,9 +347,8 @@ const SolutionsDropdown = ({ isActive }: { isActive?: boolean }) => {
         <div className="relative">
             <button
                 onClick={handleClick}
-                onMouseEnter={handleClick}
                 className={cn(
-                    "transition-colors relative group inline-flex items-center gap-1 py-4 md:py-6", // Tăng vùng tương tác
+                    "transition-colors cursor-pointer relative group inline-flex items-center gap-1 py-4 md:py-6", // Tăng vùng tương tác
                     isActive ? "text-orange-400 font-medium" : "text-gray-400 hover:text-orange-400"
                 )}
             >
@@ -350,9 +374,6 @@ const SolutionsDropdown = ({ isActive }: { isActive?: boolean }) => {
                 anchorEl={anchorEl}
                 open={open}
                 onClose={handleClose}
-                MenuListProps={{
-                    onMouseLeave: handleClose,
-                }}
                 slotProps={{
                     paper: {
                         sx: {
@@ -376,7 +397,7 @@ const SolutionsDropdown = ({ isActive }: { isActive?: boolean }) => {
                     {solutions.map((solution, index) => (
                         <MenuItem
                             key={index}
-                            onClick={handleClose}
+                            onClick={() => setAnchorEl(null)}
                             sx={{
                                 padding: 0,
                                 borderRadius: '16px',
