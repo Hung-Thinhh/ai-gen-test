@@ -1,4 +1,3 @@
-
 {
   "swapStyle_mainTitle": "Swap Image Style",
   "swapStyle_subtitle": "Upload a photo and choose a style to transform it",
@@ -18,5 +17,87 @@
   "swapStyle_regenPlaceholder": "e.g., add more details, more vibrant colors...",
   "swapStyle_styleReferenceActive": "Using style from reference image. Style selection is disabled.",
   "swapStyle_realPhotoCaption": "Real Photo",
-  "swapStyle_convertToRealNote": "The 'Convert to Real Photo' mode may be inaccurate in some cases. It's recommended to use input images with realistic human proportions."
+  "swapStyle_convertToRealNote": "The 'Convert to Real Photo' mode may be inaccurate in some cases. It's recommended to use input images with realistic human proportions.",
+  "swapStyle_styles": [
+    {
+      "en": "Cyberpunk",
+      "vi": "Cyberpunk"
+    },
+    {
+      "en": "Steampunk",
+      "vi": "Steampunk"
+    },
+    {
+      "en": "Watercolor",
+      "vi": "Watercolor"
+    },
+    {
+      "en": "Oil Painting",
+      "vi": "Oil Painting"
+    },
+    {
+      "en": "Pencil Sketch",
+      "vi": "Pencil Sketch"
+    },
+    {
+      "en": "Pixel Art",
+      "vi": "Pixel Art"
+    },
+    {
+      "en": "Van Gogh Style",
+      "vi": "Van Gogh Style"
+    },
+    {
+      "en": "Picasso Style",
+      "vi": "Picasso Style"
+    },
+    {
+      "en": "Impressionism",
+      "vi": "Impressionism"
+    },
+    {
+      "en": "Pop Art",
+      "vi": "Pop Art"
+    },
+    {
+      "en": "Film Noir Style",
+      "vi": "Film Noir Style"
+    },
+    {
+      "en": "Neon Lighting",
+      "vi": "Neon Lighting"
+    },
+    {
+      "en": "Sci-Fi Art",
+      "vi": "Sci-Fi Art"
+    },
+    {
+      "en": "Origami",
+      "vi": "Origami"
+    },
+    {
+      "en": "Marble",
+      "vi": "Marble"
+    },
+    {
+      "en": "Double Exposure",
+      "vi": "Double Exposure"
+    },
+    {
+      "en": "Hokusai Style (Ukiyo-e)",
+      "vi": "Hokusai Style (Ukiyo-e)"
+    },
+    {
+      "en": "Studio Ghibli Style",
+      "vi": "Studio Ghibli Style"
+    },
+    {
+      "en": "90s Anime Style",
+      "vi": "90s Anime Style"
+    },
+    {
+      "en": "Classic Disney Animation Style",
+      "vi": "Classic Disney Animation Style"
+    }
+  ]
 }

@@ -255,6 +255,14 @@
       "icon": "🏭",
       "supportsCanvasPreset": true,
       "previewImageUrl": "/img/img_base.webp"
+    },
+    {
+      "id": "template-composer",
+      "titleKey": "app_template-composer_title",
+      "descriptionKey": "app_template-composer_description",
+      "icon": "👔",
+      "supportsCanvasPreset": true,
+      "previewImageUrl": "/img/img_base.webp"
     }
   ],
   "avatarCreator": {
@@ -528,5 +536,19 @@
     "smartTitleWrapWords": 2,
     "uploaderCaptionKey": "khmerPhotoMerge_uploaderCaption",
     "uploaderDescriptionKey": "khmerPhotoMerge_uploaderDescription"
+  },
+  "templateComposer": {
+    "mainTitleKey": "templateComposer_mainTitle",
+    "subtitleKey": "templateComposer_subtitle",
+    "useSmartTitleWrapping": true,
+    "smartTitleWrapWords": 2,
+    "uploaderCaptionModelKey": "templateComposer_uploaderCaptionModel",
+    "uploaderDescriptionModelKey": "templateComposer_uploaderDescriptionModel",
+    "uploaderCaptionOutfit1Key": "templateComposer_uploaderCaptionOutfit1",
+    "uploaderDescriptionOutfit1Key": "templateComposer_uploaderDescriptionOutfit1",
+    "uploaderCaptionOutfit2Key": "templateComposer_uploaderCaptionOutfit2",
+    "uploaderDescriptionOutfit2Key": "templateComposer_uploaderDescriptionOutfit2",
+    "uploaderCaptionOutfit3Key": "templateComposer_uploaderCaptionOutfit3",
+    "uploaderDescriptionOutfit3Key": "templateComposer_uploaderDescriptionOutfit3"
   }
 }

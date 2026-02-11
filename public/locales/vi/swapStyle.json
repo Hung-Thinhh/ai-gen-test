@@ -17,5 +17,87 @@
   "swapStyle_regenPlaceholder": "Ví dụ: thêm nhiều chi tiết hơn, màu sắc rực rỡ hơn...",
   "swapStyle_styleReferenceActive": "Đang sử dụng phong cách từ ảnh tham chiếu. Lựa chọn Phong cách bị vô hiệu hóa.",
   "swapStyle_realPhotoCaption": "Ảnh thật",
-  "swapStyle_convertToRealNote": "Chế độ chuyển đổi sang ảnh thật không chính xác trong một vài trường hợp, nên dùng các hình ảnh input đúng tỉ lệ người thật"
+  "swapStyle_convertToRealNote": "Chế độ chuyển đổi sang ảnh thật không chính xác trong một vài trường hợp, nên dùng các hình ảnh input đúng tỉ lệ người thật",
+  "swapStyle_styles": [
+    {
+      "en": "Cyberpunk",
+      "vi": "Cyberpunk"
+    },
+    {
+      "en": "Steampunk",
+      "vi": "Steampunk"
+    },
+    {
+      "en": "Watercolor",
+      "vi": "Màu nước"
+    },
+    {
+      "en": "Oil Painting",
+      "vi": "Sơn dầu"
+    },
+    {
+      "en": "Pencil Sketch",
+      "vi": "Phác thảo bút chì"
+    },
+    {
+      "en": "Pixel Art",
+      "vi": "Nghệ thuật Pixel"
+    },
+    {
+      "en": "Van Gogh Style",
+      "vi": "Phong cách Van Gogh"
+    },
+    {
+      "en": "Picasso Style",
+      "vi": "Phong cách Picasso"
+    },
+    {
+      "en": "Impressionism",
+      "vi": "Ấn tượng"
+    },
+    {
+      "en": "Pop Art",
+      "vi": "Pop Art"
+    },
+    {
+      "en": "Film Noir Style",
+      "vi": "Phong cách Film Noir"
+    },
+    {
+      "en": "Neon Lighting",
+      "vi": "Ánh sáng Neon"
+    },
+    {
+      "en": "Sci-Fi Art",
+      "vi": "Nghệ thuật Khoa học Viễn tưởng"
+    },
+    {
+      "en": "Origami",
+      "vi": "Origami"
+    },
+    {
+      "en": "Marble",
+      "vi": "Đá cẩm thạch"
+    },
+    {
+      "en": "Double Exposure",
+      "vi": "Chồng ảnh"
+    },
+    {
+      "en": "Hokusai Style (Ukiyo-e)",
+      "vi": "Phong cách Hokusai (Ukiyo-e)"
+    },
+    {
+      "en": "Studio Ghibli Style",
+      "vi": "Phong cách Studio Ghibli"
+    },
+    {
+      "en": "90s Anime Style",
+      "vi": "Phong cách Anime thập niên 90"
+    },
+    {
+      "en": "Classic Disney Animation Style",
+      "vi": "Phong cách hoạt hình Disney cổ điển"
+    }
+  ]
 }

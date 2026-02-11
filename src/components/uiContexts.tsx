@@ -241,7 +241,8 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 'swapStyle',
                 'toyModelCreator',
                 'idPhotoCreator',
-                'khmerPhotoMerge'
+                'khmerPhotoMerge',
+                'templateComposer'
             ];
             try {
                 const fetchPromises = modules.map(module =>
@@ -940,7 +941,7 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
         // Special system views that are not in settings.apps
         // Special system views that are not in settings.apps
-        const systemViews = ['overview', 'home', 'generators','guide', 'gallery', 'contact', 'prompt-library', 'storyboarding', 'profile', 'settings', 'studio', 'pricing'];
+        const systemViews = ['overview', 'home', 'generators', 'guide', 'gallery', 'contact', 'prompt-library', 'storyboarding', 'profile', 'settings', 'studio', 'pricing'];
 
         if (systemViews.includes(appId)) {
             // Update state

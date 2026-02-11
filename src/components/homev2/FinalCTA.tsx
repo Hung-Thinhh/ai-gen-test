@@ -26,8 +26,19 @@ export const FinalCTA = () => {
   return (
     <section className="py-20 bg-black relative overflow-hidden">
       {/* Background Effects */}
+      <div className="absolute inset-0 z-0">
+        <img
+          src="https://res.cloudinary.com/dmxmzannb/image/upload/v1767599662/UX-Duky-AI_1_zufq7x.jpg"
+          onError={(e) => {
+            // Fallback to img_base if bg_banner is missing
+            e.currentTarget.src = "/img/img_base.webp";
+          }}
+          alt="Banner Background"
+          className="w-full h-full object-cover"
+        />
+      </div>
       <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-r from-orange-600/20 via-purple-600/20 to-orange-600/20" />
+        <div className="absolute inset-0 bg-gradient-to-r from-orange-600/10 via-yellow-600/10 to-orange-600/20" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-orange-500/10 rounded-full blur-[150px]" />
         <div
           className="absolute inset-0 opacity-[0.03]"

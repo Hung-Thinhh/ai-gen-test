@@ -1,10 +1,16 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
-*/
+ */
 import React, { ChangeEvent, useCallback, useRef, useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-// FIX: Import 'editImageWithPrompt' to resolve 'Cannot find name' error.
+import {
+    SparklesIcon,
+    CameraIcon,
+    NoteIcon,
+    PaletteIcon,
+    SettingsIcon,
+} from './icons/PosterIcons';
 import { swapImageStyle, mixImageStyle, editImageWithPrompt } from '../services/geminiService';
 import ActionablePolaroidCard from './ActionablePolaroidCard';
 import Lightbox from './Lightbox';
@@ -26,7 +32,11 @@ import {
     getInitialStateForApp,
     SearchableSelect,
     Switch,
+    useMediaQuery,
+    limitHistoricalImages,
 } from './uiUtils';
+import toast from 'react-hot-toast';
+import { processApiError, GeminiErrorCodes, GeminiError } from '@/services/gemini/baseService';
 
 interface SwapStyleProps {
     mainTitle: string;
@@ -57,33 +67,47 @@ const SwapStyle: React.FC<SwapStyleProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, settings, checkCredits, modelVersion } = useAppControls();
+    const { t, settings, checkCredits, modelVersion, refreshGallery } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
     const { videoTasks, generateVideo } = useVideoGeneration();
     const [localNotes, setLocalNotes] = useState(appState.options.notes);
+    const isMobile = useMediaQuery('(max-width: 768px)');
+    // Refs for multi-gen
+    const generationResults = React.useRef<string[]>([]);
+    const generationErrorsRef = React.useRef<Record<number, string>>({});
+    const [generationErrors, setGenerationErrors] = useState<Record<number, string>>({});
+
 
     const { convertToReal } = appState.options;
 
     const STYLE_STRENGTH_LEVELS = t('style_strengthLevels');
     const FAITHFULNESS_LEVELS = ['Rất yếu', 'Yếu', 'Trung bình', 'Mạnh', 'Rất mạnh'];
 
-    const bilingualStyles: { en: string; vi: string }[] = Array.isArray(t('styles')) ? t('styles') : [];
+    const bilingualStyles: { en: string; vi: string }[] = Array.isArray(t('swapStyle_styles')) ? t('swapStyle_styles') : [];
 
-    const formattedStyleOptions = useMemo(() =>
-        bilingualStyles.map(style => `${style.en} (${style.vi})`),
-        [bilingualStyles]);
+    // Ensure we handle the "styles" array even if it wasn't initialized in legacy state
+    const selectedStyles = appState.options.styles || (appState.options.style ? [appState.options.style] : []);
 
-    const handleStyleChange = (formattedValue: string) => {
-        const selectedStyle = bilingualStyles.find(s => `${s.en} (${s.vi})` === formattedValue);
-        // Save the English value for the API, as models are better trained on it.
-        handleOptionChange('style', selectedStyle ? selectedStyle.en : formattedValue.split(' (')[0]);
+    const toggleStyle = (styleEn: string) => {
+        let newStyles = [...selectedStyles];
+        if (newStyles.includes(styleEn)) {
+            newStyles = newStyles.filter(s => s !== styleEn);
+        } else {
+            if (newStyles.length >= 4) {
+                toast.error("Bạn chỉ có thể chọn tối đa 4 phong cách cùng lúc.");
+                return;
+            }
+            newStyles.push(styleEn);
+        }
+        onStateChange({
+            ...appState,
+            options: {
+                ...appState.options,
+                styles: newStyles,
+                style: newStyles.length > 0 ? newStyles[0] : '' // Sync for compatibility
+            }
+        });
     };
-
-    const displayValue = useMemo(() => {
-        const selectedStyle = bilingualStyles.find(s => s.en === appState.options.style);
-        return selectedStyle ? `${selectedStyle.en} (${selectedStyle.vi})` : appState.options.style;
-    }, [appState.options.style, bilingualStyles]);
-
 
     const lightboxImages = [appState.contentImage, appState.styleImage, ...appState.historicalImages].filter((img): img is string => !!img);
 
@@ -91,395 +115,419 @@ const SwapStyle: React.FC<SwapStyleProps> = (props) => {
         setLocalNotes(appState.options.notes);
     }, [appState.options.notes]);
 
-    const handleContentImageSelected = (imageDataUrl: string) => {
+    const handleContentImageSelected = (imageDataUrl: string | null) => {
         onStateChange({
             ...appState,
-            stage: 'configuring',
+            stage: imageDataUrl ? 'configuring' : 'idle',
             contentImage: imageDataUrl,
-            generatedImage: null,
-            historicalImages: [],
+            // generatedImages: [],
+            // historicalImages: [],
             error: null,
         });
-        // addImagesToGallery([imageDataUrl]);
     };
 
-    const handleOptionChange = (field: keyof SwapStyleState['options'], value: string | boolean) => {
+    const handleStyleImageChange = (newUrl: string | null) => {
+        onStateChange({ ...appState, styleImage: newUrl });
+    };
+
+    const handleOptionChange = (field: keyof SwapStyleState['options'], value: any) => {
         onStateChange({
             ...appState,
             options: { ...appState.options, [field]: value },
         });
     };
 
-    const executeInitialGeneration = async () => {
+    const handleGenerate = async () => {
         if (!appState.contentImage) return;
 
-        // Check credits FIRST
-        const preGenState = { ...appState };
-        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
-        if (!await checkCredits(creditCostPerImage)) {
-            return; // Stay in configuring
+        // If converting to real, we treat it as 1 item.
+        // If swapping styles, we use selectedStyles array.
+        // If styleImage is present, we ignore selectedStyles (legacy single mix behavior or maybe 1:1 mix).
+        // For simplicity: If styleImage exists -> Mix 1 style (image). 
+        // If no styleImage & no convertToReal -> Use selectedStyles loop.
+
+        const stylesToProcess = convertToReal
+            ? ['image-to-real']
+            : (appState.styleImage ? ['custom-ref'] : selectedStyles);
+
+        if (stylesToProcess.length === 0) {
+            toast.error("Vui lòng chọn ít nhất 1 phong cách.");
+            return;
         }
 
-        // Set generating stage AFTER credits confirmed
-        onStateChange({ ...appState, stage: 'generating', error: null });
+        // Check credits
+        const count = stylesToProcess.length;
+        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
+        if (!await checkCredits(creditCostPerImage * count)) {
+            return;
+        }
+
+        generationResults.current = new Array(count).fill('');
+        generationErrorsRef.current = {};
+        setGenerationErrors({});
+        const processingPromises: Promise<void>[] = [];
+        const preGenState = { ...appState };
+
+        onStateChange({ ...appState, stage: 'generating', error: null, generatedImages: new Array(count).fill('') });
 
         try {
-            let resultUrl: string;
+            stylesToProcess.forEach((styleItem, index) => {
+                const processTask = async () => {
+                    try {
+                        let resultUrl: string;
+                        // Determine which API to call based on the item
+                        if (convertToReal) {
+                            resultUrl = await swapImageStyle(appState.contentImage!, appState.options, 'image-to-real');
+                        } else if (styleItem === 'custom-ref' && appState.styleImage) {
+                            const { resultUrl: mixedUrl } = await mixImageStyle(appState.contentImage!, appState.styleImage, appState.options, 'swap-style');
+                            resultUrl = mixedUrl;
+                        } else {
+                            // Standard swap style
+                            const singleStyleOptions = { ...appState.options, style: styleItem };
+                            resultUrl = await swapImageStyle(appState.contentImage!, singleStyleOptions, 'swap-style');
+                        }
 
-            if (appState.options.convertToReal) {
-                resultUrl = await swapImageStyle(appState.contentImage, appState.options, 'image-to-real');
-            } else if (appState.styleImage) {
-                const { resultUrl: mixedUrl } = await mixImageStyle(appState.contentImage, appState.styleImage, appState.options, 'swap-style');
-                resultUrl = mixedUrl;
+                        // Embed metadata
+                        const settingsToEmbed = {
+                            viewId: 'swap-style',
+                            state: { ...preGenState, stage: 'configuring', generatedImages: [], historicalImages: [], error: null },
+                        };
+                        const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
+
+                        generationResults.current[index] = urlWithMetadata;
+
+                        // Update UI
+                        const currentImages = [...generationResults.current].map(u => u || '');
+                        onStateChange({
+                            ...appState,
+                            stage: 'generating',
+                            generatedImages: currentImages
+                        });
+                    } catch (err: any) {
+                        const errorMsg = processApiError(err).message;
+                        generationErrorsRef.current[index] = errorMsg;
+                        setGenerationErrors({ ...generationErrorsRef.current });
+                        // generationResults.current[index] = 'error'; // or keep empty?
+                    }
+                };
+                processingPromises.push(processTask());
+            });
+
+            await Promise.all(processingPromises);
+
+            // Finalize
+            const validImages = generationResults.current.filter(url => url && url.length > 0);
+            if (validImages.length > 0) {
+                onStateChange({
+                    ...appState,
+                    stage: 'results',
+                    generatedImages: generationResults.current.map(u => u || ''),
+                    historicalImages: limitHistoricalImages(appState.historicalImages, validImages),
+                    generatedImage: validImages[0] // sync for compat
+                });
+                refreshGallery();
             } else {
-                resultUrl = await swapImageStyle(appState.contentImage, appState.options, 'swap-style');
+                if (Object.keys(generationErrorsRef.current).length > 0) {
+                    // Stay in results to show errors
+                    onStateChange({ ...appState, stage: 'results' });
+                } else {
+                    onStateChange({ ...appState, stage: 'results', error: "No images generated" });
+                }
             }
 
-            const settingsToEmbed = {
-                viewId: 'swap-style',
-                state: { ...appState, stage: 'configuring', generatedImage: null, historicalImages: [], error: null },
-            };
-            const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            // logGeneration('swap-style', preGenState, urlWithMetadata, {
-            //     credits_used: creditCostPerImage,
-            //     generation_count: 1,
-            //     api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
-            // });
-            onStateChange({
-                ...appState,
-                stage: 'results',
-                generatedImage: urlWithMetadata,
-                historicalImages: [...appState.historicalImages, urlWithMetadata],
-            });
-            // addImagesToGallery([urlWithMetadata]);
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
-            onStateChange({ ...appState, stage: 'results', error: errorMessage });
+        } catch (err: any) {
+            onStateChange({ ...appState, stage: 'results', error: err.message });
         }
     };
 
-    const handleRegeneration = async (prompt: string) => {
-        if (!appState.generatedImage) return;
+    const handleRegeneration = async (index: number, prompt: string) => {
+        const url = appState.generatedImages[index];
+        if (!url) return;
 
-        // Check credits FIRST
-        const preGenState = { ...appState };
-        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
-        if (!await checkCredits(creditCostPerImage)) {
-            return; // Stay in results
-        }
+        // Logic regen... (similar to FreeGen)
+        // ...
+        // Simplified for now: just call editImageWithPrompt and update slot
+        if (!await checkCredits()) return;
 
-        // Set generating stage AFTER credits confirmed
-        onStateChange({ ...appState, stage: 'generating', error: null });
-
+        onStateChange({ ...appState, stage: 'generating' });
         try {
-            const resultUrl = await editImageWithPrompt(appState.generatedImage, prompt);
-            const settingsToEmbed = {
-                viewId: 'swap-style',
-                state: { ...appState, stage: 'configuring', generatedImage: null, historicalImages: [], error: null },
-            };
-            const urlWithMetadata = await embedJsonInPng(resultUrl, settingsToEmbed, settings.enableImageMetadata);
-            // logGeneration('swap-style', preGenState, urlWithMetadata, {
-            //     credits_used: creditCostPerImage,
-            //     generation_count: 1,
-            //     api_model_used: modelVersion === 'v3' ? 'imagen-3.0-generate-001' : 'gemini-2.5-flash-image'
-            // });
+            const resultUrl = await editImageWithPrompt(url, prompt);
+            const urlWithMetadata = await embedJsonInPng(resultUrl, { viewId: 'swap-style', state: appState }, settings.enableImageMetadata);
+
+            const newImages = [...appState.generatedImages];
+            newImages[index] = urlWithMetadata;
+
             onStateChange({
                 ...appState,
                 stage: 'results',
-                generatedImage: urlWithMetadata,
-                historicalImages: [...appState.historicalImages, urlWithMetadata],
+                generatedImages: newImages,
+                historicalImages: limitHistoricalImages(appState.historicalImages, [urlWithMetadata])
             });
-            // addImagesToGallery([urlWithMetadata]);
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
-            onStateChange({ ...appState, stage: 'results', error: errorMessage });
+            refreshGallery();
+
+        } catch (e: any) {
+            onStateChange({ ...appState, stage: 'results', error: e.message });
         }
-    };
-
-    const handleContentImageChange = (newUrl: string | null) => {
-        onStateChange({ ...appState, contentImage: newUrl, stage: newUrl ? 'configuring' : 'idle' });
-        // if (newUrl) {
-        //     addImagesToGallery([newUrl]);
-        // }
-    };
-
-    const handleStyleImageChange = (newUrl: string | null) => {
-        onStateChange({ ...appState, styleImage: newUrl });
-        // if (newUrl) {
-        //     addImagesToGallery([newUrl]);
-        // }
-    };
-
-    const handleGeneratedImageChange = (newUrl: string | null) => {
-        if (!newUrl) return;
-        const newHistorical = [...appState.historicalImages, newUrl];
-        onStateChange({ ...appState, stage: 'results', generatedImage: newUrl, historicalImages: newHistorical });
-        addImagesToGallery([newUrl]);
-    };
-
-    const handleBackToOptions = () => {
-        onStateChange({ ...appState, stage: 'configuring', error: null });
     };
 
     const handleDownloadAll = () => {
         const inputImages: ImageForZip[] = [];
-        if (appState.contentImage) {
-            inputImages.push({ url: appState.contentImage, filename: 'anh-goc', folder: 'input' });
-        }
-        if (appState.styleImage) {
-            inputImages.push({ url: appState.styleImage, filename: 'anh-style-tham-chieu', folder: 'input' });
-        }
+        if (appState.contentImage) inputImages.push({ url: appState.contentImage, filename: 'anh-goc', folder: 'input' });
+        if (appState.styleImage) inputImages.push({ url: appState.styleImage, filename: 'anh-style', folder: 'input' });
 
         processAndDownloadAll({
             inputImages,
             historicalImages: appState.historicalImages,
             videoTasks,
             zipFilename: 'anh-theo-style.zip',
-            baseOutputFilename: `anh-style-${appState.options.style.replace(/[\s()]/g, '-')}`,
+            baseOutputFilename: 'ket-qua',
         });
     };
 
     const isLoading = appState.stage === 'generating';
 
-    return (
-        <div className="flex flex-col items-center justify-center w-full h-full flex-1 min-h-screen">
-            <AnimatePresence>
-                {(appState.stage === 'idle' || appState.stage === 'configuring') && (<AppScreenHeader {...headerProps} />)}
-            </AnimatePresence>
+    // Render logic for Style Selector
+    const renderStyleSelector = () => {
+        return (
+            <div className="grid grid-cols-2 gap-2 mt-2">
+                {bilingualStyles.map((s) => {
+                    const isSelected = selectedStyles.includes(s.en);
+                    return (
+                        <button
+                            key={s.en}
+                            onClick={() => toggleStyle(s.en)}
+                            className={`
+                                relative p-2 rounded-lg text-sm text-center transition-all duration-200 border
+                                ${isSelected
+                                    ? 'bg-orange-500/20 border-orange-500 text-orange-200 shadow-[0_0_10px_rgba(249,115,22,0.3)]'
+                                    : 'bg-neutral-800/50 border-neutral-700 text-neutral-400 hover:bg-neutral-700 hover:border-neutral-500'
+                                }
+                            `}
+                        >
+                            <span className="block font-medium">{s.vi}</span>
+                            <span className="block text-[10px] opacity-70 truncate">{s.en}</span>
+                            {isSelected && (
+                                <div className="absolute top-1 right-1 w-2 h-2 bg-orange-500 rounded-full shadow-sm" />
+                            )}
+                        </button>
+                    )
+                })}
+            </div>
+        );
+    };
 
-            <div className="flex flex-col items-center justify-center w-full flex-1 px-4">
-                {(appState.stage === 'idle' || appState.stage === 'configuring') && (
-                    <motion.div
-                        className="flex flex-col items-center gap-6 w-full max-w-7xl py-6 overflow-y-auto"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5 }}
-                    >
-                        {/* Input images grid */}
-                        <div className="w-full pb-4 max-w-4xl">
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 w-full max-w-7xl mx-auto px-4">
-                                <div className="flex flex-col items-center gap-2">
-                                    <ActionablePolaroidCard
-                                        type={appState.contentImage ? 'content-input' : 'uploader'}
-                                        mediaUrl={appState.contentImage ?? undefined}
-                                        caption={uploaderCaptionContent}
-                                        placeholderType="magic"
-                                        status="done"
-                                        onClick={appState.contentImage ? () => openLightbox(lightboxImages.indexOf(appState.contentImage!)) : undefined}
-                                        onImageChange={handleContentImageChange}
-                                    />
-                                    <p className="base-font font-bold text-neutral-300 text-center max-w-xs text-xs sm:text-sm">
-                                        {uploaderDescriptionContent}
-                                    </p>
+    return (
+        <div className="min-h-screen bg-black text-white">
+            {/* Header */}
+            <div className="border-b border-neutral-800 px-6 py-4 pt-20 md:pt-10">
+                <div className="max-w-7xl mx-auto flex items-end justify-between">
+                    <div>
+                        <h1 className="text-4xl font-bold flex items-center gap-2 text-orange-500">
+                            <SparklesIcon className="w-10 h-10" />
+                            {headerProps.mainTitle}
+                        </h1>
+                        <p className="text-md text-neutral-400 mt-1">
+                            {headerProps.subtitle}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Model Selector Positioned like MilkTea V2 */}
+            <div className=" px-6 p-0 md:py-3 relative">
+                {/* Positioned absolutely on desktop to align with header right side, or handled by AppControls internal logic if reusable */}
+            </div>
+
+            {/* Main Content - 2 Column Layout (35% - 65%) */}
+            <div className="max-w-[1600px] mx-auto px-6 p-2 md:py-8">
+                <div className="grid grid-cols-1 lg:grid-cols-[35%_65%] gap-6">
+
+                    {/* LEFT COLUMN: Inputs */}
+                    <div className="flex flex-col gap-6">
+                        {/* Upload Section */}
+                        <div className="bg-[#0c0c0c] rounded-xl p-6 border border-neutral-800">
+                            <label className="text-white font-semibold text-base flex items-center gap-2 mb-4">
+                                <CameraIcon className="w-6 h-6" />
+                                Ảnh đầu vào
+                            </label>
+
+                            {/* Main Content Image */}
+                            <div className="w-full">
+                                <ActionablePolaroidCard
+                                    uploadLabel="Tải ảnh nội dung"
+                                    type={appState.contentImage ? 'content-input' : 'uploader'}
+                                    mediaUrl={appState.contentImage ?? undefined}
+                                    status="done"
+                                    caption={uploaderCaptionContent}
+                                    placeholderType="magic"
+                                    onImageChange={(url) => handleContentImageSelected(url)}
+                                    onClick={appState.contentImage ? () => openLightbox(lightboxImages.indexOf(appState.contentImage!)) : undefined}
+                                />
+                            </div>
+
+                            {/* Reference/Style Image (if needed for Mix) */}
+                            {!convertToReal && (
+                                <div className="mt-6">
+                                    <label className="text-neutral-400 text-xs font-semibold uppercase tracking-wider mb-2 block">
+                                        Ảnh tham chiếu (Tùy chọn)
+                                    </label>
+                                    <div className="h-40 w-40 mx-auto">
+                                        <ActionablePolaroidCard
+                                            uploadLabel="Ảnh phong cách"
+                                            type="style-input"
+                                            mediaUrl={appState.styleImage ?? undefined}
+                                            caption={uploaderCaptionStyle}
+                                            placeholderType='style'
+                                            status='done'
+                                            onImageChange={handleStyleImageChange}
+                                            onClick={appState.styleImage ? () => openLightbox(lightboxImages.indexOf(appState.styleImage!)) : undefined}
+                                        />
+                                    </div>
+                                    <p className="text-center text-xs text-neutral-500 mt-2">{uploaderDescriptionStyle}</p>
                                 </div>
-                                <AnimatePresence>
-                                    {!convertToReal && (
-                                        <motion.div
-                                            initial={{ opacity: 0, scale: 0.9 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            exit={{ opacity: 0, scale: 0.9 }}
-                                            transition={{ duration: 0.3 }}
-                                            className="flex flex-col items-center gap-2"
-                                        >
-                                            <ActionablePolaroidCard
-                                                type="style-input"
-                                                mediaUrl={appState.styleImage ?? undefined}
-                                                caption={uploaderCaptionStyle}
-                                                placeholderType='style'
-                                                status='done'
-                                                onImageChange={handleStyleImageChange}
-                                                onClick={appState.styleImage ? () => openLightbox(lightboxImages.indexOf(appState.styleImage!)) : undefined}
-                                            />
-                                            <p className="base-font font-bold text-neutral-300 text-center max-w-xs text-xs sm:text-sm">
-                                                {uploaderDescriptionStyle}
-                                            </p>
-                                        </motion.div>
+                            )}
+                        </div>
+
+                        {/* Notes Section */}
+                        <div className="bg-[#0c0c0c] border border-neutral-800 rounded-xl p-6">
+                            <label className="text-white font-semibold text-xl flex items-center gap-2 mb-4">
+                                <NoteIcon className="w-5 h-6" />
+                                Ghi chú
+                            </label>
+                            <textarea
+                                value={localNotes}
+                                onChange={(e) => {
+                                    setLocalNotes(e.target.value);
+                                    handleOptionChange('notes', e.target.value);
+                                }}
+                                placeholder="Nhập ghi chú thêm cho AI..."
+                                rows={3}
+                                className="w-full px-4 py-2 bg-[#0c0c0c] border border-neutral-700 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:border-orange-500 resize-none"
+                            />
+                        </div>
+                    </div>
+
+                    {/* RIGHT COLUMN: Settings & Results */}
+                    <div className="flex flex-col gap-6">
+
+                        {/* Styles Grid */}
+                        {!convertToReal && !appState.styleImage && (
+                            <div className="bg-[#0c0c0c] border border-neutral-800 rounded-xl p-6">
+                                <label className="block text-sm font-medium text-neutral-300 mb-3 flex items-center gap-2">
+                                    <PaletteIcon className="w-4 h-4" />
+                                    Chọn Phong Cách
+                                    {selectedStyles.length > 0 && (
+                                        <span className="ml-auto text-xs bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full">
+                                            {selectedStyles.length}/4 đã chọn
+                                        </span>
                                     )}
-                                </AnimatePresence>
+                                </label>
+                                {renderStyleSelector()}
+                            </div>
+                        )}
+
+                        {/* Formatting Options */}
+                        {/* Formatting Options */}
+                        <div className="bg-[#0c0c0c] border border-neutral-800 rounded-xl p-6">
+                            <div className="flex items-center gap-2 mb-4">
+                                <SettingsIcon className="w-5 h-5 text-white" />
+                                <label className="text-white font-semibold text-base">Cấu hình</label>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <Slider
+                                        label="Cường độ phong cách"
+                                        options={STYLE_STRENGTH_LEVELS}
+                                        value={appState.options.styleStrength}
+                                        onChange={(val) => handleOptionChange('styleStrength', val)}
+                                        disabled={false}
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-4 pt-2">
+                                    <div className="flex items-center justify-between">
+                                        <label htmlFor="remove-watermark" className="text-sm font-medium text-neutral-300">
+                                            {t('remove_watermark')}
+                                        </label>
+                                        <Switch
+                                            id="remove-watermark"
+                                            checked={appState.options.removeWatermark}
+                                            onChange={(checked) => handleOptionChange('removeWatermark', checked)}
+                                        />
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <label htmlFor="convert-to-real" className="text-sm font-medium text-neutral-300">
+                                            Chuyển sang ảnh thật
+                                        </label>
+                                        <Switch
+                                            id="convert-to-real"
+                                            checked={appState.options.convertToReal}
+                                            onChange={(checked) => handleOptionChange('convertToReal', checked)}
+                                        />
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Options panel - always visible */}
-                        <OptionsPanel>
-                            <h2 className="base-font font-bold text-2xl text-yellow-400 border-b border-yellow-400/20 pb-2">{t('common_options')}</h2>
-
-                            <div className="flex items-center pt-2">
-                                <Switch
-                                    id="convert-to-real-switch"
-                                    checked={convertToReal}
-                                    onChange={(checked) => handleOptionChange('convertToReal', checked)}
-                                />
-                                <label htmlFor="convert-to-real-switch" className="ml-3 block text-sm font-medium text-neutral-200">
-                                    Chuyển sang ảnh thật
-                                </label>
-                            </div>
-
-                            <AnimatePresence>
-                                {convertToReal && (
-                                    <motion.div
-                                        key="convert-to-real-note"
-                                        initial={{ opacity: 0, y: -10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -10 }}
-                                        transition={{ duration: 0.3 }}
-                                    >
-                                        <p className="text-xs text-yellow-300/90 mt-1 p-2 bg-yellow-400/10 rounded-md">
-                                            {t('swapStyle_convertToRealNote')}
-                                        </p>
-                                    </motion.div>
+                        {/* Generate Button */}
+                        <div className="sticky bottom-4 z-10">
+                            <button
+                                onClick={handleGenerate}
+                                disabled={isLoading || !appState.contentImage}
+                                className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-neutral-800 disabled:text-neutral-500 text-white font-bold py-4 rounded-xl text-lg flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-orange-500/20"
+                            >
+                                {isLoading ? (
+                                    <>
+                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        Đang xử lý...
+                                    </>
+                                ) : (
+                                    <>
+                                        <SparklesIcon className="w-5 h-5" />
+                                        Tạo Ảnh Ngay
+                                    </>
                                 )}
-                            </AnimatePresence>
+                            </button>
+                        </div>
 
-                            <AnimatePresence mode="wait">
-                                {!convertToReal && !appState.styleImage ? (
-                                    <motion.div
-                                        key="style-select"
-                                        initial={{ opacity: 0, height: 0 }}
-                                        animate={{ opacity: 1, height: 'auto' }}
-                                        exit={{ opacity: 0, height: 0 }}
-                                        transition={{ duration: 0.3 }}
-                                    >
-                                        <div className="pt-2">
-                                            <SearchableSelect
-                                                id="style-search"
-                                                label={t('swapStyle_styleLabel')}
-                                                options={formattedStyleOptions}
-                                                value={displayValue}
-                                                onChange={handleStyleChange}
-                                                placeholder={t('swapStyle_stylePlaceholder')}
+                        {/* Results Area */}
+                        {(appState.generatedImages.length > 0 || isLoading) && (
+                            <div className="bg-[#0c0c0c] border border-neutral-800 rounded-xl p-6">
+                                <div className="flex justify-between items-center mb-4">
+                                    <label className="text-white font-semibold text-xl flex items-center gap-2">
+                                        Kết quả
+                                    </label>
+                                    {appState.generatedImages.some(img => img) && (
+                                        <button
+                                            onClick={handleDownloadAll}
+                                            className="text-xs flex items-center gap-1 text-neutral-400 hover:text-white"
+                                        >
+                                            ⬇️ Tải tất cả
+                                        </button>
+                                    )}
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    {appState.generatedImages.map((img, idx) => (
+                                        <div key={idx} className="relative group">
+                                            <ActionablePolaroidCard
+                                                type="output"
+                                                mediaUrl={img || undefined}
+                                                status={img ? 'done' : (isLoading ? 'pending' : 'pending')}
+                                                caption={`Kết quả ${idx + 1}`}
+                                                error={generationErrors[idx]}
+                                                onClick={img ? () => openLightbox(lightboxImages.indexOf(img)) : undefined}
+                                                onRegenerate={() => handleRegeneration(idx, localNotes)}
                                             />
                                         </div>
-                                    </motion.div>
-                                ) : !convertToReal && appState.styleImage ? (
-                                    <motion.div
-                                        key="style-ref-active"
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        exit={{ opacity: 0 }}
-                                        className="text-center p-3 bg-neutral-700/50 rounded-lg my-2"
-                                    >
-                                        <p className="text-sm text-yellow-300">{t('swapStyle_styleReferenceActive')}</p>
-                                    </motion.div>
-                                ) : null}
-                            </AnimatePresence>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
-                            <div className="pt-2">
-                                <Slider
-                                    label={convertToReal ? "Mức độ giữ nét" : t('swapStyle_strengthLabel')}
-                                    options={convertToReal ? FAITHFULNESS_LEVELS : STYLE_STRENGTH_LEVELS}
-                                    value={appState.options.styleStrength}
-                                    onChange={(value) => handleOptionChange('styleStrength', value)}
-                                />
-                            </div>
-
-                            <div>
-                                <label htmlFor="notes" className="block text-left base-font font-bold text-lg text-neutral-200 mb-2">{t('common_additionalNotes')}</label>
-                                <textarea
-                                    id="notes"
-                                    value={localNotes}
-                                    onChange={(e) => setLocalNotes(e.target.value)}
-                                    onBlur={() => {
-                                        if (localNotes !== appState.options.notes) {
-                                            handleOptionChange('notes', localNotes);
-                                        }
-                                    }}
-                                    placeholder={t('swapStyle_notesPlaceholder')}
-                                    className="form-input h-24"
-                                    rows={3}
-                                />
-                            </div>
-                            <div className="flex items-center pt-2">
-                                <input type="checkbox" id="remove-watermark-swap" checked={appState.options.removeWatermark}
-                                    onChange={(e) => handleOptionChange('removeWatermark', e.target.checked)}
-                                    className="h-4 w-4 rounded border-neutral-500 bg-neutral-700 text-yellow-400 focus:ring-yellow-400 focus:ring-offset-neutral-800" />
-                                <label htmlFor="remove-watermark-swap" className="ml-3 block text-sm font-medium text-neutral-300">{t('common_removeWatermark')}</label>
-                            </div>
-                            <div className="flex items-center justify-end gap-4 pt-4">
-                                <button onClick={onReset} className="btn btn-secondary">{t('common_startOver')}</button>
-                                <button onClick={executeInitialGeneration} className="btn btn-primary" disabled={isLoading || !appState.contentImage}>{isLoading ? t('swapStyle_creating') : t('swapStyle_createButton')}</button>
-                            </div>
-                        </OptionsPanel>
-                    </motion.div>
-                )}
+                    </div>
+                </div>
             </div>
-
-            {(appState.stage === 'generating' || appState.stage === 'results') && (
-                <ResultsView
-                    stage={appState.stage}
-                    originalImage={appState.contentImage}
-                    onOriginalClick={() => appState.contentImage && openLightbox(lightboxImages.indexOf(appState.contentImage))}
-                    error={appState.error}
-                    actions={
-                        <>
-                            {appState.generatedImage && !appState.error && (<button onClick={handleDownloadAll} className="btn btn-secondary">{t('common_downloadAll')}</button>)}
-                            <button onClick={handleBackToOptions} className="btn btn-secondary">{t('common_edit')}</button>
-                            <button onClick={onReset} className="btn btn-secondary">{t('common_startOver')}</button>
-                        </>
-                    }>
-                    {appState.styleImage && !convertToReal && (
-                        <motion.div
-                            key="style-ref-result"
-                            className="w-full md:w-auto flex-shrink-0"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ type: 'spring', stiffness: 100, damping: 20 }}
-                        >
-                            <ActionablePolaroidCard
-                                type="display"
-                                caption={uploaderCaptionStyle}
-                                mediaUrl={appState.styleImage}
-                                status="done"
-                                onClick={() => openLightbox(lightboxImages.indexOf(appState.styleImage!))}
-                            />
-                        </motion.div>
-                    )}
-                    <motion.div
-                        className="w-full md:w-auto flex-shrink-0"
-                        key="generated-swap"
-                        initial={{ opacity: 0, scale: 0.5, y: 100 }}
-                        animate={{ opacity: 1, scale: 1, y: 0, rotate: 0 }}
-                        transition={{ type: 'spring', stiffness: 80, damping: 15, delay: 0.15 }}>
-                        <ActionablePolaroidCard
-                            type="output"
-                            caption={
-                                appState.options.convertToReal
-                                    ? t('swapStyle_realPhotoCaption')
-                                    : (appState.styleImage ? t('common_result') : (appState.options.style || t('swapStyle_autoStyleCaption')))
-                            }
-                            status={isLoading ? 'pending' : (appState.error ? 'error' : 'done')}
-                            mediaUrl={appState.generatedImage ?? undefined} error={appState.error ?? undefined}
-                            onImageChange={handleGeneratedImageChange}
-                            onRegenerate={handleRegeneration}
-                            onGenerateVideoFromPrompt={(prompt) => appState.generatedImage && generateVideo(appState.generatedImage, prompt)}
-                            regenerationTitle={t('common_regenTitle')}
-                            regenerationDescription={t('swapStyle_regenDescription')}
-                            regenerationPlaceholder={t('swapStyle_regenPlaceholder')}
-                            onClick={!appState.error && appState.generatedImage ? () => openLightbox(lightboxImages.indexOf(appState.generatedImage!)) : undefined} />
-                    </motion.div>
-                    {appState.historicalImages.map(sourceUrl => {
-                        const videoTask = videoTasks[sourceUrl];
-                        if (!videoTask) return null;
-                        return (
-                            <motion.div
-                                className="w-full md:w-auto flex-shrink-0"
-                                key={`${sourceUrl}-video`}
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ type: 'spring', stiffness: 100, damping: 20 }}
-                            >
-                                <ActionablePolaroidCard
-                                    type="output"
-                                    caption={t('common_video')}
-                                    status={videoTask.status}
-                                    mediaUrl={videoTask.resultUrl}
-                                    error={videoTask.error}
-                                    onClick={videoTask.resultUrl ? () => openLightbox(lightboxImages.indexOf(videoTask.resultUrl!)) : undefined}
-                                />
-                            </motion.div>
-                        );
-                    })}
-                </ResultsView>
-            )}
 
             <Lightbox
                 images={lightboxImages}

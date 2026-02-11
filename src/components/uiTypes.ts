@@ -192,10 +192,12 @@ export interface SwapStyleState {
     stage: 'idle' | 'configuring' | 'generating' | 'results';
     contentImage: string | null;
     styleImage: string | null;
-    generatedImage: string | null;
+    generatedImage: string | null; // Deprecated, use generatedImages
+    generatedImages: string[]; // NEW: Array for batch results
     historicalImages: string[];
     options: {
-        style: string;
+        style: string; // Primary/Single style (keep for compat or single mode)
+        styles: string[]; // NEW: Multi-select styles
         styleStrength: string;
         notes: string;
         removeWatermark: boolean;
@@ -226,6 +228,23 @@ export interface FreeGenerationState {
     image2: string | null;
     image3: string | null;
     image4: string | null;
+    generatedImages: string[];
+    historicalImages: string[];
+    options: {
+        prompt: string;
+        removeWatermark: boolean;
+        numberOfImages: number;
+        aspectRatio: string;
+    };
+    error: string | null;
+}
+
+export interface TemplateComposerState {
+    stage: 'configuring' | 'generating' | 'results';
+    modelImage: string | null;
+    outfit1: string | null;
+    outfit2: string | null;
+    outfit3: string | null;
     generatedImages: string[];
     historicalImages: string[];
     options: {
@@ -585,7 +604,8 @@ export type AnyAppState =
     | PosterCreatorState
     | IDPhotoCreatorState
     | KhmerPhotoMergeState
-    | MilkTeaPosterState;
+    | MilkTeaPosterState
+    | TemplateComposerState;
 
 // --- App Navigation & State Types (Moved from App.tsx) ---
 export type HomeView = { viewId: 'home'; state: HomeState };
@@ -615,6 +635,7 @@ export type PosterCreatorView = { viewId: 'poster-creator'; state: PosterCreator
 export type IDPhotoCreatorView = { viewId: 'id-photo-creator'; state: IDPhotoCreatorState };
 export type KhmerPhotoMergeView = { viewId: 'khmer-photo-merge'; state: KhmerPhotoMergeState };
 export type MilkTeaPosterView = { viewId: 'milk-tea-poster'; state: MilkTeaPosterState };
+export type TemplateComposerView = { viewId: 'template-composer'; state: TemplateComposerState };
 export type ProfileView = { viewId: 'profile'; state: HomeState };
 export type SettingsView = { viewId: 'settings'; state: HomeState };
 export type PricingView = { viewId: 'pricing'; state: HomeState };
@@ -647,6 +668,7 @@ export type ViewState =
     | IDPhotoCreatorView
     | KhmerPhotoMergeView
     | MilkTeaPosterView
+    | TemplateComposerView
     | ProfileView
     | SettingsView
     | PricingView;
@@ -682,7 +704,7 @@ export const getInitialStateForApp = (viewId: string): AnyAppState => {
         case 'photo-restoration':
             return { stage: 'idle', uploadedImage: null, generatedImage: null, historicalImages: [], options: { type: 'Chân dung', gender: 'Tự động', age: '', nationality: '', notes: '', removeWatermark: false, removeStains: true, colorizeRgb: true }, error: null };
         case 'swap-style':
-            return { stage: 'idle', contentImage: null, styleImage: null, generatedImage: null, historicalImages: [], options: { style: '', styleStrength: 'Rất mạnh', notes: '', removeWatermark: false, convertToReal: false }, error: null };
+            return { stage: 'idle', contentImage: null, styleImage: null, generatedImage: null, generatedImages: [], historicalImages: [], options: { style: '', styles: [], styleStrength: 'Rất mạnh', notes: '', removeWatermark: false, convertToReal: false }, error: null };
         case 'free-generation':
             return { stage: 'configuring', image1: null, image2: null, image3: null, image4: null, generatedImages: [], historicalImages: [], options: { prompt: '', removeWatermark: false, numberOfImages: 1, aspectRatio: 'Giữ nguyên' }, error: null };
         // FIX: Add missing 'image-to-real' case to factory function.
@@ -835,6 +857,23 @@ export const getInitialStateForApp = (viewId: string): AnyAppState => {
                 stage: 'idle',
                 error: null
             } as MilkTeaPosterState;
+        case 'template-composer':
+            return {
+                stage: 'configuring',
+                modelImage: null,
+                outfit1: null,
+                outfit2: null,
+                outfit3: null,
+                generatedImages: [],
+                historicalImages: [],
+                options: {
+                    prompt: '',
+                    removeWatermark: false,
+                    numberOfImages: 1,
+                    aspectRatio: 'Giữ nguyên'
+                },
+                error: null
+            } as TemplateComposerState;
         default:
             return { stage: 'home' };
     }

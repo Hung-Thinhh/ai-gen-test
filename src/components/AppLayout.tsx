@@ -123,7 +123,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     // The user explicitly requested to hide it in: gallery, prompt-library, tool list (generators), studio list.
                     // 'generators' is the tool list. 'studio' might be the studio list view ID (if it exists).
                     // Safer logic: Show ONLY if it matches an app ID.
-                    const showModelSelector = isTool;
+                    const showModelSelector = isTool && currentView.viewId !== 'template-composer';
 
                     return <MobilePageHeader
                         title={pageTitle}
@@ -140,7 +140,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 {/* Mobile Page Header logic handled above */}
 
                 {/* Model Version Selector (Desktop) - Only show in Tools */}
-                {settings?.apps.some((app: AppConfig) => app.id === currentView.viewId) && (
+                {settings?.apps.some((app: AppConfig) => app.id === currentView.viewId) && currentView.viewId !== 'template-composer' && (
                     <div className={cn(
                         "fixed z-40 gap-4 w-[200px]", // Increased z-index to be above content
                         "hidden md:flex md:top-[80px] md:left-8 md:flex-row", // Positioned below header (top-20/80px) and left aligned

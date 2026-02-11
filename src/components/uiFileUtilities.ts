@@ -194,7 +194,13 @@ export const downloadImage = async (url: string, filenameWithoutExtension: strin
         // Use a flag to track if we should fallback
         let usedShare = false;
 
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        // NEW: Check for mobile device (Android or iOS)
+        // We only want to use the Share Sheet on mobile where "Save Image" is needed.
+        // On Desktop, users prefer direct download.
+        const isMobile = (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) && window.matchMedia('(pointer: coarse)').matches;
+
+        if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
             try {
                 // On Mobile (iOS/Android), this opens the Share Sheet with "Save Image" option
                 await navigator.share({

@@ -4,14 +4,42 @@
  */
 
 // Helper function to load an image and return it as an HTMLImageElement
-function loadImage(src: string): Promise<HTMLImageElement> {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => resolve(img);
-        img.onerror = (err) => reject(new Error(`Failed to load image for print sheet: ${src.substring(0, 50)}...`));
-        img.src = src;
-    });
+// Includes fallback to proxy if CORS fails
+async function loadImage(src: string): Promise<HTMLImageElement> {
+    const loadImgElement = (url: string, isBlob: boolean): Promise<HTMLImageElement> => {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            if (!isBlob) img.crossOrigin = 'anonymous';
+            img.onload = () => resolve(img);
+            img.onerror = () => reject(new Error('Image load error'));
+            img.src = url;
+        });
+    };
+
+    try {
+        // Attempt 1: Direct load with CORS
+        return await loadImgElement(src, false);
+    } catch (error) {
+        console.warn("Direct image load failed (likely CORS), trying proxy...", error);
+        // Attempt 2: Fetch via Proxy -> Blob -> ObjectURL
+        try {
+            const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(src)}`;
+            const response = await fetch(proxyUrl);
+            if (!response.ok) throw new Error(`Proxy fetch failed: ${response.statusText}`);
+
+            const blob = await response.blob();
+            const objectUrl = URL.createObjectURL(blob);
+
+            const img = await loadImgElement(objectUrl, true);
+            // Verify image dimensions to ensure it's not a broken image icon
+            if (img.naturalWidth === 0) throw new Error("Image has 0 width");
+
+            return img;
+        } catch (proxyError) {
+            console.error("Proxy image load failed:", proxyError);
+            throw new Error(`Failed to load image for print sheet: ${src.substring(0, 50)}...`);
+        }
+    }
 }
 
 /**

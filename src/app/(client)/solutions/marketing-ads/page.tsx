@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { LeonardoHeader } from '@/components/LeonardoHeader';
 import MobileHeader from '@/components/MobileHeader';
 import Link from 'next/link';
+import Image from 'next/image';
 
 /* ─────────── Custom Hook: Scroll Animation ─────────── */
 function useScrollAnimation(threshold = 0.15) {
@@ -216,10 +217,10 @@ export default function MarketingAdsPage() {
 
                         {/* Right: Hero Image / Mockup */}
                         <div className={`relative mt-4 lg:mt-0 ${hero.isVisible ? 'animate-slideRight' : 'opacity-0'}`}>
-                            <div className="absolute -inset-6 bg-gradient-to-r from-orange-500/20 via-amber-500/15 to-orange-500/20 rounded-3xl blur-3xl animate-glow"></div>
+                            <div className="absolute -inset-6 bg-gradient-to-r from-orange-400/20 via-amber-500/30 to-orange-600/30 rounded-3xl blur-3xl animate-glow"></div>
                             <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl shadow-orange-500/10">
                                 <img
-                                    src="https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=600&h=700&fit=crop"
+                                    src="https://res.cloudinary.com/dmxmzannb/image/upload/v1770806215/BANNER-T%E1%BA%A0O-%E1%BA%A2NH-CHUY%C3%8AN-NGHI%E1%BB%86P-TRONG-10-GI%C3%82Y_koju37.png"
                                     alt="AI Marketing — tạo ảnh quảng cáo chuyên nghiệp"
                                     className="w-full h-[260px] sm:h-[360px] md:h-[420px] lg:h-[520px] object-cover"
                                 />
@@ -231,7 +232,7 @@ export default function MarketingAdsPage() {
                                         </div>
                                         <div>
                                             <p className="text-sm font-semibold text-white">Poster được tạo xong</p>
-                                            <p className="text-xs text-zinc-400">Thời gian xử lý: 8 giây</p>
+                                            <p className="text-xs text-zinc-200">Thời gian xử lý: 18 giây</p>
                                         </div>
                                     </div>
                                 </div>
@@ -369,6 +370,10 @@ export default function MarketingAdsPage() {
                                 </Link>
                             </div>
                         </div>
+                        <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-tr from-amber-500/5 to-transparent">
+                            <Image src="https://res.cloudinary.com/dmxmzannb/image/upload/v1770806217/BANNER-B%E1%BA%A0N-N%C3%93I-AI-THI%E1%BA%BET-K%E1%BA%BE_ppupfk.png" alt="Promo" width={500} height={500} />
+                        </div>
+
                     </div>
                 </div>
             </section>
@@ -440,7 +445,7 @@ export default function MarketingAdsPage() {
                         <div className={`relative ${zigzag1.isVisible ? 'animate-slideRight' : 'opacity-0'}`}>
                             <div className="absolute -inset-4 bg-gradient-to-r from-orange-500/15 to-amber-500/15 rounded-3xl blur-3xl"></div>
                             <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
-                                <img src="https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=600&h=400&fit=crop" alt="Poster Creator AI" className="w-full h-[220px] sm:h-[300px] md:h-[380px] object-cover" />
+                                <img src="https://res.cloudinary.com/dmxmzannb/image/upload/v1770808579/BANNER-T%E1%BA%A0O-POSTE-B%E1%BA%B0NG-M%E1%BB%98T-C%C3%82U-M%C3%94-T%E1%BA%A2_sbfdpf.jpg" alt="Poster Creator AI" className="w-full h-[220px] sm:h-[300px] md:h-[380px] object-cover" />
                             </div>
                         </div>
                     </div>
@@ -511,7 +516,7 @@ export default function MarketingAdsPage() {
 
             {/* ===== SECTION 8: FULL-WIDTH BANNER ===== */}
             <section ref={banner.ref} className="relative h-[300px] sm:h-[380px] md:h-[460px] lg:h-[520px] overflow-hidden">
-                <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=1600&h=800&fit=crop" alt="Marketing AI" className="w-full h-full object-cover" />
+                <img src="https://res.cloudinary.com/dmxmzannb/image/upload/v1770806215/B%E1%BA%AET-%C4%90%E1%BA%A6U-T%E1%BA%A0O-CONTENT-MI%E1%BB%84N-PH%C3%8D_byglsl.png" alt="Marketing AI" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/70 to-black/30"></div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
 
@@ -575,7 +580,7 @@ export default function MarketingAdsPage() {
                         <div className={`relative ${enterprise.isVisible ? 'animate-slideRight' : 'opacity-0'}`}>
                             <div className="absolute -inset-4 bg-gradient-to-r from-orange-500/15 to-amber-500/15 rounded-3xl blur-3xl"></div>
                             <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
-                                <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=450&fit=crop" alt="Enterprise Marketing" className="w-full h-[220px] sm:h-[320px] md:h-[400px] object-cover" />
+                                <img src="https://res.cloudinary.com/dmxmzannb/image/upload/v1770806217/BANNER-GI%E1%BA%A2I-PH%C3%81P-AI-MARKETING_txth6l.png" alt="Enterprise Marketing" className="w-full h-[220px] sm:h-[320px] md:h-[400px] object-cover" />
                             </div>
                         </div>
                     </div>
