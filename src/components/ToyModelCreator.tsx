@@ -62,7 +62,10 @@ const ToyModelCreator: React.FC<ToyModelCreatorProps> = (props) => {
         setLocalNotes(appState.options.notes);
     }, [appState.options.notes]);
 
-    const lightboxImages = [appState.uploadedImage, ...appState.historicalImages].filter((img): img is string => !!img);
+    const lightboxImages = [...new Set([
+        appState.uploadedImage, appState.generatedImage,
+        ...appState.historicalImages
+    ].filter((img): img is string => !!img))];
     const ASPECT_RATIO_OPTIONS = t('aspectRatioOptions');
 
     // --- Concept Definitions from Translations ---

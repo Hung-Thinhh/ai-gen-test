@@ -143,7 +143,11 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
 
 
 
-    const lightboxImages = [appState.image1, appState.image2, appState.image3, appState.image4, ...appState.historicalImages].filter((img): img is string => !!img);
+    const lightboxImages = [...new Set([
+        appState.image1, appState.image2, appState.image3, appState.image4,
+        ...appState.generatedImages.filter(img => img && img.length > 0),
+        ...appState.historicalImages
+    ].filter((img): img is string => !!img))];
 
     const handleImageUpload = (imageKey: 'image1' | 'image2' | 'image3' | 'image4') => (e: ChangeEvent<HTMLInputElement>) => {
         handleFileUpload(e, (imageDataUrl) => {

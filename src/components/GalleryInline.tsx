@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import React, { useEffect, useState, useRef, ChangeEvent } from 'react';
+import React, { useEffect, useState, useRef, ChangeEvent, Suspense } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Masonry from 'react-masonry-css';
@@ -44,7 +44,15 @@ interface GalleryInlineProps {
     fullPage?: boolean; // When true, uses min-h-screen instead of fixed vh
 }
 
-export const GalleryInline: React.FC<GalleryInlineProps> = ({ onClose, images: rawImages, onShareToggle, onImagesChanged, fullPage = false }) => {
+export const GalleryInline: React.FC<GalleryInlineProps> = (props) => {
+    return (
+        <Suspense fallback={<div className="flex items-center justify-center h-40"><div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+            <GalleryInlineContent {...props} />
+        </Suspense>
+    );
+};
+
+const GalleryInlineContent: React.FC<GalleryInlineProps> = ({ onClose, images: rawImages, onShareToggle, onImagesChanged, fullPage = false }) => {
     // Normalize images to GalleryItem[] to support legacy string[] input
     const images: GalleryItem[] = React.useMemo(() => {
         if (!rawImages || rawImages.length === 0) return [];

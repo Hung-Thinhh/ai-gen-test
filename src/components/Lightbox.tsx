@@ -44,8 +44,15 @@ const Lightbox: React.FC<LightboxProps> = ({ images, selectedIndex, onClose, onN
 
     // Update isShared based on current item
     useEffect(() => {
-        if (!images || selectedIndex === null) return;
+        if (!images || !images.length || selectedIndex === null || selectedIndex < 0 || selectedIndex >= images.length) {
+            setIsShared(false);
+            return;
+        }
         const item = images[selectedIndex];
+        if (!item) {
+            setIsShared(false);
+            return;
+        }
         if (typeof item !== 'string' && item.share !== undefined) {
             setIsShared(item.share);
         } else {
@@ -54,8 +61,9 @@ const Lightbox: React.FC<LightboxProps> = ({ images, selectedIndex, onClose, onN
     }, [selectedIndex, images]);
 
     const currentItem = useMemo(() => {
-        if (selectedIndex === null) return null;
+        if (selectedIndex === null || !images || selectedIndex < 0 || selectedIndex >= images.length) return null;
         const item = images[selectedIndex];
+        if (!item) return null;
         if (typeof item === 'string') {
             return {
                 src: item,

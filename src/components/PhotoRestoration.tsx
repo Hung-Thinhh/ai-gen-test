@@ -63,7 +63,10 @@ const PhotoRestoration: React.FC<PhotoRestorationProps> = (props) => {
         setLocalNotes(appState.options.notes);
     }, [appState.options.notes]);
 
-    const lightboxImages = [appState.uploadedImage, ...appState.historicalImages].filter((img): img is string => !!img);
+    const lightboxImages = [...new Set([
+        appState.uploadedImage, appState.generatedImage,
+        ...appState.historicalImages
+    ].filter((img): img is string => !!img))];
     const COUNTRIES = t('countries');
     const PHOTO_TYPE_OPTIONS = t('photoRestoration_photoTypeOptions');
     const GENDER_OPTIONS = t('photoRestoration_genderOptions');

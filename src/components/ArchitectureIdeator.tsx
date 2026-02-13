@@ -62,7 +62,10 @@ const ArchitectureIdeator: React.FC<ArchitectureIdeatorProps> = (props) => {
         setLocalNotes(appState.options.notes);
     }, [appState.options.notes]);
 
-    const lightboxImages = [appState.uploadedImage, appState.styleReferenceImage, ...appState.historicalImages].filter((img): img is string => !!img);
+    const lightboxImages = [...new Set([
+        appState.uploadedImage, appState.styleReferenceImage, appState.generatedImage,
+        ...appState.historicalImages
+    ].filter((img): img is string => !!img))];
 
     const handleImageSelectedForUploader = (imageDataUrl: string) => {
         onStateChange({

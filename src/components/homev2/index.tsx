@@ -19,20 +19,20 @@ import StudioConcept from "../StudioConcept";
 
 export const HomeV2 = () => {
   const appControls = useAppControls() as any;
-    const { t, handleSelectApp, settings, guestCredits, userCredits, isLoggedIn } = appControls;
-    const currentCredits = isLoggedIn ? userCredits : guestCredits;
-    const isMobile = useIsMobile();
-  
+  const { t, handleSelectApp, settings, guestCredits, userCredits, isLoggedIn } = appControls;
+  const currentCredits = isLoggedIn ? userCredits : guestCredits;
+  const isMobile = useIsMobile();
+
   return (
     <main className="min-h-screen bg-black">
-       {isMobile && (
-                      <MobileHomeHeader
-                          title="Home"
-                          apps={settings ? settings.apps.map((app: any) => ({ ...app, title: t(app.titleKey), description: t(app.descriptionKey) })) : []}
-                          onSelectApp={handleSelectApp}
-                          credits={currentCredits}
-                      />
-                  )}
+      {isMobile && (
+        <MobileHomeHeader
+          title="Home"
+          apps={settings ? settings.apps.map((app: any) => ({ ...app, title: t(app.titleKey), description: t(app.descriptionKey) })) : []}
+          onSelectApp={handleSelectApp}
+          credits={currentCredits}
+        />
+      )}
       <AnnouncementBar />
       {/* <LandingNavbar /> */}
       <HeroV2 />
@@ -44,10 +44,10 @@ export const HomeV2 = () => {
         <ToolShowcase />
       </div>
       <HowItWorks />
-       {/* Studio Concept Section */}
-                  <div className="relative z-10 w-screen left-1/2 -translate-x-1/2 bg-black">
-                      <StudioConcept />
-                  </div>
+      {/* Studio Concept Section */}
+      <div className="relative z-10 w-screen left-1/2 -translate-x-1/2 bg-black">
+        <StudioConcept />
+      </div>
       <CommunityGallery />
       {/* <CommunityShowcase /> */}
       <Testimonials />
@@ -68,7 +68,7 @@ export const HomeV2 = () => {
         <FAQ />
       </section>
       <FinalCTA />
-     
+
     </main>
   );
 };

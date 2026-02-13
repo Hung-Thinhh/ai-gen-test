@@ -1,11 +1,23 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { GalleryInline } from '@/components/GalleryInline';
 import { useAppControls } from '@/components/uiContexts';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function GalleryPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-black flex items-center justify-center">
+                <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        }>
+            <GalleryPageContent />
+        </Suspense>
+    );
+}
+
+function GalleryPageContent() {
     const { setActivePage, imageGallery } = useAppControls();
     const router = useRouter();
     const searchParams = useSearchParams();

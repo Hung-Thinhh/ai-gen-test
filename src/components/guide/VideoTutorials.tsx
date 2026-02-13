@@ -21,45 +21,45 @@ const videos = [
     duration: "3:45",
     views: "12.5K",
     category: "portrait",
-    youtubeId: "MwY6YFYacAU", // TODO: Replace with actual YouTube video ID
+    youtubeId: "X4WODRYThv4", // TODO: Replace with actual YouTube video ID
     isNew: true,
   },
   {
     id: 2,
-    title: "Tạo ảnh trà trái cây",
-    description: "Hướng dẫn chi tiết cách tạo ảnh sản phẩm đẹp mắt",
+    title: "Tạo ảnh bằng thư viện prompt",
+    description: "Hướng dẫn chi tiết cách tạo ảnh trong thư viện prompt",
     duration: "5:20",
     views: "8.3K",
     category: "product",
-    youtubeId: "LOTybJXCDrI", // TODO: Replace with actual YouTube video ID
+    youtubeId: "iHhLcqaB_kY", // TODO: Replace with actual YouTube video ID
   },
   {
     id: 3,
-    title: "Tạo ảnh sản phẩm tết 1",
+    title: "Tạo ảnh sản phẩm tết",
     description: "Tạo poster chuyên nghiệp cho sản phẩm tết",
     duration: "4:15",
     views: "15.2K",
     category: "marketing",
-    youtubeId: "YQOy87q-U34", // TODO: Replace with actual YouTube video ID
+    youtubeId: "cZzyYZqAB84", // TODO: Replace with actual YouTube video ID
     isHot: true,
   },
   {
     id: 4,
-    title: "Tạo ảnh sản phẩm tết 2",
+    title: "Tạo ảnh sản phẩm F&B",
     description: "Tạo poster chuyên nghiệp cho sản phẩm tết",
     duration: "2:30",
     views: "20.1K",
     category: "beginner",
-    youtubeId: "Hr8T_1ycVhA", // TODO: Replace with actual YouTube video ID
+    youtubeId: "QosdqTtq0Ko", // TODO: Replace with actual YouTube video ID
   },
   {
     id: 5,
-    title: "Tạo ản tết cho nam",
+    title: "Tạo ản tết cho nữ",
     description: "Tạo ảnh sống ảo đăng chơi tết",
     duration: "6:00",
     views: "9.8K",
     category: "tips",
-    youtubeId: "SB1IWWwkMnA", // TODO: Replace with actual YouTube video ID
+    youtubeId: "EWp1vH_4vsw", // TODO: Replace with actual YouTube video ID
   },
   {
     id: 6,
@@ -78,7 +78,7 @@ const videos = [
     duration: "2:45",
     views: "18.7K",
     category: "beginner",
-    youtubeId: "f7F3okYTqFw", // TODO: Replace with actual YouTube video ID
+    youtubeId: "h7QaFRIU5qs", // TODO: Replace with actual YouTube video ID
   },
   {
     id: 8,

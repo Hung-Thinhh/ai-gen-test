@@ -71,7 +71,10 @@ const DressTheModel: React.FC<DressTheModelProps> = (props) => {
     const PHOTO_STYLE_OPTIONS = t('dressTheModel_photoStyleOptions');
     const ASPECT_RATIO_OPTIONS = t('aspectRatioOptions');
 
-    const lightboxImages = [appState.modelImage, appState.clothingImage, ...appState.historicalImages].filter((img): img is string => !!img);
+    const lightboxImages = [...new Set([
+        appState.modelImage, appState.clothingImage, appState.generatedImage,
+        ...appState.historicalImages
+    ].filter((img): img is string => !!img))];
 
     const handleModelImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
         handleFileUpload(e, (imageDataUrl) => {

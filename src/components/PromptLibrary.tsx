@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppControls } from './uiUtils';
@@ -20,7 +20,15 @@ interface PromptLibraryProps {
 
 const ITEMS_PER_PAGE = 20;
 
-export const PromptLibrary: React.FC<PromptLibraryProps> = ({ onClose }) => {
+export const PromptLibrary: React.FC<PromptLibraryProps> = (props) => {
+    return (
+        <Suspense fallback={<div className="flex items-center justify-center h-40"><div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+            <PromptLibraryContent {...props} />
+        </Suspense>
+    );
+};
+
+const PromptLibraryContent: React.FC<PromptLibraryProps> = ({ onClose }) => {
     const { t, language } = useAppControls();
     const router = useRouter();
     const searchParams = useSearchParams();

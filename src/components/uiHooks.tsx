@@ -35,6 +35,7 @@ export const useLightbox = () => {
     const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
     const openLightbox = useCallback((index: number) => {
+        if (index < 0) return; // Guard: indexOf returns -1 when not found
         setLightboxIndex(index);
     }, []);
 

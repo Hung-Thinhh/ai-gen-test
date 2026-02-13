@@ -109,7 +109,11 @@ const SwapStyle: React.FC<SwapStyleProps> = (props) => {
         });
     };
 
-    const lightboxImages = [appState.contentImage, appState.styleImage, ...appState.historicalImages].filter((img): img is string => !!img);
+    const lightboxImages = [...new Set([
+        appState.contentImage, appState.styleImage,
+        ...appState.generatedImages.filter(img => img && img.length > 0),
+        ...appState.historicalImages
+    ].filter((img): img is string => !!img))];
 
     useEffect(() => {
         setLocalNotes(appState.options.notes);

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { LeonardoHeader } from '@/components/LeonardoHeader';
 import MobileHeader from '@/components/MobileHeader';
 import Link from 'next/link';
+import Image from 'next/image';
 
 /* ─────────── Custom Hook: Scroll Animation ─────────── */
 function useScrollAnimation(threshold = 0.15) {
@@ -126,7 +127,7 @@ export default function GraphicDesignPage() {
                         <div className={`relative mt-4 lg:mt-0 ${hero.isVisible ? 'animate-slideRight' : 'opacity-0'}`}>
                             <div className="absolute -inset-6 bg-gradient-to-r from-orange-500/20 via-red-500/15 to-orange-500/20 rounded-3xl blur-3xl animate-glow"></div>
                             <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl shadow-orange-500/10">
-                                <img src="https://images.unsplash.com/photo-1626785774573-4b799315345d?w=600&h=700&fit=crop" alt="AI Graphic Design" className="w-full h-[260px] sm:h-[360px] md:h-[420px] lg:h-[520px] object-cover" />
+                                <img src="https://res.cloudinary.com/dmxmzannb/image/upload/v1770893194/THI%E1%BA%BET-K%E1%BA%BE-%C4%90%C3%92-H%E1%BB%8CA-CHUY%C3%8AN-NGHI%E1%BB%86P-KH%C3%94NG-C%E1%BA%A6N-DESIGN_c4npqn.webp" alt="AI Graphic Design" className="w-full h-[260px] sm:h-[360px] md:h-[420px] lg:h-[520px] object-cover" />
                                 <div className="absolute bottom-4 left-4 right-4 glass-card-blue rounded-xl p-3 sm:p-4">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center flex-shrink-0">
@@ -239,6 +240,9 @@ export default function GraphicDesignPage() {
                                 </Link>
                             </div>
                         </div>
+                        <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-tr from-amber-500/5 to-transparent">
+                            <Image src="https://res.cloudinary.com/dmxmzannb/image/upload/v1770954770/B%E1%BA%A0N-NGH%C4%A8---AI-V%E1%BA%BC_yzlemw.webp" alt="Promo" width={500} height={500} />
+                        </div>
                     </div>
                 </div>
             </section>
@@ -292,7 +296,7 @@ export default function GraphicDesignPage() {
                         <div className={`relative ${zigzag1.isVisible ? 'animate-slideRight' : 'opacity-0'}`}>
                             <div className="absolute -inset-4 bg-gradient-to-r from-orange-500/15 to-red-500/15 rounded-3xl blur-3xl"></div>
                             <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
-                                <img src="https://images.unsplash.com/photo-1558655146-9f40138edfeb?w=600&h=400&fit=crop" alt="Concept Studio AI" className="w-full h-[220px] sm:h-[300px] md:h-[380px] object-cover" />
+                                <img src="https://res.cloudinary.com/dmxmzannb/image/upload/v1770893194/BI%E1%BA%BEN-CONCETP-TH%C3%80NH-THI%E1%BA%BET-K%E1%BA%BE-HO%C3%80N-CH%E1%BB%88NH_fh0x5b.webp" alt="Concept Studio AI" className="w-full h-[220px] sm:h-[300px] md:h-[380px] object-cover" />
                             </div>
                         </div>
                     </div>
@@ -301,7 +305,7 @@ export default function GraphicDesignPage() {
                         <div className={`relative order-2 lg:order-1 ${zigzag2.isVisible ? 'animate-slideLeft' : 'opacity-0'}`}>
                             <div className="absolute -inset-4 bg-gradient-to-r from-red-500/15 to-orange-500/15 rounded-3xl blur-3xl"></div>
                             <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
-                                <img src="https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600&h=400&fit=crop" alt="Color Palette AI" className="w-full h-[220px] sm:h-[300px] md:h-[380px] object-cover" />
+                                <img src="https://res.cloudinary.com/dmxmzannb/image/upload/v1770893193/%C4%90%E1%BB%94I-B%E1%BA%A2NG-M%C3%80U-CH%E1%BB%88-V%E1%BB%9AI-M%E1%BB%98T-C%C3%9A-CLICK_qr2yyi.webp" alt="Color Palette AI" className="w-full h-[220px] sm:h-[300px] md:h-[380px] object-cover" />
                             </div>
                         </div>
                         <div className={`space-y-5 order-1 lg:order-2 ${zigzag2.isVisible ? 'animate-slideRight' : 'opacity-0'}`}>
@@ -341,7 +345,7 @@ export default function GraphicDesignPage() {
 
             {/* ===== BANNER ===== */}
             <section ref={banner.ref} className="relative h-[300px] sm:h-[380px] md:h-[460px] lg:h-[520px] overflow-hidden">
-                <img src="https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=1600&h=800&fit=crop" alt="Design Studio" className="w-full h-full object-cover" />
+                <img src="https://res.cloudinary.com/dmxmzannb/image/upload/v1770977263/GI%E1%BA%A2I-PH%C3%93NG-S%E1%BB%A8C-S%C3%81NG-T%E1%BA%A0O-MI%E1%BB%84N-PH%C3%8D_eebgqh.webp" alt="Design Studio" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/70 to-black/30"></div>
                 <div className={`absolute inset-0 flex items-center transition-all duration-1000 ${banner.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
                     <div className="container mx-auto max-w-6xl px-4 sm:px-6">
@@ -382,7 +386,7 @@ export default function GraphicDesignPage() {
                         <div className={`relative ${enterprise.isVisible ? 'animate-slideRight' : 'opacity-0'}`}>
                             <div className="absolute -inset-4 bg-gradient-to-r from-orange-500/15 to-red-500/15 rounded-3xl blur-3xl"></div>
                             <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
-                                <img src="https://images.unsplash.com/photo-1542744094-3a31f272c490?w=600&h=450&fit=crop" alt="Design Team" className="w-full h-[220px] sm:h-[320px] md:h-[400px] object-cover" />
+                                <img src="https://res.cloudinary.com/dmxmzannb/image/upload/v1770893194/GI%E1%BA%A2I-PH%C3%81P-DESIGN-AI-CHOTEAM-S%C3%81NG-T%E1%BA%A0O_suihs0.webp" alt="Design Team" className="w-full h-[220px] sm:h-[320px] md:h-[400px] object-cover" />
                             </div>
                         </div>
                     </div>

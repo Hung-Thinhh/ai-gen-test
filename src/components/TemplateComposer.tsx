@@ -88,7 +88,11 @@ const TemplateComposer: React.FC<TemplateComposerProps> = (props) => {
         setLocalPrompt(appState.options.prompt);
     }, [appState.options.prompt]);
 
-    const lightboxImages = [appState.modelImage, appState.outfit1, appState.outfit2, appState.outfit3, ...appState.historicalImages].filter((img): img is string => !!img);
+    const lightboxImages = [...new Set([
+        appState.modelImage, appState.outfit1, appState.outfit2, appState.outfit3,
+        ...appState.generatedImages.filter(img => img && img.length > 0),
+        ...appState.historicalImages
+    ].filter((img): img is string => !!img))];
 
     const handleSaveImage = (imageKey: 'modelImage' | 'outfit1' | 'outfit2' | 'outfit3') => (newUrl: string | null) => {
         onStateChange({

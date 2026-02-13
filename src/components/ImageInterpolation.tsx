@@ -63,7 +63,10 @@ const ImageInterpolation: React.FC<ImageInterpolationProps> = (props) => {
     const isGeneratingRef = useRef(false);
     const [localGeneratedPrompt, setLocalGeneratedPrompt] = useState(appState.generatedPrompt);
     const [localAdditionalNotes, setLocalAdditionalNotes] = useState(appState.additionalNotes);
-    const lightboxImages = [appState.sourceImage, appState.referenceImage, ...appState.historicalImages.map(h => h.url)].filter((img): img is string => !!img);
+    const lightboxImages = [...new Set([
+        appState.sourceImage, appState.referenceImage, appState.generatedImage,
+        ...appState.historicalImages.map(h => h.url)
+    ].filter((img): img is string => !!img))];
 
     const appStateRef = useRef(appState);
     useEffect(() => {

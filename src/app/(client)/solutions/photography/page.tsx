@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { LeonardoHeader } from '@/components/LeonardoHeader';
 import MobileHeader from '@/components/MobileHeader';
 import Link from 'next/link';
+import Image from 'next/image';
 
 function useScrollAnimation(threshold = 0.15) {
     const ref = useRef<HTMLDivElement>(null);
@@ -88,7 +89,7 @@ export default function PhotographyPage() {
                         <div className={`relative mt-4 lg:mt-0 ${hero.isVisible ? 'aSR' : 'opacity-0'}`}>
                             <div className="absolute -inset-6 bg-gradient-to-r from-orange-500/20 via-red-500/15 to-orange-500/20 rounded-3xl blur-3xl aGlow"></div>
                             <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl shadow-orange-500/10">
-                                <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=700&fit=crop" alt="AI Product Photography" className="w-full h-[260px] sm:h-[360px] md:h-[420px] lg:h-[520px] object-cover" />
+                                <img src="https://res.cloudinary.com/dmxmzannb/image/upload/v1770975327/%E1%BA%A3nh-s%E1%BA%A3n-ph%E1%BA%A9m-studio-quality-kh%C3%B4ng-c%E1%BA%A7n-ch%E1%BB%A5p_z0xcvz.webp" alt="AI Product Photography" className="w-full h-[260px] sm:h-[360px] md:h-[420px] lg:h-[520px] object-cover" />
                                 <div className="absolute bottom-4 left-4 right-4 gcO rounded-xl p-3 sm:p-4"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center flex-shrink-0"><svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /></svg></div><div><p className="text-sm font-semibold text-white">Ảnh sản phẩm hoàn tất</p><p className="text-xs text-zinc-400">8 góc chụp • 5 giây</p></div></div></div>
                             </div>
                         </div>
@@ -157,6 +158,9 @@ export default function PhotographyPage() {
                                 <Link href="/tool/product-scene" className="group inline-flex items-center gap-2 text-orange-400 hover:text-orange-300 transition-colors font-medium">Thử Product Scene ngay<svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg></Link>
                             </div>
                         </div>
+                       <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-tr from-amber-500/5 to-transparent">
+                                                   <Image src="https://res.cloudinary.com/dmxmzannb/image/upload/v1770954770/B%E1%BA%A0N-NGH%C4%A8---AI-V%E1%BA%BC_yzlemw.webp" alt="Promo" width={500} height={500} />
+                                               </div>
                     </div>
                 </div>
             </section>
@@ -188,10 +192,10 @@ export default function PhotographyPage() {
                             <ul className="space-y-3">{['50+ bối cảnh studio có sẵn', 'AI tự động tạo bóng đổ & ánh sáng', 'Xuất 4K cho website & marketplace'].map((it, i) => (<li key={i} className="flex items-center gap-3 text-sm sm:text-base text-zinc-300"><div className="w-5 h-5 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0"><svg className="w-3 h-3 text-orange-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg></div>{it}</li>))}</ul>
                             <Link href="/tool/product-scene" className="group inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl font-semibold text-white hover:shadow-lg hover:shadow-orange-500/25 transition-all">Thử Product Scene<svg className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg></Link>
                         </div>
-                        <div className={`relative ${z1.isVisible ? 'aSR' : 'opacity-0'}`}><div className="absolute -inset-4 bg-gradient-to-r from-orange-500/15 to-red-500/15 rounded-3xl blur-3xl"></div><div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl"><img src="https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=600&h=400&fit=crop" alt="Product Scene" className="w-full h-[220px] sm:h-[300px] md:h-[380px] object-cover" /></div></div>
+                        <div className={`relative ${z1.isVisible ? 'aSR' : 'opacity-0'}`}><div className="absolute -inset-4 bg-gradient-to-r from-orange-500/15 to-red-500/15 rounded-3xl blur-3xl"></div><div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl"><img src="https://res.cloudinary.com/dmxmzannb/image/upload/v1770975325/%C4%90%E1%BA%B7t-s%E1%BA%A3n-ph%E1%BA%A9m-v%C3%A0o-m%E1%BB%8Di-b%E1%BB%91i-c%E1%BA%A3nh-b%E1%BA%A1n-mu%E1%BB%91n_wqyeed.webp" alt="Product Scene" className="w-full h-[220px] sm:h-[300px] md:h-[380px] object-cover" /></div></div>
                     </div>
                     <div ref={z2.ref} className="grid lg:grid-cols-2 gap-10 md:gap-16 items-center">
-                        <div className={`relative order-2 lg:order-1 ${z2.isVisible ? 'aSL' : 'opacity-0'}`}><div className="absolute -inset-4 bg-gradient-to-r from-red-500/15 to-orange-500/15 rounded-3xl blur-3xl"></div><div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl"><img src="https://images.unsplash.com/photo-1558171813-4c088753af8f?w=600&h=400&fit=crop" alt="AI Portrait" className="w-full h-[220px] sm:h-[300px] md:h-[380px] object-cover" /></div></div>
+                        <div className={`relative order-2 lg:order-1 ${z2.isVisible ? 'aSL' : 'opacity-0'}`}><div className="absolute -inset-4 bg-gradient-to-r from-red-500/15 to-orange-500/15 rounded-3xl blur-3xl"></div><div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl"><img src="https://res.cloudinary.com/dmxmzannb/image/upload/v1770975326/ch%C3%A2n-dung-th%C6%B0%C6%A1ng-hi%E1%BB%87u-kh%C3%B4ng-c%E1%BA%A7n-photoghaphi_dozhut.webp" alt="AI Portrait" className="w-full h-[220px] sm:h-[300px] md:h-[380px] object-cover" /></div></div>
                         <div className={`space-y-5 order-1 lg:order-2 ${z2.isVisible ? 'aSR' : 'opacity-0'}`}>
                             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20"><span className="text-orange-400 text-xs sm:text-sm font-medium">AI PHOTOSHOOT</span></div>
                             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold leading-tight">Chân dung thương hiệu<br /><span className="text-zinc-400">không cần photographer</span></h2>
@@ -215,7 +219,7 @@ export default function PhotographyPage() {
 
             {/* BANNER */}
             <section ref={ban.ref} className="relative h-[300px] sm:h-[380px] md:h-[460px] lg:h-[520px] overflow-hidden">
-                <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1600&h=800&fit=crop" alt="Photography AI" className="w-full h-full object-cover" />
+                <img src="https://res.cloudinary.com/dmxmzannb/image/upload/v1770975290/%E1%BA%A2NH-CHUY%C3%8AN-NGHI%E1%BB%86P-KH%C3%94NG-C%E1%BA%A6N-STUDIO_gzfl1w.png" alt="Photography AI" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/70 to-black/30"></div>
                 <div className={`absolute inset-0 flex items-center transition-all duration-1000 ${ban.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
                     <div className="container mx-auto max-w-6xl px-4 sm:px-6"><div className="max-w-lg">

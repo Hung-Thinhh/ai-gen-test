@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { LeonardoHeader } from '@/components/LeonardoHeader';
 import MobileHeader from '@/components/MobileHeader';
 import Link from 'next/link';
+import Image from 'next/image';
 
 function useScrollAnimation(threshold = 0.15) {
     const ref = useRef<HTMLDivElement>(null);
@@ -86,7 +87,7 @@ export default function AiStudioPage() {
                         <div className={`relative mt-4 lg:mt-0 ${hero.isVisible ? 'aSR' : 'opacity-0'}`}>
                             <div className="absolute -inset-6 bg-gradient-to-r from-orange-500/20 via-red-500/15 to-orange-500/20 rounded-3xl blur-3xl aGlow"></div>
                             <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl shadow-orange-500/10">
-                                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=700&fit=crop" alt="AI Portrait Studio" className="w-full h-[260px] sm:h-[360px] md:h-[420px] lg:h-[520px] object-cover" />
+                                <img src="https://res.cloudinary.com/dmxmzannb/image/upload/v1770954494/CH%E1%BB%A4P-%E1%BA%A2NH-CH%C3%82N-DUNG-AI-CHUY%C3%8AN-NGHI%E1%BB%86P_zud29x.webp" alt="AI Portrait Studio" className="w-full h-[260px] sm:h-[360px] md:h-[420px] lg:h-[520px] object-cover" />
                                 <div className="absolute bottom-4 left-4 right-4 gcP rounded-xl p-3 sm:p-4"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center flex-shrink-0"><svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg></div><div><p className="text-sm font-semibold text-white">Bộ ảnh chân dung hoàn tất</p><p className="text-xs text-zinc-400">12 ảnh • Business concept</p></div></div></div>
                             </div>
                         </div>
@@ -165,6 +166,9 @@ export default function AiStudioPage() {
                                 <Link href="/studio" className="group inline-flex items-center gap-2 text-orange-400 hover:text-orange-300 transition-colors font-medium">Thử AI Studio ngay<svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg></Link>
                             </div>
                         </div>
+                        <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-tr from-amber-500/5 to-transparent">
+                            <Image src="https://res.cloudinary.com/dmxmzannb/image/upload/v1770954496/upload-selfie-ai-bi%E1%BA%BFn-b%E1%BA%A1n-th%C3%A0nh-ng%C6%B0%E1%BB%9Di-m%E1%BA%ABu_up2msw.webp" alt="Promo" width={500} height={500} />
+                        </div>
                     </div>
                 </div>
             </section>
@@ -196,10 +200,10 @@ export default function AiStudioPage() {
                             <ul className="space-y-3">{['Chỉ cần 5-10 ảnh selfie bình thường', 'AI học trong 2-5 phút', 'Ảnh được bảo mật, xóa sau 24h'].map((it, i) => (<li key={i} className="flex items-center gap-3 text-sm sm:text-base text-zinc-300"><div className="w-5 h-5 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0"><svg className="w-3 h-3 text-orange-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg></div>{it}</li>))}</ul>
                             <Link href="/studio" className="group inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl font-semibold text-white hover:shadow-lg hover:shadow-orange-500/25 transition-all">Thử ngay<svg className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg></Link>
                         </div>
-                        <div className={`relative ${z1.isVisible ? 'aSR' : 'opacity-0'}`}><div className="absolute -inset-4 bg-gradient-to-r from-orange-500/15 to-red-500/15 rounded-3xl blur-3xl"></div><div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&h=400&fit=crop" alt="AI Portrait Training" className="w-full h-[220px] sm:h-[300px] md:h-[380px] object-cover" /></div></div>
+                        <div className={`relative ${z1.isVisible ? 'aSR' : 'opacity-0'}`}><div className="absolute -inset-4 bg-gradient-to-r from-orange-500/15 to-red-500/15 rounded-3xl blur-3xl"></div><div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl"><img src="https://res.cloudinary.com/dmxmzannb/image/upload/v1770954496/AI-H%E1%BB%8CC-G%C6%AF%C6%A0NG-M%E1%BA%B6T-B%E1%BA%A0N-T%E1%BB%AA-NH%E1%BB%AENG-T%E1%BA%A4M-SELFIE_zynnzv.webp" alt="AI Portrait Training" className="w-full h-[220px] sm:h-[300px] md:h-[380px] object-cover" /></div></div>
                     </div>
                     <div ref={z2.ref} className="grid lg:grid-cols-2 gap-10 md:gap-16 items-center">
-                        <div className={`relative order-2 lg:order-1 ${z2.isVisible ? 'aSL' : 'opacity-0'}`}><div className="absolute -inset-4 bg-gradient-to-r from-red-500/15 to-orange-500/15 rounded-3xl blur-3xl"></div><div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl"><img src="https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=600&h=400&fit=crop" alt="Business Portrait" className="w-full h-[220px] sm:h-[300px] md:h-[380px] object-cover" /></div></div>
+                        <div className={`relative order-2 lg:order-1 ${z2.isVisible ? 'aSL' : 'opacity-0'}`}><div className="absolute -inset-4 bg-gradient-to-r from-red-500/15 to-orange-500/15 rounded-3xl blur-3xl"></div><div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl"><img src="https://res.cloudinary.com/dmxmzannb/image/upload/v1770977084/50-CONCEFT-PHONG-C%C3%81CH_yr7f3d.webp" alt="Business Portrait" className="w-full h-[220px] sm:h-[300px] md:h-[380px] object-cover" /></div></div>
                         <div className={`space-y-5 order-1 lg:order-2 ${z2.isVisible ? 'aSR' : 'opacity-0'}`}>
                             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20"><span className="text-orange-400 text-xs sm:text-sm font-medium">CONCEPTS</span></div>
                             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold leading-tight">50+ concept phong cách<br /><span className="text-zinc-400">do photographer thiết kế</span></h2>
@@ -223,7 +227,7 @@ export default function AiStudioPage() {
 
             {/* BANNER */}
             <section ref={ban.ref} className="relative h-[300px] sm:h-[380px] md:h-[460px] lg:h-[520px] overflow-hidden">
-                <img src="https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=1600&h=800&fit=crop" alt="AI Studio" className="w-full h-full object-cover" />
+                <img src="https://res.cloudinary.com/dmxmzannb/image/upload/v1770977085/%E1%BA%A3nh-ch%C3%A2n-dung-ai-chuy%C3%AAn-nghi%E1%BB%87p_rzv5yy.webp" alt="AI Studio" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/70 to-black/30"></div>
                 <div className={`absolute inset-0 flex items-center transition-all duration-1000 ${ban.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
                     <div className="container mx-auto max-w-6xl px-4 sm:px-6"><div className="max-w-lg">
@@ -247,7 +251,7 @@ export default function AiStudioPage() {
                             <Link href="/contact" className="group inline-flex items-center gap-2 px-6 py-3 bg-white text-black rounded-xl font-semibold hover:bg-zinc-100 transition-colors">Liên hệ tư vấn →</Link>
                         </div>
                     </div>
-                    <div className={`relative ${ent.isVisible ? 'aSR' : 'opacity-0'}`}><div className="absolute -inset-4 bg-gradient-to-r from-orange-500/15 to-red-500/15 rounded-3xl blur-3xl"></div><div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl"><img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&h=450&fit=crop" alt="Team Photo" className="w-full h-[220px] sm:h-[320px] md:h-[400px] object-cover" /></div></div>
+                    <div className={`relative ${ent.isVisible ? 'aSR' : 'opacity-0'}`}><div className="absolute -inset-4 bg-gradient-to-r from-orange-500/15 to-red-500/15 rounded-3xl blur-3xl"></div><div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl"><img src="https://res.cloudinary.com/dmxmzannb/image/upload/v1770977102/AI-STUDIO-CHO-TEAM_kuenku.webp" alt="Team Photo" className="w-full h-[220px] sm:h-[320px] md:h-[400px] object-cover" /></div></div>
                 </div></div>
             </section>
         </div>

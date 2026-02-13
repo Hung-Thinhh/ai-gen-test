@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { VideoAppsList } from './video-platform/VideoAppsList';
@@ -9,6 +9,18 @@ import { getAppBySlug } from './video-platform/constants';
 import toast from 'react-hot-toast';
 
 export default function VideoGenerator() {
+    return (
+        <Suspense fallback={
+            <div className="flex flex-col w-full min-h-screen bg-black text-white items-center justify-center">
+                <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        }>
+            <VideoGeneratorContent />
+        </Suspense>
+    );
+}
+
+function VideoGeneratorContent() {
     const { isLoggedIn, loginGoogle } = useAuth();
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -82,3 +94,4 @@ export default function VideoGenerator() {
         </div>
     );
 }
+

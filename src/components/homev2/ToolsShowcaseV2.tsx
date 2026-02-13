@@ -1,116 +1,85 @@
 "use client";
 
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { FireIcon, SettingsIcon, ArrowRightIcon, StarIcon } from "./icons";
+import { SettingsIcon, ArrowRightIcon } from "./icons";
+import { getAllTools } from "../../services/storageService";
+import { useAppControls, AppConfig } from "../uiUtils";
+import {
+  CircularProgress,
+  Box,
+  Card,
+  CardContent,
+  CardMedia,
+  Typography,
+} from "@mui/material";
+import Grid from '@mui/material/Grid';
 
-const categories = [
-  { id: "all", label: "Tất cả" },
-  { id: "portrait", label: "Chân dung" },
-  { id: "product", label: "Sản phẩm" },
-  { id: "marketing", label: "Marketing" },
-  { id: "fun", label: "Giải trí" },
-];
-
-const tools = [
-  {
-    id: "free-generation",
-    name: "Free Generation",
-    description: "Tạo ảnh từ mô tả văn bản",
-    category: "all",
-    cost: "Miễn phí",
-    usage: 15000,
-    badge: "Hot",
-    image: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExeTczYWJlYnBlc3V1dHBxMnJidmVvcWlqd293dWQ1Ymt3Z2N3bjl3MSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/Rh0btaKsTkIIrls5yT/giphy.gif",
-    isHot: true,
-  },
-  {
-    id: "face-swap",
-    name: "Face Swap",
-    description: "Đổi khuôn mặt trong ảnh",
-    category: "fun",
-    cost: "1 credit",
-    usage: 12000,
-    badge: "Phổ biến",
-    image: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExeTczYWJlYnBlc3V1dHBxMnJidmVvcWlqd293dWQ1Ymt3Z2N3bjl3MSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/Rh0btaKsTkIIrls5yT/giphy.gif",
-    isHot: true,
-  },
-  {
-    id: "avatar-creator",
-    name: "Avatar Creator",
-    description: "Tạo avatar chuyên nghiệp",
-    category: "portrait",
-    cost: "2 credits",
-    usage: 8000,
-    badge: "Mới",
-    image: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExeTczYWJlYnBlc3V1dHBxMnJidmVvcWlqd293dWQ1Ymt3Z2N3bjl3MSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/Rh0btaKsTkIIrls5yT/giphy.gif",
-    isNew: true,
-  },
-  {
-    id: "product-photo",
-    name: "Product Photo",
-    description: "Chụp ảnh sản phẩm đẹp",
-    category: "product",
-    cost: "2 credits",
-    usage: 6000,
-    image: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExeTczYWJlYnBlc3V1dHBxMnJidmVvcWlqd293dWQ1Ymt3Z2N3bjl3MSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/Rh0btaKsTkIIrls5yT/giphy.gif",
-  },
-  {
-    id: "poster-creator",
-    name: "Poster Creator",
-    description: "Tạo poster chuyên nghiệp",
-    category: "marketing",
-    cost: "1 credit",
-    usage: 5000,
-    image: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExeTczYWJlYnBlc3V1dHBxMnJidmVvcWlqd293dWQ1Ymt3Z2N3bjl3MSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/Rh0btaKsTkIIrls5yT/giphy.gif",
-  },
-  {
-    id: "photo-booth",
-    name: "Photo Booth",
-    description: "Booth ảnh vui nhộn",
-    category: "fun",
-    cost: "Miễn phí",
-    usage: 10000,
-    badge: "Free",
-    image: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExeTczYWJlYnBlc3V1dHBxMnJidmVvcWlqd293dWQ1Ymt3Z2N3bjl3MSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/Rh0btaKsTkIIrls5yT/giphy.gif",
-  },
-  {
-    id: "beauty-creator",
-    name: "Beauty Creator",
-    description: "Làm đẹp ảnh chân dung",
-    category: "portrait",
-    cost: "1 credit",
-    usage: 7000,
-    image: "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExYm11eXA3ZjR4Y2Q0anJ6Y2pubHl0aHV1dXd1ZTdtcHA0bmU2cWc2YiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/bCEGJKTfuUnja/giphy.gif",
-  },
-  {
-    id: "milk-tea-poster",
-    name: "Milk Tea Poster",
-    description: "Poster trà sữa đẹp mắt",
-    category: "marketing",
-    cost: "2 credits",
-    usage: 4000,
-    image: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExeTczYWJlYnBlc3V1dHBxMnJidmVvcWlqd293dWQ1Ymt3Z2N3bjl3MSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/Rh0btaKsTkIIrls5yT/giphy.gif",
-    isNew: true,
-  },
-];
-
-const formatNumber = (num: number) => {
-  if (num >= 1000) {
-    return (num / 1000).toFixed(1) + "K";
-  }
-  return num.toString();
-};
+interface ProcessedAppConfig extends AppConfig {
+  title: string;
+  description: string;
+}
 
 export const ToolsShowcaseV2 = () => {
-  const [activeCategory, setActiveCategory] = useState("all");
   const router = useRouter();
+  const { language } = useAppControls();
+  const [dbTools, setDbTools] = useState<ProcessedAppConfig[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredTools =
-    activeCategory === "all"
-      ? tools
-      : tools.filter((tool) => tool.category === activeCategory || tool.category === "all");
+  // Helper to get localized text
+  const getLocalizedText = (content: any, lang: string) => {
+    if (typeof content === 'string') return content;
+    if (typeof content === 'object' && content !== null) {
+      return content[lang] || content['en'] || content['vi'] || '';
+    }
+    return '';
+  };
+
+  useEffect(() => {
+    const fetchTools = async () => {
+      try {
+        const tools = await getAllTools();
+        const mappedTools = (tools || []).map((t: any) => ({
+          id: t.tool_key || t.tool_id?.toString() || '',
+          titleKey: t.title_key || t.name,
+          descriptionKey: t.description,
+          title: t.name,
+          description: t.description,
+          previewImageUrl: t.preview_image_url || 'https://res.cloudinary.com/dmxmzannb/image/upload/v1765978950/pqotah7yias7jtpnwnca.jpg',
+          ...t
+        }));
+
+        const activeTools = mappedTools.filter((t: any) => t.is_active === true);
+
+        // Sort by sort_order
+        activeTools.sort((a: any, b: any) => {
+          const orderA = a.sort_order || 0;
+          const orderB = b.sort_order || 0;
+          if (orderA === 0 && orderB === 0) return 0;
+          if (orderA === 0) return 1;
+          if (orderB === 0) return -1;
+          return orderA - orderB;
+        });
+
+        // Take top 8
+        setDbTools(activeTools.slice(0, 8));
+      } catch (error) {
+        console.error("Error fetching tools in ToolsShowcaseV2:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTools();
+  }, []);
+
+  const handleSelectApp = (appId: string) => {
+    if (appId === 'studio') {
+      router.push('/studio');
+    } else {
+      router.push(`/tool/${appId}`);
+    }
+  };
 
   return (
     <section className="py-20 bg-black">
@@ -134,108 +103,75 @@ export const ToolsShowcaseV2 = () => {
           </p>
         </motion.div>
 
-        {/* Category Tabs */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-          className="flex flex-wrap justify-center gap-2 mb-10"
-        >
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setActiveCategory(cat.id)}
-              className={`relative px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer ${
-                activeCategory === cat.id
-                  ? "text-white bg-orange-500"
-                  : "text-neutral-400 bg-white/5 hover:bg-white/10"
-              }`}
-            >
-              {cat.label}
-              {activeCategory === cat.id && (
-                <motion.div
-                  layoutId="activeTab"
-                  className="absolute inset-0 bg-orange-500 rounded-full -z-10"
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                />
-              )}
-            </button>
-          ))}
-        </motion.div>
-
         {/* Tools Grid */}
-        <motion.div
-          layout
-          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6"
-        >
-          <AnimatePresence mode="popLayout">
-            {filteredTools.map((tool, index) => (
-                <motion.div
-                key={tool.id}
-                layout
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
-                // whileHover={{ y: -10, scale: 1.02 }}
-                onClick={() => router.push(`/tool/${tool.id}`)}
-                className="group cursor-pointer bg-neutral-900 rounded-2xl overflow-hidden border border-white/10 hover:border-orange-500/50 transition-all"
-                >
-                {/* Image - 9:16 Aspect Ratio */}
-                <div className="relative aspect-[9/16] overflow-hidden">
-                  <img
-                  src={tool.image.replace(/\.(jpg|jpeg|png)$/i, '.gif')}
-                  alt={tool.name}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-                  {/* Badge */}
-                  {(tool.isNew || tool.isHot) && (
-                  <div
-                    className={`absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
-                    tool.isNew
-                      ? "bg-green-500 text-white"
-                      : "bg-red-500 text-white"
-                    }`}
+        <div className="mb-10 min-h-[400px]">
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress sx={{ color: '#f97316' }} />
+            </Box>
+          ) : (
+            <Grid container spacing={2} justifyContent="center">
+              {dbTools.map((app) => (
+                <Grid size={{ xs: 6, sm: 6, md: 3 }} key={app.id}>
+                  <Card
+                    className="themed-card"
+                    sx={{
+                      cursor: 'pointer',
+                      backdropFilter: 'blur(10px)',
+                      borderRadius: '16px',
+                      transition: 'transform 0.3s, box-shadow 0.3s',
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      '&:hover': {
+                        transform: 'scale(1.05)',
+                      },
+                    }}
+                    onClick={() => handleSelectApp(app.id)}
                   >
-                    {tool.isNew ? (
-                    <>
-                      <SettingsIcon className="w-3 h-3" />
-                      <span>Mới</span>
-                    </>
-                    ) : (
-                    <>
-                      <FireIcon className="w-3 h-3" />
-                      <span>Hot</span>
-                    </>
+                    {app.previewImageUrl && (
+                      <CardMedia
+                        component="img"
+                        sx={{ aspectRatio: '1/1', objectFit: 'cover' }}
+                        image={app.previewImageUrl}
+                        alt={`Preview for ${app.title}`}
+                      />
                     )}
-                  </div>
-                  )}
-
-                  {/* Info - appears on hover */}
-                  <div className="absolute inset-0 flex flex-col justify-end p-4 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <h3 className="text-white font-semibold mb-1">
-                    {tool.name}
-                  </h3>
-                  <p className="text-neutral-300 text-sm mb-3 line-clamp-2">
-                    {tool.description}
-                  </p>
-                  <button className="px-4 py-2 bg-orange-500 text-white text-sm font-semibold rounded-full flex items-center gap-1 w-fit">
-                    Thử ngay
-                    <ArrowRightIcon className="w-4 h-4" />
-                  </button>
-                  </div>
-                </div>
-                </motion.div>
-            ))}
-          </AnimatePresence>
-        </motion.div>
+                    <CardContent sx={{ flexGrow: 1 }}>
+                      <Typography
+                        variant="h6"
+                        component="div"
+                        className="themed-text"
+                        sx={{ marginBottom: 1, fontWeight: 700 }}
+                      >
+                        {getLocalizedText(app.title, language)}
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        className="themed-text-tertiary"
+                        sx={{
+                          display: '-webkit-box',
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          opacity: 0.85
+                        }}
+                      >
+                        {getLocalizedText(app.description, language)}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          )}
+        </div>
 
         {/* View All Button */}
         <motion.div
           initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
+          whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
           className="text-center mt-10"
         >

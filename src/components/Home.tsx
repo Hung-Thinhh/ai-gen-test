@@ -1,8 +1,8 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
-*/
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+ */
+import React, { useState, useRef, useCallback, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -41,7 +41,7 @@ interface HomeProps {
   apps: ProcessedAppConfig[];
 }
 
-const Home: React.FC<HomeProps> = ({ onSelectApp, title, subtitle, apps: initialApps }) => { // Rename prop to initialApps
+const HomeContent: React.FC<HomeProps> = ({ onSelectApp, title, subtitle, apps: initialApps }) => { // Rename prop to initialApps
   const { t, language, importSettingsAndNavigate, openLayerComposer, addImagesToGallery, openStoryboardingModal } = useAppControls();
   const { openEmptyImageEditor } = useImageEditor();
   const searchParams = useSearchParams();
@@ -315,6 +315,18 @@ const Home: React.FC<HomeProps> = ({ onSelectApp, title, subtitle, apps: initial
         )}
       </AnimatePresence>
     </Box>
+  );
+};
+
+const Home: React.FC<HomeProps> = (props) => {
+  return (
+    <Suspense fallback={
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+        <CircularProgress color="inherit" />
+      </Box>
+    }>
+      <HomeContent {...props} />
+    </Suspense>
   );
 };
 
