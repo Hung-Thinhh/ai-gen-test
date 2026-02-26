@@ -19,14 +19,13 @@ function getPrimaryPrompt(templatePrompt: string, customPrompt: string, styleCon
     // OPTIMIZED: Concise but effective face swap instructions
     if (hasSecondImage) {
         if (toolKey === 'fifa-online') {
-            return `${aspectRatioText}FACE SWAP + SQUAD FORMATION POSTER:
-STEP 1 - FACE SWAP: Take the face from Photo 1 and swap it onto a person in the scene. Keep the EXACT face from Photo 1 - same eyes, nose, mouth, jawline, skin tone, facial structure. The face must be 100% identical to the input photo. Do NOT generate a new face. Do NOT create an AI face. COPY the real human face pixel by pixel.
-STEP 2 - SQUAD FORMATION: Take the squad formation from Photo 2 and display it clearly in the image. Keep all player cards, positions, and formation layout as sharp and readable as possible. The formation should occupy most of the image.
-STEP 3 - COMPOSITION: Place the person (with swapped face from Photo 1) on one side of the image. The squad formation from Photo 2 fills the rest. The person should wear their ORIGINAL clothes from Photo 1, NOT fantasy armor or suits.
-Do NOT add any text, names, titles, or labels.
-Style: "${styleContext}"
-Scene: "${templatePrompt}"
-CRITICAL REMINDER: This is a FACE SWAP task. The face MUST come from Photo 1. Do NOT generate, imagine, or create a new face. Only ONE person in the final image.${modificationText}${watermarkText}`;
+            return `${aspectRatioText}A professional eSports tournament broadcast graphic for a football game.
+The scene features two distinct elements based on the provided reference photos:
+1. The FIRST IMAGE shows the manager/competitor. Their facial identity, expression, and original clothing must be represented with absolute fidelity in the final output.
+2. The SECOND IMAGE shows their tactical squad formation. This entire formation layout, including all player cards and positions, must be clearly visible and legible as the background or central focus of the graphic.
+Composition: The manager stands confidently on one side. The tactical formation occupies the remaining space.
+Atmosphere: Professional gaming arena, cinematic stadium lighting, elegant golden and blue auras, high-end eSports production quality.
+Please create a cohesive, photorealistic scene that combines these elements naturally. No additional text, labels, or names.${modificationText}${watermarkText}`;
         } else {
             return `${aspectRatioText}DUAL FACE SWAP:
 Photo 1 (Female): Use this face for female character.
@@ -51,14 +50,15 @@ function getFallbackPrompt(templatePrompt: string, customPrompt: string, styleCo
 
     if (hasSecondImage) {
         if (toolKey === 'fifa-online') {
-            return `${aspectRatioText}\nGHÉP MẶT + POSTER ĐỘI HÌNH:
-BƯỚC 1: LẤY MẶT từ Ảnh 1 và ghép vào nhân vật. Giữ NGUYÊN mặt thật - mắt, mũi, miệng, da, cấu trúc khuôn mặt phải GIỐNG HỆT ảnh gốc. KHÔNG được tạo mặt AI. KHÔNG được vẽ mặt mới.
-BƯỚC 2: LẤY ĐỘI HÌNH từ Ảnh 2, hiển thị rõ ràng sắc nét. Giữ nguyên thẻ cầu thủ, vị trí, đội hình.
-BƯỚC 3: Người (mặt từ Ảnh 1) đứng 1 bên, mặc ĐÚNG quần áo gốc từ Ảnh 1. Đội hình chiếm phần còn lại.
-KHÔNG thêm chữ, tên, nhãn.
-PHONG CÁCH: "${styleContext}".
-BỐI CẢNH: "${templatePrompt}".
-NHẮC LẠI: Đây là GHÉP MẶT. Mặt PHẢI lấy từ Ảnh 1. KHÔNG tạo mặt mới.${modificationText}${watermarkText}`;
+            return `${aspectRatioText}\nPOSTER COMPETITOR FIFA ONLINE 4:
+Dữ liệu đầu vào:
+- Ảnh 1: Chân dung người thật. CẦN giữ nguyên khuôn mặt 100%.
+- Ảnh 2: Ảnh chụp màn hình đội hình game.
+Nhiệm vụ: Tạo ảnh giới thiệu tuyển thủ esports chuyên nghiệp.
+Đặt người từ Ảnh 1 ở một bên. Giữ nguyên mặt và trang phục từ Ảnh 1.
+Hiển thị đội hình từ Ảnh 2 rõ ràng ở trung tâm hoặc phía sau. Thẻ cầu thủ phải dễ đọc.
+Hiệu ứng: Sân vận động hoành tráng, hào quang vàng/xanh, không khí vô địch.
+YÊU CẦU: Giống mặt 100%, không thêm chữ hay nhãn.${modificationText}${watermarkText}`;
         } else {
             return `${aspectRatioText}\nFACE SWAP CẶP ĐÔI (NAM & NỮ):
 1. Ghép mặt Nữ từ Ảnh 1 vào nhân vật nữ.
@@ -88,23 +88,12 @@ export async function generateStudioImage(
     const userImagePart = { inlineData: { mimeType: userMime, data: userData } };
 
     const parts: any[] = [];
+    parts.push(userImagePart);
 
-    // For FIFA Online: add text labels BEFORE each image so Gemini knows which is which
-    if (toolKey === 'fifa-online' && secondImageDataUrl) {
-        parts.push({ text: "[Photo 1 - USER PORTRAIT: This is the real person's photo. You MUST use this EXACT face in the final image. Do NOT generate a new face.]" });
-        parts.push(userImagePart);
-
+    if (secondImageDataUrl) {
         const { mimeType: userMime2, data: userData2 } = await import('./baseService').then(m => m.normalizeImageInput(secondImageDataUrl));
         const userImagePart2 = { inlineData: { mimeType: userMime2, data: userData2 } };
-        parts.push({ text: "[Photo 2 - SQUAD FORMATION: This is a game screenshot showing the team formation. Display this formation in the background.]" });
         parts.push(userImagePart2);
-    } else {
-        parts.push(userImagePart);
-        if (secondImageDataUrl) {
-            const { mimeType: userMime2, data: userData2 } = await import('./baseService').then(m => m.normalizeImageInput(secondImageDataUrl));
-            const userImagePart2 = { inlineData: { mimeType: userMime2, data: userData2 } };
-            parts.push(userImagePart2);
-        }
     }
 
     const config: any = {};
@@ -120,12 +109,12 @@ export async function generateStudioImage(
     const hasSecondImage = !!secondImageDataUrl;
 
     try {
-        console.log(`Attempting Studio Image generation (${hasSecondImage ? 'Couple' : 'Single'} Mode) with Context: "${styleContext}"...`);
+        console.log(`Attempting Studio Image generation (${hasSecondImage ? 'Dual' : 'Single'} Mode) with Context: "${styleContext}"...`);
 
         const prompt = getPrimaryPrompt(templatePrompt, customPrompt, styleContext, removeWatermark, aspectRatio, hasSecondImage, toolKey);
         const textPart = { text: prompt };
 
-        // Add prompt at the end
+        // Order: Image 1, [Image 2], Prompt
         parts.push(textPart as any);
 
         const response = await callGeminiWithRetry(parts, config);
