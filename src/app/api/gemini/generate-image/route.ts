@@ -229,6 +229,11 @@ export async function POST(req: NextRequest) {
 
                 console.log(`[API DEBUG] Attempt ${attempt} - Filtered config:`, JSON.stringify(filteredConfig, null, 2));
 
+                // Check if multiple images (dual image mode)
+                const imageCount = imageParts.length;
+                const isDualImageMode = imageCount >= 2;
+                console.log(`[API DEBUG] Attempt ${attempt} - Image count: ${imageCount}, Dual mode: ${isDualImageMode}`);
+
                 const response = await ai.models.generateContent({
                     model: model || 'gemini-2.5-flash-image',
                     contents: [{
@@ -238,7 +243,7 @@ export async function POST(req: NextRequest) {
                     config: {
                         ...filteredConfig,
                         // Bổ sung cấu hình cho ảnh người (nếu SDK/Model hỗ trợ)
-                        personGeneration: 'ALLOW_ALL',
+                        ...(isDualImageMode ? {} : { personGeneration: 'ALLOW_ALL' }),
                         safetySettings: [
                             {
                                 category: HarmCategory.HARM_CATEGORY_HARASSMENT,
@@ -281,6 +286,11 @@ export async function POST(req: NextRequest) {
                 } else {
                     // Attempt failed - log why
                     console.warn(`[API DEBUG] ❌ Attempt ${attempt} failed: No valid image data found in candidates. Finish reason: ${finishReason}`);
+                    
+                    // Log extra info for debugging IMAGE_OTHER with dual images
+                    if (finishReason === 'IMAGE_OTHER' && isDualImageMode) {
+                        console.warn(`[API DEBUG] IMAGE_OTHER detected with ${imageCount} images. This may be due to policy restrictions on face swap.`);
+                    }
 
                     const firstPart = response.candidates?.[0]?.content?.parts?.[0];
                     if (firstPart?.text) {
@@ -545,7 +555,8 @@ export async function POST(req: NextRequest) {
             statusCode = 400;
             errorCode = 'INVALID_ARGUMENT';
         } else if (fullErrorMessage.includes('image_other') || fullErrorMessage.includes('stop')) {
-            userMessage = 'Mô hình gặp lỗi khi xử lý yêu cầu này. Vui lòng thử lại hoặc điều chỉnh prompt.';
+            // IMAGE_OTHER thường xảy ra khi: 1) Policy violation với multi-image, 2) Model không thể generate
+            userMessage = 'Mô hình không thể tạo ảnh với yêu cầu này. Vui lòng thử lại hoặc đổi ảnh/kiểu khác.';
             statusCode = 500;
             errorCode = 'GENERATION_FAILED';
         } else if (errorMessage.includes('400')) {

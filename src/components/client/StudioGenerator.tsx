@@ -39,7 +39,7 @@ interface StudioGeneratorProps {
 }
 
 // Danh sách các slug yêu cầu upload 2 ảnh
-const DUAL_IMAGE_SLUGS = ['bo-anh-tet-2026', 'fifa-online'];
+const DUAL_IMAGE_SLUGS = ['fifa-online'];
 
 const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
     const router = useRouter();

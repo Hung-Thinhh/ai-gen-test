@@ -19,10 +19,16 @@ function getPrimaryPrompt(templatePrompt: string, customPrompt: string, styleCon
     // OPTIMIZED: Concise but effective face swap instructions
     if (hasSecondImage) {
         if (toolKey === 'fifa-online') {
-            return `${aspectRatioText}Epic esports poster:
-Background: A packed, glowing football stadium at night under bright stadium lights. Luxurious gold, amber, and bronze color grading. Integrate the gaming squad formation card layout beautifully, glowing with golden magical sparks and lens flares.
-Foreground: The person looking confident, wearing a sleek black polo shirt or suit, standing with crossed arms. 
-Details: Add glowing golden particles floating in the air, dynamic cinematic lighting highlighting the person's face. The words "HLV" and a stylized golden logo subtly integrated into the shiny golden bottom frame. 
+            return `${aspectRatioText}Epic esports poster creation:
+INPUT 1 (Primary): Portrait photo of the user (Head Coach/HLV) - preserve this person's face and appearance.
+INPUT 2 (Reference): Gaming squad formation card/layout - use this as visual reference for the team setup/stats display.
+
+COMPOSITION:
+- Background: A packed, glowing football stadium at night under bright stadium lights. Luxurious gold, amber, and bronze color grading.
+- Foreground: The person from Input 1 looking confident, wearing a sleek black polo shirt or suit, standing with crossed arms.
+- Gaming Element: Beautifully integrate the formation card concept from Input 2 as a graphic overlay element (not as real people), glowing with golden magical sparks and lens flares.
+
+Details: Add glowing golden particles floating in the air, dynamic cinematic lighting highlighting the person's face. The words "HLV" and a stylized golden logo subtly integrated into the shiny golden bottom frame.
 Style: 8k resolution, ultra-detailed, photorealistic, octane render masterpiece. No extra text labels.${modificationText}${watermarkText}`;
         } else {
             return `${aspectRatioText}PORTRAIT MERGING (DUAL):
@@ -49,12 +55,17 @@ function getFallbackPrompt(templatePrompt: string, customPrompt: string, styleCo
 
     if (hasSecondImage) {
         if (toolKey === 'fifa-online') {
-            return `${aspectRatioText}\nẢNH CHÂN DUNG + SƠ ĐỒ ĐỘI HÌNH:
-- Ảnh 1: Chân dung tuyển thủ. Cần tái tạo lại chân dung và trang phục một cách tự nhiên.
-- Ảnh 2: Sơ đồ đội hình game. Cần tích hợp rõ ràng vào hình ảnh.
-Nhiệm vụ: Tạo một poster chuyên nghiệp với người đứng một bên và sơ đồ đội hình chiếm không gian còn lại.
-Phong cách: Sân vận động hoành tráng, ánh sáng rực rỡ, không khí thi đấu đỉnh cao.
-Yêu cầu: Không thêm chữ hay nhãn.${modificationText}${watermarkText}`;
+            return `${aspectRatioText}\nTẠO POSTER FIFA/FC ONLINE:
+- Input 1: Ảnh chân dung ngưở i dùng (HLV/Game thủ). Giữ nguyên khuôn mặt và dáng vẻ của ngưở i này.
+- Input 2: Ảnh sơ đồ đội hình trong game (có thể có thẻ cầu thủ). Sử dụng làm tham khảo cho layout đội hình.
+
+Nhiệm vụ: Tạo poster thể thao điện tử chuyên nghiệp:
++ Ngưở i dùng từ Input 1 đứng ở vị trí trung tâm/trước, thần thái tự tin
++ Tích hợp yếu tố đội hình từ Input 2 dưới dạng đồ họa/layer (không cần tái tạo từng cầu thủ)
++ Phong cách sân vận động hoành tráng, ánh sáng vàng đồng rực rỡ, hiệu ứng gaming
+
+Lưu ý: Input 2 chỉ là tham khảo giao diện game, không cần tái tạo chi tiết từng ngưở i trong đó.
+Yêu cầu: Không thêm chữ hay nhãn ngoài những gì có trong ảnh Input 2.${modificationText}${watermarkText}`;
         } else {
             return `${aspectRatioText}\nGHÉP MẶT HAI NGƯỜI:
 - Ảnh 1 & Ảnh 2: Hình mẫu khuôn mặt.
