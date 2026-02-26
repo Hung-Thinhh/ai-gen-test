@@ -19,13 +19,11 @@ function getPrimaryPrompt(templatePrompt: string, customPrompt: string, styleCon
     // OPTIMIZED: Concise but effective face swap instructions
     if (hasSecondImage) {
         if (toolKey === 'fifa-online') {
-            return `${aspectRatioText}PORTRAIT INTEGRATION + ESPORTS BROADCAST GRAPHIC:
-The scene features two primary visual elements:
-1. FIRST IMAGE (Portrait): The competitor. Preserve their facial appearance (eyes, nose, mouth) and clothing exactly in the final image.
-2. SECOND IMAGE (Tactics): The tactical squad formation. This entire team lineup must be clear and readable as part of the graphic.
-Composition: The competitor stands on the left or right, with the tactical formation dominating the center or background.
-Aesthetic: Professional gaming arena, cinematic stadium lighting, elegant golden and blue atmospheric glows.
-Create a photorealistic scene combining these references naturally. No extra text or labels.${modificationText}${watermarkText}`;
+            return `${aspectRatioText}Epic esports poster:
+Background: A packed, glowing football stadium at night under bright stadium lights. Luxurious gold, amber, and bronze color grading. Integrate the gaming squad formation card layout beautifully, glowing with golden magical sparks and lens flares.
+Foreground: The person looking confident, wearing a sleek black polo shirt or suit, standing with crossed arms. 
+Details: Add glowing golden particles floating in the air, dynamic cinematic lighting highlighting the person's face. The words "HLV" and a stylized golden logo subtly integrated into the shiny golden bottom frame. 
+Style: 8k resolution, ultra-detailed, photorealistic, octane render masterpiece. No extra text labels.${modificationText}${watermarkText}`;
         } else {
             return `${aspectRatioText}PORTRAIT MERGING (DUAL):
 Photo 1: Reference for the person's face. 
@@ -51,9 +49,9 @@ function getFallbackPrompt(templatePrompt: string, customPrompt: string, styleCo
 
     if (hasSecondImage) {
         if (toolKey === 'fifa-online') {
-            return `${aspectRatioText}\nGHÉP MẶT + POSTER CHIẾN THUẬT:
-- Ảnh 1: Chân dung tuyển thủ. Cần giữ nguyên khuôn mặt và trang phục.
-- Ảnh 2: Sơ đồ đội hình game. Cần hiển thị rõ các thẻ cầu thủ.
+            return `${aspectRatioText}\nẢNH CHÂN DUNG + SƠ ĐỒ ĐỘI HÌNH:
+- Ảnh 1: Chân dung tuyển thủ. Cần tái tạo lại chân dung và trang phục một cách tự nhiên.
+- Ảnh 2: Sơ đồ đội hình game. Cần tích hợp rõ ràng vào hình ảnh.
 Nhiệm vụ: Tạo một poster chuyên nghiệp với người đứng một bên và sơ đồ đội hình chiếm không gian còn lại.
 Phong cách: Sân vận động hoành tráng, ánh sáng rực rỡ, không khí thi đấu đỉnh cao.
 Yêu cầu: Không thêm chữ hay nhãn.${modificationText}${watermarkText}`;

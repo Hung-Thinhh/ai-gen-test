@@ -418,7 +418,7 @@ export async function POST(req: NextRequest) {
             // If tool_key is provided but tool_id is missing/invalid, look it up
             if (toolKey && (toolId === -1 || !toolId)) {
                 try {
-                    const toolResult = await sql`SELECT tool_id FROM tools WHERE key = ${toolKey} LIMIT 1`;
+                    const toolResult = await sql`SELECT tool_id FROM tools WHERE tool_key = ${toolKey} LIMIT 1`;
                     if (toolResult && toolResult.length > 0) {
                         toolId = toolResult[0].tool_id;
                         console.log(`[API] Resolved tool_key '${toolKey}' to tool_id: ${toolId}`);
