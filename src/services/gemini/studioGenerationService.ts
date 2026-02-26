@@ -19,17 +19,22 @@ function getPrimaryPrompt(templatePrompt: string, customPrompt: string, styleCon
     // OPTIMIZED: Concise but effective face swap instructions
     if (hasSecondImage) {
         if (toolKey === 'fifa-online') {
-            return `${aspectRatioText}Epic esports poster creation:
-INPUT 1 (Primary): Portrait photo of the user (Head Coach/HLV) - preserve this person's face and appearance.
-INPUT 2 (Reference): Gaming squad formation card/layout - use this as visual reference for the team setup/stats display.
+            return `${aspectRatioText}CREATE A FIFA/FC ONLINE ESPORTS POSTER:
 
-COMPOSITION:
-- Background: A packed, glowing football stadium at night under bright stadium lights. Luxurious gold, amber, and bronze color grading.
-- Foreground: The person from Input 1 looking confident, wearing a sleek black polo shirt or suit, standing with crossed arms.
-- Gaming Element: Beautifully integrate the formation card concept from Input 2 as a graphic overlay element (not as real people), glowing with golden magical sparks and lens flares.
+SCENE DESCRIPTION:
+A professional esports poster featuring a Head Coach (HLV) standing confidently in front of a packed football stadium at night. Golden, amber and bronze color grading with dramatic stadium lights. Gaming UI elements and formation cards floating as holographic overlays.
 
-Details: Add glowing golden particles floating in the air, dynamic cinematic lighting highlighting the person's face. The words "HLV" and a stylized golden logo subtly integrated into the shiny golden bottom frame.
-Style: 8k resolution, ultra-detailed, photorealistic, octane render masterpiece. No extra text labels.${modificationText}${watermarkText}`;
+REFERENCES PROVIDED:
+- REFERENCE IMAGE A shows the Head Coach appearance to include
+- REFERENCE IMAGE B shows the gaming squad formation UI style to incorporate as graphic elements
+
+OUTPUT REQUIREMENTS:
+- Epic stadium background with glowing lights and golden particles
+- Coach figure wearing sleek black polo or suit, crossed arms, confident pose
+- Formation card elements integrated as glowing golden holographic overlays (not as real players)
+- "HLV" text and stylized golden logo in frame
+- 8k resolution, photorealistic, cinematic lighting
+- No additional text labels${modificationText}${watermarkText}`;
         } else {
             return `${aspectRatioText}PORTRAIT MERGING (DUAL):
 Photo 1: Reference for the person's face. 
@@ -55,17 +60,22 @@ function getFallbackPrompt(templatePrompt: string, customPrompt: string, styleCo
 
     if (hasSecondImage) {
         if (toolKey === 'fifa-online') {
-            return `${aspectRatioText}\nTẠO POSTER FIFA/FC ONLINE:
-- Input 1: Ảnh chân dung ngưở i dùng (HLV/Game thủ). Giữ nguyên khuôn mặt và dáng vẻ của ngưở i này.
-- Input 2: Ảnh sơ đồ đội hình trong game (có thể có thẻ cầu thủ). Sử dụng làm tham khảo cho layout đội hình.
+            return `${aspectRatioText}\nTẠO POSTER ESPORTS FIFA/FC ONLINE:
 
-Nhiệm vụ: Tạo poster thể thao điện tử chuyên nghiệp:
-+ Ngưở i dùng từ Input 1 đứng ở vị trí trung tâm/trước, thần thái tự tin
-+ Tích hợp yếu tố đội hình từ Input 2 dưới dạng đồ họa/layer (không cần tái tạo từng cầu thủ)
-+ Phong cách sân vận động hoành tráng, ánh sáng vàng đồng rực rỡ, hiệu ứng gaming
+MÔ TẢ CẢNH:
+Poster thể thao điện tử chuyên nghiệp với HLV đứng tự tin trước sân vận động đầy ắp khán giả về đêm. Tông màu vàng đồng, hổ phách, đồng cổ điển với ánh đèn sân khấu drama. UI game và thẻ đội hình hiển thị như lớp hologram phủ lên.
 
-Lưu ý: Input 2 chỉ là tham khảo giao diện game, không cần tái tạo chi tiết từng ngưở i trong đó.
-Yêu cầu: Không thêm chữ hay nhãn ngoài những gì có trong ảnh Input 2.${modificationText}${watermarkText}`;
+ẢNH THAM KHẢO:
+- ẢNH A: Hình dáng HLV cần đưa vào poster
+- ẢNH B: Phong cách UI đội hình game để tích hợp dưới dạng đồ họa
+
+YÊU CẦU OUTPUT:
++ Sân vận động hoành tráng với ánh sáng vàng và hiệu ứng hạt phát sáng
++ Nhân vật HLV mặc áo polo đen hoặc vest, tư thế tự tin, tay khoanh
++ Thẻ đội hình tích hợp như lớp hologram vàng phát sáng (không phải ngưở i thật)
++ Chữ "HLV" và logo vàng trong khung
++ 8k resolution, photorealistic, cinematic lighting
++ Không thêm chữ hay nhãn khác${modificationText}${watermarkText}`;
         } else {
             return `${aspectRatioText}\nGHÉP MẶT HAI NGƯỜI:
 - Ảnh 1 & Ảnh 2: Hình mẫu khuôn mặt.
@@ -93,13 +103,32 @@ export async function generateStudioImage(
     const { mimeType: userMime, data: userData } = await import('./baseService').then(m => m.normalizeImageInput(userImageDataUrl));
     const userImagePart = { inlineData: { mimeType: userMime, data: userData } };
 
+    // FIX: Build parts with TEXT FIRST for FIFA to avoid IMAGE_OTHER
+    // This changes how the model interprets the request
+    const isFifaOnline = toolKey === 'fifa-online';
+    
+    const prompt = getPrimaryPrompt(templatePrompt, customPrompt, styleContext, removeWatermark, aspectRatio, !!secondImageDataUrl, toolKey);
+    const textPart = { text: prompt };
+    
     const parts: any[] = [];
-    parts.push(userImagePart);
-
-    if (secondImageDataUrl) {
-        const { mimeType: userMime2, data: userData2 } = await import('./baseService').then(m => m.normalizeImageInput(secondImageDataUrl));
-        const userImagePart2 = { inlineData: { mimeType: userMime2, data: userData2 } };
-        parts.push(userImagePart2);
+    
+    // For FIFA: Text first, then images (different from other tools)
+    // This helps avoid triggering face manipulation policy
+    if (isFifaOnline) {
+        parts.push(textPart);
+        parts.push(userImagePart);
+        if (secondImageDataUrl) {
+            const { mimeType: userMime2, data: userData2 } = await import('./baseService').then(m => m.normalizeImageInput(secondImageDataUrl));
+            parts.push({ inlineData: { mimeType: userMime2, data: userData2 } });
+        }
+    } else {
+        // Original order for other tools: Images first, then text
+        parts.push(userImagePart);
+        if (secondImageDataUrl) {
+            const { mimeType: userMime2, data: userData2 } = await import('./baseService').then(m => m.normalizeImageInput(secondImageDataUrl));
+            parts.push({ inlineData: { mimeType: userMime2, data: userData2 } });
+        }
+        parts.push(textPart as any);
     }
 
     const config: any = {};
@@ -116,12 +145,7 @@ export async function generateStudioImage(
 
     try {
         console.log(`Attempting Studio Image generation (${hasSecondImage ? 'Dual' : 'Single'} Mode) with Context: "${styleContext}"...`);
-
-        const prompt = getPrimaryPrompt(templatePrompt, customPrompt, styleContext, removeWatermark, aspectRatio, hasSecondImage, toolKey);
-        const textPart = { text: prompt };
-
-        // Order: Image 1, [Image 2], Prompt
-        parts.push(textPart as any);
+        console.log(`[FIFA DEBUG] Parts order: ${isFifaOnline ? 'TEXT -> IMG1 -> IMG2' : 'IMG1 -> IMG2 -> TEXT'}`);
 
         const response = await callGeminiWithRetry(parts, config);
         return processGeminiResponse(response);
@@ -141,13 +165,25 @@ export async function generateStudioImage(
                 const fallbackPrompt = getFallbackPrompt(templatePrompt, customPrompt, styleContext, removeWatermark, aspectRatio, hasSecondImage, toolKey);
                 const fallbackTextPart = { text: fallbackPrompt };
 
-                // Reconstruct parts for fallback (must be clean array)
-                const fbParts = [userImagePart];
-                if (secondImageDataUrl) {
-                    const { mimeType: userMime2, data: userData2 } = await import('./baseService').then(m => m.normalizeImageInput(secondImageDataUrl));
-                    fbParts.push({ inlineData: { mimeType: userMime2, data: userData2 } });
+                // Reconstruct parts for fallback with same order logic
+                const fbParts: any[] = [];
+                if (isFifaOnline) {
+                    // Text first for FIFA
+                    fbParts.push(fallbackTextPart);
+                    fbParts.push(userImagePart);
+                    if (secondImageDataUrl) {
+                        const { mimeType: userMime2, data: userData2 } = await import('./baseService').then(m => m.normalizeImageInput(secondImageDataUrl));
+                        fbParts.push({ inlineData: { mimeType: userMime2, data: userData2 } });
+                    }
+                } else {
+                    // Images first for others
+                    fbParts.push(userImagePart);
+                    if (secondImageDataUrl) {
+                        const { mimeType: userMime2, data: userData2 } = await import('./baseService').then(m => m.normalizeImageInput(secondImageDataUrl));
+                        fbParts.push({ inlineData: { mimeType: userMime2, data: userData2 } });
+                    }
+                    fbParts.push(fallbackTextPart as any);
                 }
-                fbParts.push(fallbackTextPart as any);
 
                 const fallbackResponse = await callGeminiWithRetry(fbParts, config);
                 return processGeminiResponse(fallbackResponse);

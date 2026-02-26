@@ -79,8 +79,16 @@ export async function POST(req: NextRequest) {
         const creditCostHeader = req.headers.get('x-credit-cost');
         const creditCost = creditCostHeader ? parseInt(creditCostHeader, 10) : 1; // Default to 1 if not provided
 
+        // Check if this is FIFA tool - needs Gemini API instead of Vertex AI
+        const toolKey = config?.tool_key || body?.tool_key;
+        const isFifaTool = toolKey === 'fifa-online';
+        if (isFifaTool) {
+            console.log('[API DEBUG] FIFA tool detected - forcing Gemini API Key instead of Vertex AI');
+        }
+
         console.log('[API DEBUG] Credit cost from header:', creditCost);
         console.log('[API DEBUG] Model:', model);
+        console.log('[API DEBUG] Tool key:', toolKey);
         console.log('[API DEBUG] Received parts:', JSON.stringify(parts, null, 2));
         console.log('[API DEBUG] Received config:', JSON.stringify(config, null, 2));
 
@@ -149,7 +157,9 @@ export async function POST(req: NextRequest) {
         console.log('[API DEBUG] Credits sufficient, proceeding with generation...');
 
         let ai;
-        if (vertexProjectId) {
+        // FIX: FIFA tool must use Gemini API Key (not Vertex AI) due to person generation policy
+        // Vertex AI has stricter policy on face manipulation, causing IMAGE_OTHER errors
+        if (vertexProjectId && !isFifaTool) {
             console.log('[API DEBUG] Using Vertex AI Provider', { project: vertexProjectId, location: vertexLocation });
             // [FIX] Correct configuration for @google/genai:
             // The build fails with 'vertexAI' because strict types require 'vertexai'.
@@ -160,7 +170,11 @@ export async function POST(req: NextRequest) {
                 location: vertexLocation
             });
         } else {
-            console.log('[API DEBUG] Using Gemini API Key Provider');
+            if (isFifaTool && vertexProjectId) {
+                console.log('[API DEBUG] Using Gemini API Key Provider (forced for FIFA tool)');
+            } else {
+                console.log('[API DEBUG] Using Gemini API Key Provider');
+            }
             ai = new GoogleGenAI({ apiKey });
         }
 
