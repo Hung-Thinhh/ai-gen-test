@@ -17,7 +17,7 @@ import {
     useVideoGeneration,
     useAppControls,
     embedJsonInPng,
-    KhmerPhotoMergeState // We can reuse this state or define a new one if needed
+    KhmerPhotoMergeState
 } from '../uiUtils';
 
 import { processApiError, GeminiErrorCodes, GeminiError } from '@/services/gemini/baseService';
@@ -37,6 +37,9 @@ export interface Studio {
 interface StudioGeneratorProps {
     studio: Studio;
 }
+
+// Danh sách các slug yêu cầu upload 2 ảnh
+const DUAL_IMAGE_SLUGS = ['bo-anh-tet-2026', 'fifa-online'];
 
 const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
     const router = useRouter();
@@ -98,7 +101,7 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
         options: {
             customPrompt: '',
             removeWatermark: false,
-            aspectRatio: '3:4',
+            aspectRatio: DUAL_IMAGE_SLUGS.includes(studio.slug) ? '4:3' : '3:4',
         },
         activeTab: defaultTab as 'female' | 'male' | 'couple'
     });
@@ -108,8 +111,9 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
     // For now keep default 'female' or first available gender in templates
     // useEffect(() => { ... }, [TEMPLATES]);
 
+    const isDualImageMode = DUAL_IMAGE_SLUGS.includes(studio.slug);
 
-    const lightboxImages = [appState.uploadedImage, ...selectedStyleImages, ...generatedImages].filter((img): img is string => !!img);
+    const lightboxImages = [appState.uploadedImage, appState.uploadedImage2, ...selectedStyleImages, ...generatedImages].filter((img): img is string => !!img);
 
     const handleGoBack = () => {
         router.push('/studio');
@@ -169,14 +173,14 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
         }));
     };
 
-    const handleStyleSelect = (templateUrl: string) => {
+    const handleStyleSelect = (templateKey: string) => {
         setSelectedStyleImages(prev => {
-            if (prev.includes(templateUrl)) {
+            if (prev.includes(templateKey)) {
                 // Deselect if already selected
-                return prev.filter(url => url !== templateUrl);
+                return prev.filter(k => k !== templateKey);
             } else if (prev.length < 4) {
                 // Add if under limit
-                return [...prev, templateUrl];
+                return [...prev, templateKey];
             }
             // At limit, don't add
             return prev;
@@ -199,7 +203,7 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
     };
 
     const handleGenerate = async () => {
-        if (!appState.uploadedImage || selectedStyleImages.length === 0) {
+        if (!appState.uploadedImage || selectedStyleImages.length === 0 || (isDualImageMode && !appState.uploadedImage2)) {
             console.warn("Missing inputs - aborting generation");
             return;
         }
@@ -225,9 +229,13 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
 
 
         // Generate images in parallel
-        const processingPromises = selectedStyleImages.map(async (styleUrl, index) => {
+        const processingPromises = selectedStyleImages.map(async (styleKey, index) => {
             try {
-                const selectedTemplate = TEMPLATES.find((t: any) => t.image_url === styleUrl || t.url === styleUrl);
+                // Find template by checking if styleKey matches url, name or stringified index
+                const selectedTemplate = TEMPLATES.find((t: any, i: number) => {
+                    const uniqueKey = t.image_url || t.url || t.name || i.toString();
+                    return uniqueKey === styleKey;
+                });
                 const templatePrompt = selectedTemplate ? (selectedTemplate.prompt || selectedTemplate.content) : "Portrait style";
 
                 // Reconstruct the full prompt just for logging purposes (approximation of service logic)
@@ -240,8 +248,8 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                     appState.options.customPrompt,
                     appState.options.removeWatermark,
                     appState.options.aspectRatio,
-                    undefined,
-                    'studio-generator'
+                    isDualImageMode ? appState.uploadedImage2 : undefined,
+                    isDualImageMode ? studio.slug : 'studio-generator'
                 );
 
                 const settingsToEmbed = {
@@ -267,7 +275,7 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
 
                 return { url: displayUrl, prompt: fullPrompt };
             } catch (err) {
-                console.error("Generation failed for style:", styleUrl, err);
+                console.error("Generation failed for style:", styleKey, err);
                 const errorMessage = err instanceof Error ? err.message : String(err);
 
                 // Show toast for immediate feedback if desired, or just rely on the card error
@@ -389,13 +397,13 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                     {/* 1. Inputs Section */}
                     {(!isLoading && appState.stage !== 'results') && (
                         <div className="w-full max-w-4xl flex flex-col items-center">
-                            <div className="grid gap-6 w-full grid-cols-1 md:max-w-md mx-auto">
+                            <div className={`grid gap-6 w-full ${isDualImageMode ? 'grid-cols-1 md:grid-cols-2 max-w-2xl' : 'grid-cols-1 md:max-w-md'} mx-auto`}>
                                 <div className="themed-card backdrop-blur-md p-4 rounded-2xl flex flex-col items-center gap-4">
-                                    <h3 className="text-lg font-bold text-orange-400">Tải ảnh lên</h3>
+                                    <h3 className="text-lg font-bold text-orange-400">{isDualImageMode ? 'Ảnh mặt (Face)' : 'Tải ảnh lên'}</h3>
                                     <ActionablePolaroidCard
                                         type={appState.uploadedImage ? 'photo-input' : 'uploader'}
                                         mediaUrl={appState.uploadedImage ?? undefined}
-                                        caption="Tải ảnh của bạn"
+                                        caption={isDualImageMode ? 'Ảnh chân dung' : 'Tải ảnh của bạn'}
                                         placeholderType="person"
                                         status="done"
                                         onClick={appState.uploadedImage ? () => openLightbox(lightboxImages.indexOf(appState.uploadedImage!)) : undefined}
@@ -403,6 +411,21 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                                         isMobile={isMobile}
                                     />
                                 </div>
+                                {isDualImageMode && (
+                                    <div className="themed-card backdrop-blur-md p-4 rounded-2xl flex flex-col items-center gap-4">
+                                        <h3 className="text-lg font-bold text-orange-400">Ảnh phụ (Tùy chọn)</h3>
+                                        <ActionablePolaroidCard
+                                            type={appState.uploadedImage2 ? 'photo-input' : 'uploader'}
+                                            mediaUrl={appState.uploadedImage2 ?? undefined}
+                                            caption="Ảnh đội hình/nam"
+                                            placeholderType="person"
+                                            status="done"
+                                            onClick={appState.uploadedImage2 ? () => openLightbox(lightboxImages.indexOf(appState.uploadedImage2!)) : undefined}
+                                            onImageChange={handleImage2Change}
+                                            isMobile={isMobile}
+                                        />
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -421,15 +444,29 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                                 {/* Input Section */}
                                 <div className="themed-card backdrop-blur-md p-4 rounded-2xl flex flex-col items-center gap-4">
                                     <h3 className="text-lg font-bold text-orange-400">Ảnh gốc</h3>
-                                    <div className="w-full max-w-xs">
-                                        <ActionablePolaroidCard
-                                            type="photo-input"
-                                            mediaUrl={appState.uploadedImage ?? undefined}
-                                            caption="Ảnh của bạn"
-                                            placeholderType="person"
-                                            status="done"
-                                            isMobile={isMobile}
-                                        />
+                                    <div className={`w-full flex ${isDualImageMode && appState.uploadedImage2 ? 'gap-2 justify-center' : 'max-w-xs justify-center'} items-center`}>
+                                        <div className={isDualImageMode && appState.uploadedImage2 ? 'w-1/2' : 'w-full'}>
+                                            <ActionablePolaroidCard
+                                                type="photo-input"
+                                                mediaUrl={appState.uploadedImage ?? undefined}
+                                                caption={isDualImageMode ? "Ảnh 1" : "Ảnh của bạn"}
+                                                placeholderType="person"
+                                                status="done"
+                                                isMobile={isMobile}
+                                            />
+                                        </div>
+                                        {isDualImageMode && appState.uploadedImage2 && (
+                                            <div className="w-1/2">
+                                                <ActionablePolaroidCard
+                                                    type="photo-input"
+                                                    mediaUrl={appState.uploadedImage2}
+                                                    caption="Ảnh 2"
+                                                    placeholderType="person"
+                                                    status="done"
+                                                    isMobile={isMobile}
+                                                />
+                                            </div>
+                                        )}
                                     </div>
                                     {selectedStyleImages.length > 0 && (
                                         <div className="mt-2">
@@ -458,7 +495,7 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                                     {/* Action buttons (Top or Bottom? - Let's keep them at bottom as originally intended, but we can have a cancel button here if needed) */}
 
                                     <div className="grid grid-cols-2 gap-3 md:gap-4 w-full">
-                                        {selectedStyleImages.map((styleUrl, idx) => {
+                                        {selectedStyleImages.map((styleKey, idx) => {
                                             const url = generatedImages[idx];
                                             const error = generationErrors[idx];
                                             const isDone = url && url.length > 0;
@@ -591,20 +628,30 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
                                         {currentTemplates.map((tpl: any, idx: number) => {
                                             const templateUrl = tpl.image_url || tpl.url;
-                                            const isSelected = selectedStyleImages.includes(templateUrl);
-                                            const selectionIndex = selectedStyleImages.indexOf(templateUrl);
+                                            const uniqueKey = templateUrl || tpl.name || idx.toString();
+                                            const isSelected = selectedStyleImages.includes(uniqueKey);
+                                            const selectionIndex = selectedStyleImages.indexOf(uniqueKey);
                                             const isAtLimit = selectedStyleImages.length >= 4 && !isSelected;
+
+                                            // Handle case where image is empty
+                                            const displayImage = templateUrl || "https://res.cloudinary.com/dmxmzannb/image/upload/v1765978950/pqotah7yias7jtpnwnca.jpg"; // Placeholder
+
                                             return (
                                                 <button
                                                     key={idx}
-                                                    onClick={() => handleStyleSelect(templateUrl)}
+                                                    onClick={() => handleStyleSelect(uniqueKey)}
                                                     disabled={isAtLimit}
                                                     className={`relative rounded-xl overflow-hidden border-2 !p-0 transition-all duration-200 aspect-[9/16] ${isSelected ? 'border-orange-400 scale-105 shadow-lg shadow-orange-400/20' : isAtLimit ? 'border-neutral-800 opacity-50 cursor-not-allowed' : 'border-neutral-700 hover:border-neutral-500'}`}
                                                 >
-                                                    <img src={templateUrl} alt={`Template ${idx + 1}`} className="w-full h-full object-cover" />
+                                                    <img src={displayImage} alt={`Template ${idx + 1}`} className="w-full h-full object-cover" />
+                                                    {!templateUrl && (
+                                                        <div className="absolute inset-0 flex items-center justify-center p-2 bg-black/60 backdrop-blur-sm">
+                                                            <span className="text-white text-xs text-center font-bold">{tpl.name || `Mẫu ${idx + 1}`}</span>
+                                                        </div>
+                                                    )}
                                                     {isSelected && (
-                                                        <div className="absolute inset-0 bg-orange-400/20 flex items-center justify-center">
-                                                            <div className="bg-orange-400 rounded-full w-6 h-6 flex items-center justify-center">
+                                                        <div className="absolute inset-0 bg-orange-400/40 flex items-center justify-center">
+                                                            <div className="bg-orange-400 rounded-full w-6 h-6 flex items-center justify-center border-2 border-white">
                                                                 <span className="text-black font-bold text-sm">{selectionIndex + 1}</span>
                                                             </div>
                                                         </div>
@@ -663,8 +710,8 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                                     )}
                                     <button
                                         onClick={handleGenerate}
-                                        disabled={!appState.uploadedImage || selectedStyleImages.length === 0 || isLoading}
-                                        className={`px-12 py-3 rounded-full font-bold text-black text-lg transition-all transform active:scale-95 shadow-lg ${!appState.uploadedImage || selectedStyleImages.length === 0 || isLoading
+                                        disabled={!appState.uploadedImage || selectedStyleImages.length === 0 || isLoading || (isDualImageMode && !appState.uploadedImage2)}
+                                        className={`px-12 py-3 rounded-full font-bold text-black text-lg transition-all transform active:scale-95 shadow-lg ${!appState.uploadedImage || selectedStyleImages.length === 0 || isLoading || (isDualImageMode && !appState.uploadedImage2)
                                             ? 'bg-neutral-600 cursor-not-allowed opacity-50'
                                             : 'bg-gradient-to-r from-orange-400 to-orange-600 hover:from-orange-600 hover:to-orange-400 shadow-orange-500/20'
                                             }`}
