@@ -29,14 +29,14 @@ const StudioPhotoshoot: React.FC<StudioPhotoshootProps> = (props) => {
         onStateChange({ ...appState, stage: 'generating', error: null });
 
         try {
-            const prompt = `**CRITICAL: PRESERVE EXACT IDENTITY**
+            const prompt = `Professional portrait photography:
 Create a professional studio photoshoot of the person in the provided image.
 
-**ABSOLUTE REQUIREMENT - FACE IDENTITY PRESERVATION:**
-- The person in the output MUST be the EXACT SAME PERSON as in the input image.
-- Preserve 100% of facial features: eyes, nose, mouth, face shape, jawline, cheekbones.
-- Maintain the original skin tone and any distinguishing features.
-- If someone knows this person, they MUST immediately recognize them.
+**Key requirement:**
+- Maintain the facial identity and natural appearance of the person from the input image.
+- Capture their features accurately: eyes, nose, mouth, and face shape.
+- Keep the original skin tone and characteristic details.
+- The person should be clearly recognizable as the subject from the photo.
 
 **STUDIO SETTINGS:**
 - Style: ${appState.options.style || 'commercial'}
