@@ -237,25 +237,27 @@ export async function POST(req: NextRequest) {
                     }],
                     config: {
                         ...filteredConfig,
+                        // Bổ sung cấu hình cho ảnh người (nếu SDK/Model hỗ trợ)
+                        personGeneration: 'ALLOW_ALL',
                         safetySettings: [
                             {
                                 category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-                                threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+                                threshold: HarmBlockThreshold.BLOCK_NONE,
                             },
                             {
                                 category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-                                threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+                                threshold: HarmBlockThreshold.BLOCK_NONE,
                             },
                             {
                                 category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-                                threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+                                threshold: HarmBlockThreshold.BLOCK_NONE,
                             },
                             {
                                 category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-                                threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+                                threshold: HarmBlockThreshold.BLOCK_NONE,
                             },
                         ]
-                    }  // Use filtered config + loose safety
+                    }  // Use filtered config + BLOCK_NONE safety
                 });
 
                 perfLog(`AI generation completed (Attempt ${attempt})`);
