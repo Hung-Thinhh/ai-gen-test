@@ -19,28 +19,29 @@ function getPrimaryPrompt(templatePrompt: string, customPrompt: string, styleCon
     // OPTIMIZED: Concise but effective face swap instructions
     if (hasSecondImage) {
         if (toolKey === 'fifa-online') {
-            return `${aspectRatioText}A professional eSports tournament broadcast graphic for a football game.
-The scene features two distinct elements based on the provided reference photos:
-1. The FIRST IMAGE shows the manager/competitor. Their facial identity, expression, and original clothing must be represented with absolute fidelity in the final output.
-2. The SECOND IMAGE shows their tactical squad formation. This entire formation layout, including all player cards and positions, must be clearly visible and legible as the background or central focus of the graphic.
-Composition: The manager stands confidently on one side. The tactical formation occupies the remaining space.
-Atmosphere: Professional gaming arena, cinematic stadium lighting, elegant golden and blue auras, high-end eSports production quality.
-Please create a cohesive, photorealistic scene that combines these elements naturally. No additional text, labels, or names.${modificationText}${watermarkText}`;
+            return `${aspectRatioText}PORTRAIT INTEGRATION + ESPORTS BROADCAST GRAPHIC:
+The scene features two primary visual elements:
+1. FIRST IMAGE (Portrait): The competitor. Preserve their facial appearance (eyes, nose, mouth) and clothing exactly in the final image.
+2. SECOND IMAGE (Tactics): The tactical squad formation. This entire team lineup must be clear and readable as part of the graphic.
+Composition: The competitor stands on the left or right, with the tactical formation dominating the center or background.
+Aesthetic: Professional gaming arena, cinematic stadium lighting, elegant golden and blue atmospheric glows.
+Create a photorealistic scene combining these references naturally. No extra text or labels.${modificationText}${watermarkText}`;
         } else {
-            return `${aspectRatioText}DUAL FACE SWAP:
-Photo 1 (Female): Use this face for female character.
-Photo 2 (Male): Use this face for male character.
+            return `${aspectRatioText}PORTRAIT MERGING (DUAL):
+Photo 1: Reference for the person's face. 
+Photo 2: Reference for the secondary person or background element.
+Instruction: Preserve the facial identity (eyes, nose, mouth, skin tone) from the input photos.
 Style: "${styleContext}"
 Scene: "${templatePrompt}"
-CRITICAL: Preserve 100% facial identity from input photos. Only change clothing, hair, and background.${modificationText}${watermarkText}`;
+Create a photorealistic result preserving the subjects' appearance.${modificationText}${watermarkText}`;
         }
     }
 
-    return `${aspectRatioText}FACE SWAP:
-Keep exact face from input photo (eyes, nose, mouth, skin tone).
+    return `${aspectRatioText}PORTRAIT RECREATION:
+Keep the exact facial identity from the input photo (eyes, nose, mouth, skin tone).
 Style: "${styleContext}"
 Scene: "${templatePrompt}"
-Requirements: Photorealdistic, natural lighting, high detail.${modificationText}${watermarkText}`;
+Requirements: Photorealistic, natural lighting, high detail.${modificationText}${watermarkText}`;
 }
 
 function getFallbackPrompt(templatePrompt: string, customPrompt: string, styleContext: string, removeWatermark?: boolean, aspectRatio?: string, hasSecondImage = false, toolKey?: string): string {
@@ -50,28 +51,24 @@ function getFallbackPrompt(templatePrompt: string, customPrompt: string, styleCo
 
     if (hasSecondImage) {
         if (toolKey === 'fifa-online') {
-            return `${aspectRatioText}\nPOSTER COMPETITOR FIFA ONLINE 4:
-Dữ liệu đầu vào:
-- Ảnh 1: Chân dung người thật. CẦN giữ nguyên khuôn mặt 100%.
-- Ảnh 2: Ảnh chụp màn hình đội hình game.
-Nhiệm vụ: Tạo ảnh giới thiệu tuyển thủ esports chuyên nghiệp.
-Đặt người từ Ảnh 1 ở một bên. Giữ nguyên mặt và trang phục từ Ảnh 1.
-Hiển thị đội hình từ Ảnh 2 rõ ràng ở trung tâm hoặc phía sau. Thẻ cầu thủ phải dễ đọc.
-Hiệu ứng: Sân vận động hoành tráng, hào quang vàng/xanh, không khí vô địch.
-YÊU CẦU: Giống mặt 100%, không thêm chữ hay nhãn.${modificationText}${watermarkText}`;
+            return `${aspectRatioText}\nGHÉP MẶT + POSTER CHIẾN THUẬT:
+- Ảnh 1: Chân dung tuyển thủ. Cần giữ nguyên khuôn mặt và trang phục.
+- Ảnh 2: Sơ đồ đội hình game. Cần hiển thị rõ các thẻ cầu thủ.
+Nhiệm vụ: Tạo một poster chuyên nghiệp với người đứng một bên và sơ đồ đội hình chiếm không gian còn lại.
+Phong cách: Sân vận động hoành tráng, ánh sáng rực rỡ, không khí thi đấu đỉnh cao.
+Yêu cầu: Không thêm chữ hay nhãn.${modificationText}${watermarkText}`;
         } else {
-            return `${aspectRatioText}\nFACE SWAP CẶP ĐÔI (NAM & NỮ):
-1. Ghép mặt Nữ từ Ảnh 1 vào nhân vật nữ.
-2. Ghép mặt Nam từ Ảnh 2 vào nhân vật nam.
-3. PHONG CÁCH: "${styleContext}".
-4. TRANG PHỤC & BỐI CẢNH: "${templatePrompt}".
-Yêu cầu: Giống mặt 100%, trang phục và phong cách đúng mô tả.${modificationText}${watermarkText}`;
+            return `${aspectRatioText}\nGHÉP MẶT HAI NGƯỜI:
+- Ảnh 1 & Ảnh 2: Hình mẫu khuôn mặt.
+- Yêu cầu: Giữ nguyên khuôn mặt thật (mắt, mũi, miệng, da).
+PHONG CÁCH: "${styleContext}".
+BỐI CẢNH: "${templatePrompt}".${modificationText}${watermarkText}`;
         }
     }
-    return `${aspectRatioText}\nFACE SWAP: Sao chép khuôn mặt từ ảnh gốc vào ảnh mới.
+    return `${aspectRatioText}\nGHÉP MẶT: Sao chép khuôn mặt thực từ ảnh gốc vào ảnh mới.
+Yêu cầu: Giữ nguyên khuôn mặt thật (mắt, mũi, miệng, da).
 PHONG CÁCH: "${styleContext}".
-TRANG PHỤC & BỐI CẢNH: "${templatePrompt}".
-Yêu cầu: Giữ nguyên khuôn mặt, thay đổi trang phục và bối cảnh đúng như mô tả.${modificationText}${watermarkText}`;
+BỐI CẢNH: "${templatePrompt}".${modificationText}${watermarkText}`;
 }
 
 export async function generateStudioImage(

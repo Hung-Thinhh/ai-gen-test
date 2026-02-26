@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from '@google/genai';
 // import { supabaseAdmin } from '@/lib/supabase/client';
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
@@ -235,7 +235,27 @@ export async function POST(req: NextRequest) {
                         role: 'user',
                         parts: requestParts  // Image data (if any) + enhanced text prompt
                     }],
-                    config: filteredConfig  // Use only filtered config
+                    config: {
+                        ...filteredConfig,
+                        safetySettings: [
+                            {
+                                category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+                                threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+                            },
+                            {
+                                category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                                threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+                            },
+                            {
+                                category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                                threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+                            },
+                            {
+                                category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                                threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+                            },
+                        ]
+                    }  // Use filtered config + loose safety
                 });
 
                 perfLog(`AI generation completed (Attempt ${attempt})`);
