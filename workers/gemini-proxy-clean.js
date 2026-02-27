@@ -1,0 +1,87 @@
+export default {
+  async fetch(request, env, ctx) {
+    if (request.method === 'OPTIONS') {
+      return handleCORS(request);
+    }
+
+    if (request.method !== 'POST') {
+      return new Response('Method not allowed', { status: 405 });
+    }
+
+    const allowedOrigins = [
+      'https://dukyai.com',
+      'https://www.dukyai.com',
+      'http://localhost:3000',
+      'http://127.0.0.1:3000'
+    ];
+    
+    const origin = request.headers.get('Origin');
+    if (!allowedOrigins.includes(origin)) {
+      return new Response('Forbidden', { status: 403 });
+    }
+
+    try {
+      const body = await request.json();
+      const { parts, config, model } = body;
+
+      const geminiModel = model || 'gemini-2.5-flash-image';
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${env.GEMINI_API_KEY}`;
+
+      const geminiBody = {
+        contents: [{
+          role: 'user',
+          parts: parts
+        }],
+        generationConfig: {
+          responseModalities: ["Text", "Image"],
+          ...config
+        },
+        safetySettings: [
+          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+        ]
+      };
+
+      const geminiResponse = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(geminiBody),
+      });
+
+      const responseData = await geminiResponse.json();
+
+      return new Response(JSON.stringify(responseData), {
+        status: 200,
+        headers: {
+          ...corsHeaders(origin),
+          'Content-Type': 'application/json'
+        }
+      });
+
+    } catch (error) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: corsHeaders(origin)
+      });
+    }
+  }
+};
+
+function corsHeaders(origin) {
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Max-Age': '86400'
+  };
+}
+
+function handleCORS(request) {
+  const origin = request.headers.get('Origin');
+  return new Response(null, {
+    status: 204,
+    headers: corsHeaders(origin)
+  });
+}

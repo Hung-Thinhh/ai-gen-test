@@ -82,8 +82,16 @@ export async function POST(req: NextRequest) {
         // Check if this is FIFA tool - needs Gemini API instead of Vertex AI
         const toolKey = config?.tool_key || body?.tool_key;
         const isFifaTool = toolKey === 'fifa-online';
+        
+        // Check if we should use Cloudflare Proxy (for FIFA tool in EU region)
+        const geminiProxyUrl = process.env.GEMINI_PROXY_URL;
+        const shouldUseProxy = isFifaTool && geminiProxyUrl;
+        
         if (isFifaTool) {
             console.log('[API DEBUG] FIFA tool detected - forcing Gemini API Key instead of Vertex AI');
+            if (shouldUseProxy) {
+                console.log('[API DEBUG] Will use Cloudflare Proxy:', geminiProxyUrl);
+            }
         }
 
         console.log('[API DEBUG] Credit cost from header:', creditCost);
@@ -248,7 +256,38 @@ export async function POST(req: NextRequest) {
                 const isDualImageMode = imageCount >= 2;
                 console.log(`[API DEBUG] Attempt ${attempt} - Image count: ${imageCount}, Dual mode: ${isDualImageMode}`);
 
-                const response = await ai.models.generateContent({
+                let response;
+
+                if (shouldUseProxy) {
+                    // Use Cloudflare Worker Proxy to bypass EU region restrictions
+                    console.log(`[API DEBUG] Attempt ${attempt} - Using Cloudflare Proxy`);
+                    
+                    const proxyResponse = await fetch(geminiProxyUrl!, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Origin': process.env.NEXT_PUBLIC_SITE_URL || 'https://dukyai.com'
+                        },
+                        body: JSON.stringify({
+                            model: model || 'gemini-2.5-flash-image',
+                            parts: requestParts,
+                            config: filteredConfig
+                        })
+                    });
+
+                    if (!proxyResponse.ok) {
+                        const errorText = await proxyResponse.text();
+                        console.error('[API DEBUG] Proxy error:', errorText);
+                        throw new Error(`Proxy error: ${proxyResponse.status} - ${errorText}`);
+                    }
+
+                    response = await proxyResponse.json();
+                    console.log('[API DEBUG] Proxy response received successfully');
+                } else {
+                    // Use direct Gemini API (SDK)
+                    console.log(`[API DEBUG] Attempt ${attempt} - Using direct Gemini API`);
+                    
+                    response = await ai.models.generateContent({
                     model: model || 'gemini-2.5-flash-image',
                     contents: [{
                         role: 'user',
@@ -278,6 +317,7 @@ export async function POST(req: NextRequest) {
                         ]
                     }  // Use filtered config + BLOCK_NONE safety
                 });
+                } // End of if (shouldUseProxy) else block
 
                 perfLog(`AI generation completed (Attempt ${attempt})`);
 

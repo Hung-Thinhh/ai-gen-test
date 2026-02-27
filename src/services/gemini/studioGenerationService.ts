@@ -21,19 +21,21 @@ function getPrimaryPrompt(templatePrompt: string, customPrompt: string, styleCon
         if (toolKey === 'fifa-online') {
             return `${aspectRatioText}CREATE A FIFA/FC ONLINE ESPORTS POSTER:
 
+SELECTED TEMPLATE STYLE: ${templatePrompt}
+
 SCENE DESCRIPTION:
-A professional esports poster featuring a Head Coach (HLV) standing confidently in front of a packed football stadium at night. Golden, amber and bronze color grading with dramatic stadium lights. Gaming UI elements and formation cards floating as holographic overlays.
+A professional esports poster featuring a Head Coach (HLV) standing confidently in a football stadium setting. Apply the SELECTED TEMPLATE STYLE above to customize the atmosphere, lighting, and mood. Golden/amber color grading with dramatic lighting. Gaming UI elements and formation cards floating as holographic overlays.
 
 REFERENCES PROVIDED:
 - REFERENCE IMAGE A shows the Head Coach appearance to include
 - REFERENCE IMAGE B shows the gaming squad formation UI style to incorporate as graphic elements
 
 OUTPUT REQUIREMENTS:
-- Epic stadium background with glowing lights and golden particles
+- Stadium background styled according to the SELECTED TEMPLATE
 - Coach figure wearing sleek black polo or suit, crossed arms, confident pose
 - Formation card elements integrated as glowing golden holographic overlays (not as real players)
 - "HLV" text and stylized golden logo in frame
-- 8k resolution, photorealistic, cinematic lighting
+- 8k resolution, photorealistic, cinematic lighting matching the template style
 - No additional text labels${modificationText}${watermarkText}`;
         } else {
             return `${aspectRatioText}PORTRAIT MERGING (DUAL):
@@ -62,19 +64,21 @@ function getFallbackPrompt(templatePrompt: string, customPrompt: string, styleCo
         if (toolKey === 'fifa-online') {
             return `${aspectRatioText}\nTẠO POSTER ESPORTS FIFA/FC ONLINE:
 
+MẪU ĐÃ CHỌN: ${templatePrompt}
+
 MÔ TẢ CẢNH:
-Poster thể thao điện tử chuyên nghiệp với HLV đứng tự tin trước sân vận động đầy ắp khán giả về đêm. Tông màu vàng đồng, hổ phách, đồng cổ điển với ánh đèn sân khấu drama. UI game và thẻ đội hình hiển thị như lớp hologram phủ lên.
+Poster thể thao điện tử chuyên nghiệp với HLV đứng tự tin. Áp dụng phong cách từ MẪU ĐÃ CHỌN ở trên để tùy chỉnh không khí sân vận động, ánh sáng và màu sắc. Tông màu vàng đồng với ánh đèn sân khấu drama. UI game và thẻ đội hình hiển thị như lớp hologram phủ lên.
 
 ẢNH THAM KHẢO:
 - ẢNH A: Hình dáng HLV cần đưa vào poster
 - ẢNH B: Phong cách UI đội hình game để tích hợp dưới dạng đồ họa
 
 YÊU CẦU OUTPUT:
-+ Sân vận động hoành tráng với ánh sáng vàng và hiệu ứng hạt phát sáng
++ Sân vận động theo phong cách MẪU ĐÃ CHỌN
 + Nhân vật HLV mặc áo polo đen hoặc vest, tư thế tự tin, tay khoanh
 + Thẻ đội hình tích hợp như lớp hologram vàng phát sáng (không phải ngưở i thật)
 + Chữ "HLV" và logo vàng trong khung
-+ 8k resolution, photorealistic, cinematic lighting
++ 8k resolution, photorealistic, cinematic lighting theo mẫu
 + Không thêm chữ hay nhãn khác${modificationText}${watermarkText}`;
         } else {
             return `${aspectRatioText}\nGHÉP MẶT HAI NGƯỜI:

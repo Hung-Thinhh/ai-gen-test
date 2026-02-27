@@ -1,0 +1,12 @@
+name = "gemini-proxy-duky"
+main = "gemini-proxy.js"
+compatibility_date = "2024-02-27"
+
+# Lưu API key trong Cloudflare (không expose ra public)
+[vars]
+# GEMINI_API_KEY sẽ được set qua wrangler secret
+
+# Cấu hình routes nếu dùng custom domain
+# routes = [
+#   { pattern = "api-proxy.dukyai.com", custom_domain = true }
+# ]
