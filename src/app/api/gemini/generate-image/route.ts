@@ -85,19 +85,35 @@ export async function POST(req: NextRequest) {
         
         // Check if we should use Cloudflare Proxy (for FIFA tool in EU region)
         const geminiProxyUrl = process.env.GEMINI_PROXY_URL;
-        const shouldUseProxy = isFifaTool && geminiProxyUrl;
+        const shouldUseProxy = isFifaTool && !!geminiProxyUrl;
+        
+        // DEBUG: Log all relevant values
+        console.log('[API DEBUG] Proxy check:', { 
+            toolKey, 
+            isFifaTool, 
+            geminiProxyUrl: geminiProxyUrl || 'NOT_SET',
+            shouldUseProxy 
+        });
         
         if (isFifaTool) {
             console.log('[API DEBUG] FIFA tool detected - forcing Gemini API Key instead of Vertex AI');
             if (shouldUseProxy) {
                 console.log('[API DEBUG] Will use Cloudflare Proxy:', geminiProxyUrl);
+            } else {
+                console.log('[API DEBUG] Proxy NOT used - geminiProxyUrl:', geminiProxyUrl);
             }
         }
 
         console.log('[API DEBUG] Credit cost from header:', creditCost);
         console.log('[API DEBUG] Model:', model);
         console.log('[API DEBUG] Tool key:', toolKey);
-        console.log('[API DEBUG] Received parts:', JSON.stringify(parts, null, 2));
+        // DEBUG: Log parts without base64 data (too large)
+        const partsSummary = parts.map((p: any) => ({
+            type: p.text ? 'text' : (p.inlineData ? `image(${p.inlineData.mimeType})` : 'unknown'),
+            textLength: p.text ? p.text.length : 0,
+            hasImageData: !!p.inlineData
+        }));
+        console.log('[API DEBUG] Received parts summary:', partsSummary);
         console.log('[API DEBUG] Received config:', JSON.stringify(config, null, 2));
 
         // 3. Check if user has enough credits (don't deduct yet)
@@ -239,6 +255,7 @@ export async function POST(req: NextRequest) {
                 requestParts.push({ text: enhancedPrompt });
 
                 console.log(`[API DEBUG] Attempt ${attempt} - Request parts: ${imageParts.length} images + 1 text`);
+                console.log(`[API DEBUG] Attempt ${attempt} - Prompt preview: ${enhancedPrompt.substring(0, 100)}...`);
 
                 // Filter out properties that are not valid for image generation
                 const filteredConfig = Object.keys(config).reduce((acc: any, key: string) => {
@@ -282,7 +299,12 @@ export async function POST(req: NextRequest) {
                     }
 
                     response = await proxyResponse.json();
-                    console.log('[API DEBUG] Proxy response received successfully');
+                    console.log('[API DEBUG] Proxy response received:', {
+                        hasCandidates: !!response.candidates,
+                        candidatesCount: response.candidates?.length,
+                        finishReason: response.candidates?.[0]?.finishReason,
+                        hasImage: response.candidates?.[0]?.content?.parts?.some((p: any) => p.inlineData)
+                    });
                 } else {
                     // Use direct Gemini API (SDK)
                     console.log(`[API DEBUG] Attempt ${attempt} - Using direct Gemini API`);
