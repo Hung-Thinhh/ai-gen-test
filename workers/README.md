@@ -17,7 +17,6 @@ npx wrangler login
 ### 3. Set Gemini API Key (Secret)
 ```bash
 npx wrangler secret put GEMINI_API_KEY
-# Nhập API key của bạn: AIzaSyA6RM_6mxGTCwfGvf4ocGFNsmGAbylZpbE
 ```
 
 ### 4. Deploy Worker

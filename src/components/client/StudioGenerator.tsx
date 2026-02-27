@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -203,7 +203,8 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
     };
 
     const handleGenerate = async () => {
-        if (!appState.uploadedImage || selectedStyleImages.length === 0 || (isDualImageMode && !appState.uploadedImage2)) {
+        // Only require image 1, image 2 is optional even for dual image mode
+        if (!appState.uploadedImage || selectedStyleImages.length === 0) {
             console.warn("Missing inputs - aborting generation");
             return;
         }
@@ -413,11 +414,11 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                                 </div>
                                 {isDualImageMode && (
                                     <div className="themed-card backdrop-blur-md p-4 rounded-2xl flex flex-col items-center gap-4">
-                                        <h3 className="text-lg font-bold text-orange-400">Ảnh phụ (Tùy chọn)</h3>
+                                        <h3 className="text-lg font-bold text-orange-400">Ảnh đội hình (Tùy chọn)</h3>
                                         <ActionablePolaroidCard
                                             type={appState.uploadedImage2 ? 'photo-input' : 'uploader'}
                                             mediaUrl={appState.uploadedImage2 ?? undefined}
-                                            caption="Ảnh đội hình/nam"
+                                            caption="Ảnh đội hình game (không bắt buộc)"
                                             placeholderType="person"
                                             status="done"
                                             onClick={appState.uploadedImage2 ? () => openLightbox(lightboxImages.indexOf(appState.uploadedImage2!)) : undefined}
@@ -710,8 +711,8 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                                     )}
                                     <button
                                         onClick={handleGenerate}
-                                        disabled={!appState.uploadedImage || selectedStyleImages.length === 0 || isLoading || (isDualImageMode && !appState.uploadedImage2)}
-                                        className={`px-12 py-3 rounded-full font-bold text-black text-lg transition-all transform active:scale-95 shadow-lg ${!appState.uploadedImage || selectedStyleImages.length === 0 || isLoading || (isDualImageMode && !appState.uploadedImage2)
+                                        disabled={!appState.uploadedImage || selectedStyleImages.length === 0 || isLoading}
+                                        className={`px-12 py-3 rounded-full font-bold text-black text-lg transition-all transform active:scale-95 shadow-lg ${!appState.uploadedImage || selectedStyleImages.length === 0 || isLoading
                                             ? 'bg-neutral-600 cursor-not-allowed opacity-50'
                                             : 'bg-gradient-to-r from-orange-400 to-orange-600 hover:from-orange-600 hover:to-orange-400 shadow-orange-500/20'
                                             }`}
