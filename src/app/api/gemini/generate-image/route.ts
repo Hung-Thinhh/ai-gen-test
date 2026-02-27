@@ -242,8 +242,8 @@ export async function POST(req: NextRequest) {
 
                 // Filter out properties that are not valid for image generation
                 const filteredConfig = Object.keys(config).reduce((acc: any, key: string) => {
-                    // Exclude text-generation specific properties
-                    if (!['responseMimeType', 'responseSchema', 'responseModalities'].includes(key)) {
+                    // Exclude text-generation specific properties AND tool_key (custom field)
+                    if (!['responseMimeType', 'responseSchema', 'responseModalities', 'tool_key'].includes(key)) {
                         acc[key] = config[key];
                     }
                     return acc;
