@@ -274,6 +274,8 @@ export async function POST(req: NextRequest) {
                 console.log(`[API DEBUG] Attempt ${attempt} - Image count: ${imageCount}, Dual mode: ${isDualImageMode}`);
 
                 let response;
+                
+                console.log(`[API DEBUG] Attempt ${attempt} - shouldUseProxy: ${shouldUseProxy}, isFifaTool: ${isFifaTool}`);
 
                 if (shouldUseProxy) {
                     // Use Cloudflare Worker Proxy to bypass EU region restrictions
