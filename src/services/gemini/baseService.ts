@@ -24,8 +24,8 @@ export const getModelConfig = () => globalConfig;
 
 export const getTextModel = () => globalConfig.modelVersion === 'v3' ? 'gemini-3-pro-preview' : 'gemini-2.5-flash';
 // CRITICAL: Only imagen-* models work on Vertex AI. gemini-*-image models do NOT exist on Vertex AI!
-// For Gemini API: v3 uses Nano Banana Pro (gemini-3-pro-image-preview), v2 uses Flash Image
-export const getImageModel = () => globalConfig.modelVersion === 'v3' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image';
+// For Gemini API: v3 uses Nano Banana 2 (gemini-3.1-flash-image-preview), v2 uses Flash Image
+export const getImageModel = () => globalConfig.modelVersion === 'v3' ? 'gemini-3.1-flash-image-preview' : 'gemini-2.5-flash-image';
 
 // --- Development Mode Detection ---
 const isDev = process.env.NODE_ENV === 'development';
