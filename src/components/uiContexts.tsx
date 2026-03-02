@@ -131,6 +131,7 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     // Usage tracking
     const [v2UsageCount, setV2UsageCount] = useState(0);
     const [v3UsageCount, setV3UsageCount] = useState(0);
+    const [vProUsageCount, setVProUsageCount] = useState(0); // NEW
 
     // Guest Identity
     const [guestId, setGuestId] = useState<string>('');
@@ -211,12 +212,7 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         }
     }, [isLoggedIn, guestId]);
 
-    const refreshUsageCounts = useCallback(() => {
-        import('../services/gemini/usageTracker').then(({ getUsageCount }) => {
-            setV2UsageCount(getUsageCount('v2'));
-            setV3UsageCount(getUsageCount('v3'));
-        });
-    }, []);
+
 
     const currentView = viewHistory[historyIndex];
 
@@ -549,9 +545,12 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }, [addGenerationToHistory, settings, t, getExportableState]);
 
 
-    const handleLanguageChange = useCallback((lang: 'vi' | 'en') => {
-        setLanguage(lang);
-        localStorage.setItem('app-language', lang);
+    const refreshUsageCounts = useCallback(() => {
+        import('../services/gemini/usageTracker').then(({ getUsageCount }) => {
+            setV2UsageCount(getUsageCount('v2'));
+            setV3UsageCount(getUsageCount('v3'));
+            setVProUsageCount(getUsageCount('pro')); // NEW
+        });
     }, []);
 
     const handleModelVersionChange = useCallback((version: ModelVersion) => {
@@ -561,8 +560,8 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             setGlobalModelConfig({ modelVersion: version });
         });
 
-        // Auto-set to 1K when switching to V3
-        if (version === 'v3') {
+        // Auto-set to 1K when switching to V3 or Pro (Pro also uses high res internally but often limited to 1K/2K for stability)
+        if (version === 'v3' || version === 'pro') {
             setImageResolution('1K');
             import('../services/gemini/baseService').then(({ setGlobalModelConfig }) => {
                 setGlobalModelConfig({ imageResolution: '1K' });
@@ -845,6 +844,11 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         }
     };
 
+    const handleLanguageChange = useCallback((lang: 'vi' | 'en') => {
+        setLanguage(lang);
+        localStorage.setItem('app-language', lang);
+    }, []);
+
     const restoreStateFromGallery = useCallback((stateToRestore: any, gallery: string[]): AnyAppState => {
         const restoredState = JSON.parse(JSON.stringify(stateToRestore));
 
@@ -1095,11 +1099,13 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         language,
         generationHistory,
         modelVersion,
+        creditCostPerImage: modelVersion === 'pro' ? 3 : (modelVersion === 'v3' ? 2 : 1),
         imageResolution,
         guestCredits,
         userCredits,
         v2UsageCount,
         v3UsageCount,
+        vProUsageCount, // NEW
         refreshUsageCounts,
         checkCredits,
         refreshGallery, // NEW
@@ -1161,8 +1167,10 @@ export const AppControlProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         isStoryboardingModalMounted, isStoryboardingModalVisible,
         isLayerComposerMounted, isLayerComposerVisible, isLoginModalOpen,
         isOutOfCreditsModalOpen, // NEW DEP
-        language, generationHistory, modelVersion, imageResolution,
-        guestCredits, userCredits, v2UsageCount, v3UsageCount,
+        language, generationHistory, modelVersion,
+        modelVersion === 'pro' ? 3 : (modelVersion === 'v3' ? 2 : 1),
+        imageResolution,
+        guestCredits, userCredits, v2UsageCount, v3UsageCount, vProUsageCount, // NEW DEP
         refreshUsageCounts, checkCredits, refreshGallery,
         addGenerationToHistory, logGeneration, addImagesToGallery, removeImageFromGallery,
         replaceImageInGallery, handleThemeChange, handleLanguageChange,

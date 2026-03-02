@@ -230,7 +230,7 @@ const PosterCreator: React.FC<PosterCreatorProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, checkCredits, user: currentUser, isLoggedIn, guestId, userIp, modelVersion, handleModelVersionChange } = useAppControls();
+    const { t, settings, checkCredits, modelVersion, creditCostPerImage, handleModelVersionChange, user: currentUser, isLoggedIn } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
     const { videoTasks, generateVideo } = useVideoGeneration();
 
@@ -326,7 +326,7 @@ const PosterCreator: React.FC<PosterCreatorProps> = (props) => {
         }
 
         // Check credits before proceeding
-        if (!await checkCredits()) {
+        if (!await checkCredits(creditCostPerImage)) {
             return;
         }
 
@@ -400,7 +400,7 @@ const PosterCreator: React.FC<PosterCreatorProps> = (props) => {
             setPendingImageSlots(prev => Math.max(0, prev - 1));
             toast.error(`Lỗi tạo lại ảnh: ${error.message}`, { id: 'regenerating' });
         }
-    }, [appState, checkCredits, modelVersion, logGeneration, addImagesToGallery]);
+    }, [appState, checkCredits, modelVersion, logGeneration, addImagesToGallery, creditCostPerImage]);
 
 
     // Helper to read file as Blob URL
@@ -671,7 +671,7 @@ ${localCTA ? `📌 **CTA BUTTON (MANDATORY):** "${localCTA}"
 **⚠️⚠️ CRITICAL - VIETNAMESE TEXT ACCURACY (RẤT QUAN TRỌNG):**
 The text I provided is in VIETNAMESE with special diacritical marks (dấu). You MUST:
 - Copy EVERY character EXACTLY as I wrote it - do NOT guess or change any letter
-- Vietnamese has unique diacritics: à, á, ả, ã, ạ, ă, ằ, ắ, ẳ, ẵ, ặ, â, ầ, ấ, ẩ, ẫ, ậ, etc.
+- Vietnamese has unique diacritics: à, á, ả, ã, ạ, ă, ằ, ắ, ẵ, ặ, â, ầ, ấ, ẩ, ẫ, ậ, etc.
 - Do NOT substitute similar-looking letters (e.g., "tràn" ≠ "trản", "Mua" ≠ "Nhặn")
 - If my text says "${localHeadline || ''}" - write EXACTLY that, character by character
 - If my text says "${localSubheadline || ''}" - write EXACTLY that, character by character  
@@ -827,7 +827,11 @@ ${aspectRatioPrompt}
 
         // Server-side credit validation will handle this
         // We catch the 402 error in the try/catch block below
-        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
+        // Check credits based on number of selected styles
+        const totalCredits = creditCostPerImage * imageCount; // Assuming imageCount is the number of "selected styles" for credit calculation
+        if (!await checkCredits(totalCredits)) {
+            return;
+        }
 
         // Set generating flag
         setIsGenerating(true);
@@ -1375,10 +1379,10 @@ ${aspectRatioPrompt}
                                     {/* Aspect Ratio */}
                                     <div className="mb-4">
                                         <SearchableSelect id="aspectRatio" label={t('common_aspectRatio') || 'Tỷ lệ khung ảnh'} options={ASPECT_RATIO_OPTIONS} value={appState.options.aspectRatio || ''} onChange={(val) => handleOptionChange('aspectRatio', val)} placeholder={t('common_select') || 'Chọn...'} />
-                                        {appState.options.aspectRatio && appState.options.aspectRatio !== 'Giữ nguyên theo ảnh tham khảo' && modelVersion !== 'v3' && (
-                                            <p className="text-xs text-orange-500 mt-1 flex items-center gap-1">
+                                        {appState.options.aspectRatio && appState.options.aspectRatio !== 'Giữ nguyên theo ảnh tham khảo' && modelVersion !== 'v3' && modelVersion !== 'pro' && (
+                                            <p className="!text-xs text-orange-500 mt-1 flex items-center gap-1">
                                                 <span>⚠️</span>
-                                                <span>Tỷ lệ khung ảnh chỉ hoạt động với Model v3. Vui lòng chuyển sang v3 trong Settings.</span>
+                                                <span>Tỷ lệ khung ảnh chỉ hoạt động với Model v3 / Pro. Vui lòng chuyển sang v3 hoặc Pro</span>
                                             </p>
                                         )}
                                     </div>

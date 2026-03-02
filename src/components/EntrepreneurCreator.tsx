@@ -58,7 +58,7 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, settings, checkCredits, modelVersion } = useAppControls();
+    const { t, settings, checkCredits, modelVersion, creditCostPerImage } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
     const { videoTasks, generateVideo } = useVideoGeneration();
     const isMobile = useMediaQuery('(max-width: 768px)');
@@ -145,10 +145,13 @@ const EntrepreneurCreator: React.FC<EntrepreneurCreatorProps> = (props) => {
     const executeGeneration = async (ideas?: string[]) => {
         if (!appState.uploadedImage) return;
 
-        // Removed early checkCredits()
-
-        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
+        const totalCredits = appState.styleReferenceImage ? creditCostPerImage : (ideas?.length || 0) * creditCostPerImage;
         hasLoggedGeneration.current = false;
+
+        // Check credits
+        if (!await checkCredits(totalCredits)) {
+            return;
+        }
 
         if (appState.styleReferenceImage) {
             const idea = "Style Reference";

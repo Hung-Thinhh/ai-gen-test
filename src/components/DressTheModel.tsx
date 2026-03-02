@@ -56,7 +56,7 @@ const DressTheModel: React.FC<DressTheModelProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, settings, checkCredits, modelVersion } = useAppControls();
+    const { t, settings, checkCredits, modelVersion, creditCostPerImage } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
     const { videoTasks, generateVideo } = useVideoGeneration();
     const isMobile = useMediaQuery('(max-width: 768px)');
@@ -175,12 +175,10 @@ const DressTheModel: React.FC<DressTheModelProps> = (props) => {
 
         // Check credits FIRST
         const preGenState = { ...appState };
-        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
-        if (!await checkCredits(creditCostPerImage)) {
-            return; // Stay in results
-        }
-
-        // Set generating stage AFTER credits confirmed
+        const totalCredits = creditCostPerImage;
+        if (!await checkCredits(totalCredits)) {
+            return;
+        }// Set generating stage AFTER credits confirmed
         onStateChange({ ...appState, stage: 'generating', error: null });
 
         try {

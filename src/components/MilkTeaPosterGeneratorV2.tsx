@@ -200,7 +200,7 @@ export const MilkTeaPosterGeneratorV2: React.FC<PosterGeneratorV2Props> = ({
     theme,
     // Other props are ignored for now in V2
 }) => {
-    const { t, checkCredits, modelVersion, handleModelVersionChange } = useAppControls();
+    const { t, settings, checkCredits, modelVersion, creditCostPerImage, handleModelVersionChange } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
     const { videoTasks, generateVideo } = useVideoGeneration();
 
@@ -722,8 +722,8 @@ ${aspectRatioPrompt}
         }
 
         // Check credits based on number of selected styles
-        const totalImagesToGenerate = selectedStyles.length;
-        if (!await checkCredits(totalImagesToGenerate)) {
+        const totalCredits = creditCostPerImage * selectedStyles.length;
+        if (!await checkCredits(totalCredits)) {
             return;
         }
 
@@ -1212,10 +1212,10 @@ ${aspectRatioPrompt}
                                         onChange={setSelectedAspectRatio}
                                         placeholder="Chọn tỷ lệ khung hình..."
                                     />
-                                    {appState.options.aspectRatio && appState.options.aspectRatio !== 'Giữ nguyên theo ảnh tham khảo' && modelVersion !== 'v3' && (
+                                    {appState.options.aspectRatio && appState.options.aspectRatio !== 'Giữ nguyên theo ảnh tham khảo' && modelVersion !== 'v3' && modelVersion !== 'pro' && (
                                         <p className="!text-xs text-orange-500 mt-1 flex items-center gap-1">
                                             <span>⚠️</span>
-                                            <span>Tỷ lệ khung ảnh chỉ hoạt động với Model v3. Vui lòng chuyển sang v3</span>
+                                            <span>Tỷ lệ khung ảnh chỉ hoạt động với Model v3 / Pro. Vui lòng chuyển sang v3 hoặc Pro</span>
                                         </p>
                                     )}
                                 </div>

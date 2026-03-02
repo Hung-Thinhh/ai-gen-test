@@ -46,7 +46,7 @@ const PhotoBooth: React.FC<PhotoBoothProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, checkCredits, modelVersion } = useAppControls();
+    const { t, checkCredits, modelVersion, creditCostPerImage } = useAppControls();
 
     const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
         utilHandleFileUpload(e, (imageDataUrl) => {
@@ -65,10 +65,9 @@ const PhotoBooth: React.FC<PhotoBoothProps> = (props) => {
 
         // Check credits FIRST
         const preGenState = { ...appState };
-        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
-        const totalCost = appState.options.photoCount * creditCostPerImage;
+        const totalCredits = appState.options.photoCount * creditCostPerImage;
 
-        if (!await checkCredits(totalCost)) {
+        if (!await checkCredits(totalCredits)) {
             return; // Stay in configuring
         }
 

@@ -44,6 +44,18 @@ export const ModelVersionSelector: React.FC<ModelVersionSelectorProps> = ({
             >
                 <span className="hidden md:inline">Model </span>V3
             </button>
+            <button
+                onClick={() => onModelChange('pro')}
+                className={cn(
+                    'rounded-full font-bold transition-all duration-200',
+                    'md:px-4 md:py-1.5 md:!text-xs',
+                    '!px-2 py-1 !text-[10px]',
+                    modelVersion === 'pro' ? 'text-black shadow-md' : 'text-neutral-400 hover:text-white'
+                )}
+                style={modelVersion === 'pro' ? { backgroundColor: '#f97316' } : {}} // Orange-500
+            >
+                <span className="hidden md:inline">Model </span>Pro
+            </button>
         </div>
     );
 };

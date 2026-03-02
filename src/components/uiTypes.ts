@@ -901,7 +901,7 @@ export interface GenerationHistoryEntry {
     input_prompt?: string;
 }
 
-export type ModelVersion = 'v2' | 'v3';
+export type ModelVersion = 'v2' | 'v3' | 'pro';
 export type ImageResolution = '1K' | '2K' | '4K';
 
 // --- Context Types ---
@@ -943,9 +943,11 @@ export interface AppControlContextType {
     isIncognito: boolean; // NEW - Detect incognito mode
     generationHistory: GenerationHistoryEntry[];
     modelVersion: ModelVersion;
+    creditCostPerImage: number; // NEW: Centralized credit cost
     imageResolution: ImageResolution;
     v2UsageCount: number;
     v3UsageCount: number;
+    vProUsageCount: number; // NEW
     refreshUsageCounts: () => void;
     logGeneration: (appId: string, preGenState: any, thumbnailUrl: string, extraDetails?: any) => Promise<void>; // NEW
     addGenerationToHistory: (entryData: Omit<GenerationHistoryEntry, 'id' | 'timestamp'>) => Promise<void>;

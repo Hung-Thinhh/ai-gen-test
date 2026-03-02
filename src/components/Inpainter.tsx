@@ -29,7 +29,7 @@ interface InpainterProps {
 
 const Inpainter: React.FC<InpainterProps> = (props) => {
     const { uploaderCaption, uploaderDescription, addImagesToGallery, appState, onStateChange, onReset, logGeneration, ...headerProps } = props;
-    const { t, checkCredits, modelVersion } = useAppControls();
+    const { t, checkCredits, modelVersion, creditCostPerImage } = useAppControls();
 
     const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
         utilHandleFileUpload(e, (imageDataUrl) => {
@@ -43,11 +43,10 @@ const Inpainter: React.FC<InpainterProps> = (props) => {
 
         // Check credits FIRST
         const preGenState = { ...appState };
-        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
-        if (!await checkCredits(creditCostPerImage)) {
-            return; // Stay in configuring
+        const totalCredits = creditCostPerImage;
+        if (!await checkCredits(totalCredits)) {
+            return;
         }
-
         // Set generating stage AFTER credits confirmed
         onStateChange({ ...appState, stage: 'generating', error: null });
 

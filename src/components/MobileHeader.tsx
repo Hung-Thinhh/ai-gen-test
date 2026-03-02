@@ -180,8 +180,8 @@ interface PageHeaderProps {
     showSettings?: boolean;
     apps?: any[];
     onSelectApp?: (appId: string) => void;
-    modelVersion?: 'v2' | 'v3';
-    onModelChange?: (version: 'v2' | 'v3') => void;
+    modelVersion?: 'v2' | 'v3' | 'pro';
+    onModelChange?: (version: 'v2' | 'v3' | 'pro') => void;
     credits?: number;
 }
 
@@ -312,6 +312,12 @@ export const MobilePageHeader: React.FC<PageHeaderProps> = ({
                                 className={`model-btn ${modelVersion === 'v3' ? 'active' : ''}`}
                             >
                                 v3
+                            </button>
+                            <button
+                                onClick={() => onModelChange('pro')}
+                                className={`model-btn ${modelVersion === 'pro' ? 'active' : ''}`}
+                            >
+                                pro
                             </button>
                         </div>
                     )}

@@ -2705,7 +2705,7 @@ input:checked+.switch-slider:before {
     /* Account for bottom nav - increased padding */
     .main-content,
     #main-content-scroll {
-        padding-bottom: 120px !important;
+        padding-bottom: 20px !important;
     }
 
     /* Additional padding for direct children */

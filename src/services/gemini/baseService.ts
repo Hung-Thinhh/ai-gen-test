@@ -7,7 +7,7 @@ import type { GenerateContentResponse } from "@google/genai";
 
 // --- Global Configuration Store ---
 interface GlobalConfig {
-    modelVersion: 'v2' | 'v3';
+    modelVersion: 'v2' | 'v3' | 'pro';
     imageResolution: '1K' | '2K' | '4K';
 }
 
@@ -22,10 +22,20 @@ export const setGlobalModelConfig = (config: Partial<GlobalConfig>) => {
 
 export const getModelConfig = () => globalConfig;
 
-export const getTextModel = () => globalConfig.modelVersion === 'v3' ? 'gemini-3-pro-preview' : 'gemini-2.5-flash';
+export const getTextModel = () => {
+    if (globalConfig.modelVersion === 'pro') return 'gemini-3-pro-preview';
+    return globalConfig.modelVersion === 'v3' ? 'gemini-3-pro-preview' : 'gemini-2.5-flash';
+};
+
 // CRITICAL: Only imagen-* models work on Vertex AI. gemini-*-image models do NOT exist on Vertex AI!
-// For Gemini API: v3 uses Nano Banana 2 (gemini-3.1-flash-image-preview), v2 uses Flash Image
-export const getImageModel = () => globalConfig.modelVersion === 'v3' ? 'gemini-3.1-flash-image-preview' : 'gemini-2.5-flash-image';
+// For Gemini API: v3 uses Nano Banana 2 (gemini-3.1-flash-image-preview), pro uses Nano Banana Pro (gemini-3-pro-image-preview), v2 uses Flash Image
+export const getImageModel = () => {
+    switch (globalConfig.modelVersion) {
+        case 'pro': return 'gemini-3-pro-image-preview';
+        case 'v3': return 'gemini-3.1-flash-image-preview';
+        default: return 'gemini-2.5-flash-image';
+    }
+};
 
 // --- Development Mode Detection ---
 const isDev = process.env.NODE_ENV === 'development';
@@ -342,7 +352,7 @@ export async function callGeminiWithRetry(parts: object[], config: any = {}): Pr
     // Prepare Headers
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
-        'x-credit-cost': currentVersion === 'v3' ? '2' : '1', // Credit cost based on model version
+        'x-credit-cost': currentVersion === 'pro' ? '3' : (currentVersion === 'v3' ? '2' : '1'), // Credit cost based on model version
     };
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;

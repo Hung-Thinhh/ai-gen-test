@@ -964,7 +964,13 @@ ${aspectRatioPrompt}
 
         // Server-side credit validation will handle this
         // We catch the 402 error in the try/catch block below
-        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
+        const creditCostPerImage = modelVersion === 'pro' ? 3 : (modelVersion === 'v3' ? 2 : 1);
+        const totalCredits = creditCostPerImage * imageCount;
+
+        if (!await checkCredits(totalCredits)) {
+            setIsGenerating(false);
+            return;
+        }
 
         // Set generating flag
         setIsGenerating(true);
@@ -1486,10 +1492,10 @@ ${aspectRatioPrompt}
                                     {/* Aspect Ratio */}
                                     <div className="mb-4">
                                         <SearchableSelect id="aspectRatio" label={t('common_aspectRatio') || 'Tỷ lệ khung ảnh'} options={ASPECT_RATIO_OPTIONS} value={appState.options.aspectRatio || ''} onChange={(val) => handleOptionChange('aspectRatio', val)} placeholder={t('common_select') || 'Chọn...'} />
-                                        {appState.options.aspectRatio && appState.options.aspectRatio !== 'Giữ nguyên theo ảnh tham khảo' && modelVersion !== 'v3' && (
+                                        {appState.options.aspectRatio && appState.options.aspectRatio !== 'Giữ nguyên theo ảnh tham khảo' && modelVersion !== 'v3' && modelVersion !== 'pro' && (
                                             <p className="text-xs text-orange-500 mt-1 flex items-center gap-1">
                                                 <span>⚠️</span>
-                                                <span>Tỷ lệ khung ảnh chỉ hoạt động với Model v3. Vui lòng chuyển sang v3 trong Settings.</span>
+                                                <span>Tỷ lệ khung ảnh chỉ hoạt động với Model v3 / Pro. Vui lòng chuyển sang v3 hoặc Pro trong Settings.</span>
                                             </p>
                                         )}
                                     </div>

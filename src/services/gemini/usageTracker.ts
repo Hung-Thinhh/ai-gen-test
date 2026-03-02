@@ -3,20 +3,23 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export type ModelVersion = 'v2' | 'v3';
+export type ModelVersion = 'v2' | 'v3' | 'pro';
 
 // Read from environment variables with fallback defaults
 const V2_LIMIT = parseInt(process.env.NEXT_PUBLIC_GEMINI_V2_LIMIT || '50', 10);
 const V3_LIMIT = parseInt(process.env.NEXT_PUBLIC_GEMINI_V3_LIMIT || '50', 10);
+const PRO_LIMIT = parseInt(process.env.NEXT_PUBLIC_GEMINI_PRO_LIMIT || '50', 10);
 
 const USAGE_LIMITS: Record<ModelVersion, number> = {
     v2: V2_LIMIT,
     v3: V3_LIMIT,
+    pro: PRO_LIMIT,
 };
 
 const STORAGE_KEYS: Record<ModelVersion, string> = {
     v2: 'gemini_v2_usage_count',
     v3: 'gemini_v3_usage_count',
+    pro: 'gemini_pro_usage_count',
 };
 
 /**
@@ -72,4 +75,5 @@ export function resetUsage(version: ModelVersion): void {
 export function resetAllUsage(): void {
     resetUsage('v2');
     resetUsage('v3');
+    resetUsage('pro');
 }

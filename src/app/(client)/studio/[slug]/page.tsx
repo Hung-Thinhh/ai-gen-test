@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { getStudioBySlug } from '../../../../services/storageService';
 import StudioGenerator, { Studio } from '../../../../components/client/StudioGenerator';
-import AppLayout from '../../../../components/AppLayout';
 import { Box, CircularProgress, Typography } from '@mui/material';
 
 export default function StudioDetailPage() {
@@ -39,29 +38,23 @@ export default function StudioDetailPage() {
 
     if (loading) {
         return (
-            <AppLayout>
-                <Box sx={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                    <CircularProgress sx={{ color: 'var(--accent-primary)' }} />
-                </Box>
-            </AppLayout>
+            <Box sx={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <CircularProgress sx={{ color: 'var(--accent-primary)' }} />
+            </Box>
         );
     }
 
     if (error || !studio) {
         return (
-            <AppLayout>
-                <Box sx={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
-                    <Typography variant="h5" color="error">{error || 'Không tìm thấy studio.'}</Typography>
-                </Box>
-            </AppLayout>
+            <Box sx={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
+                <Typography variant="h5" color="error">{error || 'Không tìm thấy studio.'}</Typography>
+            </Box>
         );
     }
 
     return (
-        <AppLayout>
-            <Box sx={{ minHeight: '100vh' }}>
-                <StudioGenerator studio={studio} />
-            </Box>
-        </AppLayout>
+        <Box sx={{ minHeight: '100vh' }}>
+            <StudioGenerator studio={studio} />
+        </Box>
     );
 }

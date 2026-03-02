@@ -53,7 +53,7 @@ const FaceSwap: React.FC<FaceSwapProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, checkCredits, modelVersion } = useAppControls();
+    const { t, checkCredits, modelVersion, creditCostPerImage } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
     const isMobile = useMediaQuery('(max-width: 768px)');
 
@@ -79,8 +79,8 @@ const FaceSwap: React.FC<FaceSwapProps> = (props) => {
         if (!appState.sourceImage || !appState.targetFaceImage) return;
 
         const preGenState = { ...appState };
-        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
-        if (!await checkCredits(creditCostPerImage)) {
+        const totalCredits = creditCostPerImage;
+        if (!await checkCredits(totalCredits)) {
             return;
         }
 

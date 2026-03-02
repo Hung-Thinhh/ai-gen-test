@@ -13,19 +13,17 @@ interface PhotoshootProps { mainTitle: string; subtitle: string; useSmartTitleWr
 
 const Photoshoot: React.FC<PhotoshootProps> = (props) => {
     const { uploaderCaptionPerson, uploaderDescriptionPerson, uploaderCaptionOutfit, uploaderDescriptionOutfit, addImagesToGallery, appState, onStateChange, onReset, logGeneration, ...headerProps } = props;
-    const { t, checkCredits, modelVersion } = useAppControls();
+    const { t, checkCredits, modelVersion, creditCostPerImage } = useAppControls();
 
     const handleGenerate = async () => {
         if (!appState.personImage) return;
 
         // Check credits FIRST
         const preGenState = { ...appState };
-        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
-        if (!await checkCredits(creditCostPerImage)) {
-            return; // Stay in configuring
-        }
-
-        // Set generating stage AFTER credits confirmed
+        const totalCredits = creditCostPerImage;
+        if (!await checkCredits(totalCredits)) {
+            return;
+        }// Set generating stage AFTER credits confirmed
         onStateChange({ ...appState, stage: 'generating', error: null });
 
         try {

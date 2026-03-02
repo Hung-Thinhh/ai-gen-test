@@ -43,7 +43,11 @@ const DUAL_IMAGE_SLUGS = ['fifa-online'];
 
 const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
     const router = useRouter();
-    const { t, settings, checkCredits, modelVersion, handleModelVersionChange, logGeneration, addImagesToGallery, refreshGallery } = useAppControls();
+    const {
+        guestId, userIp, user, isLoggedIn, modelVersion, creditCostPerImage, imageResolution,
+        settings, checkCredits, addImagesToGallery, logGeneration, t, refreshGallery,
+        handleModelVersionChange
+    } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
     const { generateVideo } = useVideoGeneration();
     const isMobile = useMediaQuery('(max-width: 768px)');
@@ -210,9 +214,8 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
 
         const preGenState = { ...appState };
         const imageCount = selectedStyleImages.length;
-        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
+        // Check credits based on number of selected styles
         const totalCredits = creditCostPerImage * imageCount;
-
         if (!await checkCredits(totalCredits)) {
             return;
         }
@@ -356,22 +359,28 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                     </svg>
                     Quay lại
                 </button>
+            </div>
 
-                {/* Model Version Selector */}
-                <div className="flex gap-1 themed-card backdrop-blur-md rounded-full p-1 border border-white/10 shadow-lg">
+            {/* Model Version Selector (Fixed) */}
+            <div className={`fixed z-50 gap-4 flex md:top-[80px] md:right-8 flex-row top-[80px] right-2`}>
+                <div className="flex gap-1 themed-card backdrop-blur-md rounded-full p-1 border border-white/10 shadow-lg md:text-sm text-xs">
                     <button
                         onClick={() => handleModelVersionChange('v2')}
-                        className={`rounded-full font-bold transition-all duration-200 px-4 py-1.5 !text-xs ${modelVersion === 'v2' ? 'text-black shadow-md bg-orange-500' : 'text-neutral-400 hover:text-white'
-                            }`}
+                        className={`rounded-full font-bold transition-all duration-200 md:px-4 md:py-1.5 px-2 py-1 !text-xs ${modelVersion === 'v2' ? 'text-black shadow-md bg-orange-500' : 'text-neutral-400 hover:text-white'}`}
                     >
                         <span className="hidden md:inline">Model </span>V2
                     </button>
                     <button
                         onClick={() => handleModelVersionChange('v3')}
-                        className={`rounded-full font-bold transition-all duration-200 px-4 py-1.5 !text-xs ${modelVersion === 'v3' ? 'text-black shadow-md bg-orange-500' : 'text-neutral-400 hover:text-white'
-                            }`}
+                        className={`rounded-full font-bold transition-all duration-200 md:px-4 md:py-1.5 px-2 py-1 !text-xs ${modelVersion === 'v3' ? 'text-black shadow-md bg-orange-500' : 'text-neutral-400 hover:text-white'}`}
                     >
                         <span className="hidden md:inline">Model </span>V3
+                    </button>
+                    <button
+                        onClick={() => handleModelVersionChange('pro')}
+                        className={`rounded-full font-bold transition-all duration-200 md:px-4 md:py-1.5 px-2 py-1 !text-xs ${modelVersion === 'pro' ? 'text-black shadow-md bg-orange-500' : 'text-neutral-400 hover:text-white'}`}
+                    >
+                        <span className="hidden md:inline">Model </span>Pro
                     </button>
                 </div>
             </div>
@@ -705,7 +714,7 @@ const StudioGenerator: React.FC<StudioGeneratorProps> = ({ studio }) => {
                                 <div className="mt-8 flex flex-col items-center gap-2">
                                     {selectedStyleImages.length > 0 && (
                                         <p className="text-sm text-neutral-400">
-                                            Chi phí: {selectedStyleImages.length * (modelVersion === 'v3' ? 2 : 1)} credits
+                                            Chi phí: {selectedStyleImages.length * creditCostPerImage} credits
                                         </p>
                                     )}
                                     <button

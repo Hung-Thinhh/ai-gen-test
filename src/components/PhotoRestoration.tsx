@@ -50,7 +50,7 @@ const PhotoRestoration: React.FC<PhotoRestorationProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, settings, checkCredits, modelVersion } = useAppControls();
+    const { t, settings, checkCredits, modelVersion, creditCostPerImage } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
 
     // State for searchable nationality dropdown
@@ -163,11 +163,10 @@ const PhotoRestoration: React.FC<PhotoRestorationProps> = (props) => {
 
         // Check credits FIRST
         const preGenState = { ...appState };
-        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
-        if (!await checkCredits(creditCostPerImage)) {
-            return; // Stay in results
+        const totalCredits = creditCostPerImage;
+        if (!await checkCredits(totalCredits)) {
+            return;
         }
-
         // Set generating stage AFTER credits confirmed
         onStateChange({ ...appState, stage: 'generating', error: null });
 

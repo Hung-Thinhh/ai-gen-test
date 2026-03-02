@@ -227,7 +227,7 @@ const KhmerPhotoMerge: React.FC<KhmerPhotoMergeProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, settings, checkCredits, modelVersion } = useAppControls();
+    const { t, checkCredits, modelVersion, creditCostPerImage, settings } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
     const { generateVideo } = useVideoGeneration();
     const isMobile = useMediaQuery('(max-width: 768px)');
@@ -316,11 +316,9 @@ const KhmerPhotoMerge: React.FC<KhmerPhotoMergeProps> = (props) => {
         // Check credits FIRST
         const preGenState = { ...appState };
         // Calculate credit cost based on model version (v3 = 2, v2 = 1)
-        const creditCost = modelVersion === 'v3' ? 2 : 1;
-
-        if (!await checkCredits(creditCost)) {
-            console.warn(`checkCredits failed for cost ${creditCost}`);
-            return; // Stay in configuring
+        const totalCredits = creditCostPerImage;
+        if (!await checkCredits(totalCredits)) {
+            return;
         }
 
         // Set generating stage AFTER credits confirmed

@@ -249,7 +249,7 @@ const LoadingCard = ({ index }: { index: number }) => (
 
 const PortraitGenerator: React.FC<PortraitGeneratorProps> = (props) => {
     const { addImagesToGallery, appState, onStateChange, onReset, logGeneration, mainTitle, ...headerProps } = props;
-    const { t, checkCredits, modelVersion } = useAppControls();
+    const { t, checkCredits, modelVersion, creditCostPerImage } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
     const isMobile = useMediaQuery('(max-width: 768px)');
 
@@ -271,16 +271,16 @@ const PortraitGenerator: React.FC<PortraitGeneratorProps> = (props) => {
         reader.readAsDataURL(file);
     };
 
+    // Local credit calculation removed, use context value instead
+
     const handleGenerate = async () => {
 
         const preGenState = { ...appState };
         const imageCount = appState.options.imageCount;
-        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
-        const totalCredits = creditCostPerImage * imageCount;
-
-        if (!await checkCredits(totalCredits)) return;
-
-        // Start generating - set pending count
+        const totalCredits = appState.options.imageCount * creditCostPerImage;
+        if (!await checkCredits(totalCredits)) {
+            return;
+        }  // Start generating - set pending count
         onStateChange({
             ...appState,
             stage: 'generating',
@@ -420,7 +420,7 @@ const PortraitGenerator: React.FC<PortraitGeneratorProps> = (props) => {
                                 ))}
                             </div>
                             <p className="text-neutral-500 text-xs mt-2">
-                                Chi phí: {appState.options.imageCount * (modelVersion === 'v3' ? 2 : 1)} credits
+                                Chi phí: {appState.options.imageCount * creditCostPerImage} credits
                             </p>
                         </div>
 

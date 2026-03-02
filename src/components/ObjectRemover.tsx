@@ -29,7 +29,7 @@ interface ObjectRemoverProps {
 
 const ObjectRemover: React.FC<ObjectRemoverProps> = (props) => {
     const { uploaderCaption, uploaderDescription, addImagesToGallery, appState, onStateChange, onReset, logGeneration, ...headerProps } = props;
-    const { t, checkCredits, modelVersion } = useAppControls();
+    const { t, checkCredits, modelVersion, creditCostPerImage } = useAppControls();
 
     const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
         utilHandleFileUpload(e, (imageDataUrl) => {
@@ -43,8 +43,8 @@ const ObjectRemover: React.FC<ObjectRemoverProps> = (props) => {
 
         // Check credits FIRST
         const preGenState = { ...appState };
-        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
-        if (!await checkCredits(creditCostPerImage)) {
+        const totalCredits = creditCostPerImage;
+        if (!await checkCredits(totalCredits)) {
             return; // Stay in configuring
         }
 

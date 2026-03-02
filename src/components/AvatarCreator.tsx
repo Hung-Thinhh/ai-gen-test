@@ -59,7 +59,7 @@ const AvatarCreator: React.FC<AvatarCreatorProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, settings, checkCredits, modelVersion } = useAppControls();
+    const { t, settings, checkCredits, modelVersion, creditCostPerImage } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
     const { videoTasks, generateVideo } = useVideoGeneration();
     const isMobile = useMediaQuery('(max-width: 768px)');
@@ -146,10 +146,14 @@ const AvatarCreator: React.FC<AvatarCreatorProps> = (props) => {
     const executeGeneration = async (ideas?: string[]) => {
         if (!appState.uploadedImage) return;
 
-        // Removed early checkCredits() to allow immediate UI feedback
-
-        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
+        const totalCredits = appState.styleReferenceImage ? creditCostPerImage : (ideas?.length || 0) * creditCostPerImage;
         hasLoggedGeneration.current = false;
+
+        // Check credits
+        // For style reference, it's always 1 image. For ideas, it's the number of ideas.
+        if (!await checkCredits(totalCredits)) {
+            return;
+        }
 
         // --- Branch 1: Generation from Style Reference Image ---
         if (appState.styleReferenceImage) {

@@ -67,7 +67,7 @@ const SwapStyle: React.FC<SwapStyleProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, settings, checkCredits, modelVersion, refreshGallery } = useAppControls();
+    const { t, settings, checkCredits, modelVersion, creditCostPerImage, refreshGallery } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
     const { videoTasks, generateVideo } = useVideoGeneration();
     const [localNotes, setLocalNotes] = useState(appState.options.notes);
@@ -161,8 +161,8 @@ const SwapStyle: React.FC<SwapStyleProps> = (props) => {
 
         // Check credits
         const count = stylesToProcess.length;
-        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
-        if (!await checkCredits(creditCostPerImage * count)) {
+        const totalCredits = creditCostPerImage;
+        if (!await checkCredits(totalCredits)) {
             return;
         }
 

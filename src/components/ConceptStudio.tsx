@@ -14,7 +14,7 @@ interface ConceptStudioProps { mainTitle: string; subtitle: string; useSmartTitl
 
 const ConceptStudio: React.FC<ConceptStudioProps> = (props) => {
     const { uploaderCaption, uploaderDescription, addImagesToGallery, appState, onStateChange, onReset, logGeneration, ...headerProps } = props;
-    const { t, checkCredits, modelVersion } = useAppControls();
+    const { t, checkCredits, modelVersion, creditCostPerImage } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
     const lightboxImages = [appState.conceptImage, appState.resultImage].filter((img): img is string => !!img);
 
@@ -23,12 +23,10 @@ const ConceptStudio: React.FC<ConceptStudioProps> = (props) => {
 
         // Check credits FIRST
         const preGenState = { ...appState };
-        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
-        if (!await checkCredits(creditCostPerImage)) {
-            return; // Stay in configuring
-        }
-
-        // Set generating stage AFTER credits confirmed
+        const totalCredits = creditCostPerImage;
+        if (!await checkCredits(totalCredits)) {
+            return;
+        }// Set generating stage AFTER credits confirmed
         onStateChange({ ...appState, stage: 'generating', error: null });
 
         try {

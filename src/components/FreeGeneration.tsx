@@ -74,7 +74,7 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, settings, checkCredits, modelVersion, isLoggedIn, openLoginModal, refreshGallery } = useAppControls();
+    const { t, settings, checkCredits, modelVersion, creditCostPerImage, isLoggedIn, openLoginModal, refreshGallery } = useAppControls();
 
     const { videoTasks, generateVideo } = useVideoGeneration();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
@@ -224,8 +224,8 @@ const FreeGeneration: React.FC<FreeGenerationProps> = (props) => {
         }
 
         // Check credits FIRST
-        const creditCostPerImage = modelVersion === 'v3' ? 2 * appState.options.numberOfImages : 1 * appState.options.numberOfImages;
-        if (!await checkCredits(creditCostPerImage)) {
+        const totalCredits = appState.options.numberOfImages * creditCostPerImage;
+        if (!await checkCredits(totalCredits)) {
             return;
         }
 

@@ -59,7 +59,7 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, settings, checkCredits, modelVersion } = useAppControls();
+    const { t, settings, checkCredits, modelVersion, creditCostPerImage } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
     const { videoTasks, generateVideo } = useVideoGeneration();
     const isMobile = useMediaQuery('(max-width: 768px)');
@@ -146,15 +146,15 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
     };
 
     const executeGeneration = async (ideas?: string[]) => {
-        if (!appState.uploadedImage) {
-            toast.error(t('beautyCreator_missingImagesError'));
+        if (!appState.uploadedImage) return;
+
+        const totalCredits = appState.styleReferenceImage ? creditCostPerImage : (ideas?.length || 0) * creditCostPerImage;
+        hasLoggedGeneration.current = false;
+
+        // Check credits
+        if (!await checkCredits(totalCredits)) {
             return;
         }
-
-        // Removed early checkCredits()
-
-        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
-        hasLoggedGeneration.current = false;
 
         if (appState.styleReferenceImage) {
             const idea = "Style Reference";
@@ -266,7 +266,7 @@ const BeautyCreator: React.FC<BeautyCreatorProps> = (props) => {
 
         // Double check credits if needed
         if (randomCount === 0) {
-            const creditCost = modelVersion === 'v3' ? 2 : 1;
+            const creditCost = creditCostPerImage;
             if (!await checkCredits(creditCost)) {
                 onStateChange({ ...appState, stage: 'configuring' });
                 return;

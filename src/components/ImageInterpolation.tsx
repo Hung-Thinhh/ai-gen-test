@@ -57,7 +57,7 @@ const ImageInterpolation: React.FC<ImageInterpolationProps> = (props) => {
         ...headerProps
     } = props;
 
-    const { t, settings, checkCredits, modelVersion } = useAppControls();
+    const { t, settings, checkCredits, modelVersion, creditCostPerImage } = useAppControls();
     const { lightboxIndex, openLightbox, closeLightbox, navigateLightbox } = useLightbox();
     const { videoTasks, generateVideo } = useVideoGeneration();
     const isGeneratingRef = useRef(false);
@@ -229,8 +229,8 @@ const ImageInterpolation: React.FC<ImageInterpolationProps> = (props) => {
         try {
             // Check credits FIRST
             const preGenState = { ...appState };
-            const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
-            if (!await checkCredits(creditCostPerImage)) {
+            const totalCredits = creditCostPerImage;
+            if (!await checkCredits(totalCredits)) {
                 return; // Stay in results
             }
 

@@ -13,7 +13,7 @@ interface OutfitExtractorProps { mainTitle: string; subtitle: string; useSmartTi
 
 const OutfitExtractor: React.FC<OutfitExtractorProps> = (props) => {
     const { uploaderCaption, uploaderDescription, addImagesToGallery, appState, onStateChange, onReset, logGeneration, ...headerProps } = props;
-    const { t, checkCredits, modelVersion } = useAppControls();
+    const { t, checkCredits, modelVersion, creditCostPerImage } = useAppControls();
 
     const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => { utilHandleFileUpload(e, (imageDataUrl) => { onStateChange({ ...appState, uploadedImage: imageDataUrl, resultImage: null, error: null }); /* addImagesToGallery([imageDataUrl]); */ }); };
 
@@ -22,12 +22,10 @@ const OutfitExtractor: React.FC<OutfitExtractorProps> = (props) => {
 
         // Check credits FIRST
         const preGenState = { ...appState };
-        const creditCostPerImage = modelVersion === 'v3' ? 2 : 1;
-        if (!await checkCredits(creditCostPerImage)) {
-            return; // Stay in configuring
-        }
-
-        // Set generating stage AFTER credits confirmed
+        const totalCredits = creditCostPerImage;
+        if (!await checkCredits(totalCredits)) {
+            return;
+        }// Set generating stage AFTER credits confirmed
         onStateChange({ ...appState, stage: 'generating', error: null });
 
         try {
